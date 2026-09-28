@@ -6,6 +6,7 @@ import { SeatBadge } from '../components/SeatBadge'
 import { MapView } from '../components/MapView'
 import { useMatchStore } from '../store/matchStore'
 import { centers } from '../data/centers'
+import { gradesOverlap } from '../data/grade'
 import type { Center } from '../data/types'
 
 const filterDefs: { label: string; test: (c: Center) => boolean }[] = [
@@ -14,7 +15,7 @@ const filterDefs: { label: string; test: (c: Center) => boolean }[] = [
   { label: '저녁 7시 이후', test: (c) => c.tags.includes('저녁 7시 이후') },
   { label: '무료·저비용', test: (c) => c.feeMonthly === 0 || c.feeMonthly <= 50000 },
   { label: '평점 4.8+', test: (c) => c.rating >= 4.8 },
-  { label: '초1~2', test: (c) => c.grade.includes('1~2') },
+  { label: '초1~2', test: (c) => gradesOverlap(c.grade, '초1~2') },
 ]
 
 type SortKey = 'match' | 'distance' | 'rating'
@@ -48,7 +49,7 @@ export function Find() {
     <div className="mx-auto max-w-6xl px-4 py-6">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <div className="flex items-center gap-3">
-          <span className="text-lg font-extrabold text-ink">After School</span>
+          <Link to="/" className="focus-ring text-lg font-extrabold text-ink">After School</Link>
           <span className="rounded-full bg-ivory-deep px-3 py-1.5 text-xs font-semibold text-ink-2">
             {conditionSummary || '조건을 선택해주세요'}
           </span>

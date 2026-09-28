@@ -4,6 +4,7 @@ import { Chip } from '../components/Chip'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { useHashTab } from '../hooks/useHashTab'
+import { useEventStore } from '../store/eventStore'
 import { events as allEvents } from '../data/events'
 import type { EventItem } from '../data/types'
 
@@ -15,9 +16,7 @@ export function Events() {
   const [tab, setTab] = useHashTab(TABS, 'month')
   const [gu, setGu] = useState('전체')
   const [age, setAge] = useState<(typeof ageOptions)[number]>('전체')
-  const [applied, setApplied] = useState<string[]>([])
-
-  const toggleApply = (id: string) => setApplied((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  const { applied, toggleApply } = useEventStore()
 
   const filtered = useMemo(() => {
     let list = allEvents.filter((e) => (gu === '전체' || e.gu === gu) && (age === '전체' || e.ageGroup === age))

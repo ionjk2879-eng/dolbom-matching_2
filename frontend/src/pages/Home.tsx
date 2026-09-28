@@ -7,7 +7,9 @@ import { SeatBadge } from '../components/SeatBadge'
 import { Calendar } from '../components/Calendar'
 import { PlaceholderImage } from '../components/PlaceholderImage'
 import { useMatchStore } from '../store/matchStore'
+import { useEventStore } from '../store/eventStore'
 import { centers } from '../data/centers'
+import { gradesOverlap } from '../data/grade'
 import { events } from '../data/events'
 import { newsItems, infoArticles } from '../data/info'
 
@@ -25,13 +27,10 @@ export function Home() {
   const [heroTime, setHeroTime] = useState('')
   const [selectedOrgTypes, setSelectedOrgTypes] = useState<string[]>([])
   const [infoTab, setInfoTab] = useState<'play' | 'care' | 'card'>('play')
-  const [appliedEvents, setAppliedEvents] = useState<string[]>([])
+  const { applied: appliedEvents, toggleApply } = useEventStore()
 
   const toggleOrgType = (t: string) =>
     setSelectedOrgTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
-
-  const toggleApply = (id: string) =>
-    setAppliedEvents((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const goSearch = () => {
     match.setArea(heroArea)
@@ -43,7 +42,7 @@ export function Home() {
   const goMatch = () => navigate('/find')
 
   const matchedCount = match.grade
-    ? centers.filter((c) => c.grade.includes(match.grade.replace('초', ''))).length || centers.length
+    ? centers.filter((c) => gradesOverlap(c.grade, match.grade)).length
     : centers.length
 
   return (
@@ -267,10 +266,11 @@ export function Home() {
                 <p className="mt-1 text-xs text-ink-3">{e.date}</p>
                 <Button
                   variant={applied ? 'outline' : 'primary'}
+                  disabled={e.full}
                   onClick={() => toggleApply(e.id)}
                   className="mt-3 w-full"
                 >
-                  {applied ? '신청 취소' : '신청하기'}
+                  {e.full ? '마감' : applied ? '신청 취소' : '신청하기'}
                 </Button>
               </Card>
             )

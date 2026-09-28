@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 type MenuItem = {
@@ -66,11 +66,36 @@ const menu: MenuItem[] = [
 export function Header() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
+  const navRef = useRef<HTMLElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  // Set when Escape moves focus back to the nav, so that focus doesn't reopen the menu
+  const skipFocusOpen = useRef(false)
+
+  const onNavFocus = () => {
+    if (skipFocusOpen.current) {
+      skipFocusOpen.current = false
+      return
+    }
+    setOpen(true)
+  }
+
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key !== 'Escape' || !open) return
+    setOpen(false)
+    if (dropdownRef.current?.contains(document.activeElement)) {
+      skipFocusOpen.current = true
+      navRef.current?.querySelector('a')?.focus()
+    }
+  }
 
   return (
     <header
       className="relative border-b border-line bg-ivory-card"
       onMouseLeave={() => setOpen(false)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false)
+      }}
+      onKeyDown={onKeyDown}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2.5">
@@ -80,7 +105,7 @@ export function Header() {
           <span className="text-xl font-extrabold text-ink">After School</span>
         </Link>
 
-        <nav aria-label="주요 메뉴" onMouseEnter={() => setOpen(true)}>
+        <nav ref={navRef} aria-label="주요 메뉴" onMouseEnter={() => setOpen(true)} onFocus={onNavFocus}>
           <ul className="flex gap-8">
             {menu.map((m) => {
               const active = location.pathname === m.to
@@ -115,6 +140,7 @@ export function Header() {
 
       {open && (
         <div
+          ref={dropdownRef}
           onMouseEnter={() => setOpen(true)}
           className="absolute inset-x-0 top-full z-30 border-b border-line bg-ivory-card shadow-[0_24px_40px_-28px_rgba(60,50,30,.45)]"
         >

@@ -6,6 +6,7 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { useHashTab } from '../hooks/useHashTab'
 import { centers } from '../data/centers'
+import { gradesOverlap } from '../data/grade'
 import { offers as initialOffers } from '../data/offers'
 import type { CenterRequest, Offer } from '../data/types'
 
@@ -53,7 +54,7 @@ export function RequestPage() {
   // #manage
   const [requests, setRequests] = useState<CenterRequest[]>(initialRequests)
 
-  const matchedCount = grade ? centers.filter((c) => c.grade.includes(grade.replace('초', ''))).length : centers.length
+  const matchedCount = grade ? centers.filter((c) => gradesOverlap(c.grade, grade)).length : centers.length
 
   const submitRequest = () => {
     setRequests((prev) => [

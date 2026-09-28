@@ -124,7 +124,7 @@ export function Login() {
       </div>
 
       <div className="flex-1">
-        <span className="text-xl font-extrabold text-ink">After School</span>
+        <Link to="/" className="focus-ring text-xl font-extrabold text-ink">After School</Link>
         <p className="mt-3 text-2xl font-extrabold tracking-[-0.03em] text-ink">
           방과 후에도
           <br />
