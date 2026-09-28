@@ -30,8 +30,8 @@
 ```bash
 # 의존성 설치
 npm install
-cd frontend && npm install && cd ..
-cd backend && npm install && cd ..
+npm install --prefix frontend
+npm install --prefix backend
 
 # 프론트엔드 + 백엔드 동시 실행
 npm run dev
