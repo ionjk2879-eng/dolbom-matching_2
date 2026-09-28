@@ -1,0 +1,85 @@
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.login-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.login-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.login-desc {
+  color: #666;
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 0 0 0.5rem;
+}
+
+.login-error {
+  color: #e53e3e;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.btn-kakao,
+.btn-naver {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: filter 0.15s;
+}
+
+.btn-kakao:hover,
+.btn-naver:hover {
+  filter: brightness(0.93);
+}
+
+.btn-kakao {
+  background-color: #fee500;
+  color: #191919;
+}
+
+.btn-naver {
+  background-color: #03c75a;
+  color: #fff;
+}
+
+.btn-icon {
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 800;
+  font-style: normal;
+}

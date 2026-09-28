@@ -1,11 +1,20 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { createDb } from './db/index'
+import auth from './routes/auth'
+import type { Env } from './types'
 
-type Bindings = {
-  DATABASE_URL: string
-}
+const app = new Hono<{ Bindings: Env }>()
 
-const app = new Hono<{ Bindings: Bindings }>()
+app.use('*', async (c, next) => {
+  const corsMiddleware = cors({
+    origin: [c.env.FRONTEND_URL, 'http://localhost:5173'].filter(Boolean),
+    credentials: true,
+  })
+  return corsMiddleware(c, next)
+})
+
+app.route('/auth', auth)
 
 app.get('/', (c) => c.json({ message: 'dolbom-matching API' }))
 

@@ -1,0 +1,7 @@
+DATABASE_URL=postgresql://dolbom:dolbom@localhost:5432/dolbom
+FRONTEND_URL=http://localhost:5173
+JWT_SECRET=change-this-to-a-random-secret-key
+KAKAO_CLIENT_ID=your-kakao-client-id
+KAKAO_CLIENT_SECRET=your-kakao-client-secret
+NAVER_CLIENT_ID=your-naver-client-id
+NAVER_CLIENT_SECRET=your-naver-client-secret
