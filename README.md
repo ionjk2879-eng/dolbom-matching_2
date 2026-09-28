@@ -28,13 +28,11 @@
 ## 로컬 실행
 
 ```bash
-# 프론트엔드
-cd frontend
+# 의존성 설치
 npm install
-npm run dev
+cd frontend && npm install && cd ..
+cd backend && npm install && cd ..
 
-# 백엔드
-cd backend
-npm install
+# 프론트엔드 + 백엔드 동시 실행
 npm run dev
 ```

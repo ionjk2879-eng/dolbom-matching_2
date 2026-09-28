@@ -1,0 +1,24 @@
+{
+  "name": "dolbom-matching",
+  "version": "1.0.0",
+  "description": "돌봄이 필요한 사람과 돌봄 제공자를 연결하는 매칭 서비스",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ionjk2879-eng/dolbom-matching_2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ionjk2879-eng/dolbom-matching_2/issues"
+  },
+  "homepage": "https://github.com/ionjk2879-eng/dolbom-matching_2#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
