@@ -1,6 +1,6 @@
 # CLAUDE.md — dolbom-matching
 
-> **이 파일을 읽는 즉시 아래 두 스킬을 순서대로 실행하세요.**
+> **이 파일을 읽는 즉시 아래 두 스킬을 순서대로 실행하고, `HANDOFF.md`를 반드시 읽으세요.**
 
 ```
 /andrej-karpathy-skills:karpathy-guidelines
