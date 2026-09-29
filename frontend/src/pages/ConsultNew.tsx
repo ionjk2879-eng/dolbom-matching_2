@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
@@ -14,6 +14,8 @@ const inputClass = 'focus-ring mt-1.5 w-full rounded-xl border border-line-2 bg-
 export function ConsultNew() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // Page that sent the user here (my page, find, …); falls back to the center detail
+  const from = (useLocation().state as { from?: string } | null)?.from
   const center = centers.find((c) => c.id === id)
   const addConsult = useConsultStore((s) => s.addConsult)
   const [grade, setGrade] = useState(() => useMatchStore.getState().grade)
@@ -38,7 +40,7 @@ export function ConsultNew() {
     if (!grade || !phone || !date) return setError('아이 학년, 연락처, 희망 상담일을 입력해주세요')
     if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)) return setError('휴대폰 번호 형식이 올바르지 않아요 (예: 010-1234-5678)')
     addConsult({ centerId: center.id, grade, phone, date, message })
-    navigate(`/centers/${center.id}`)
+    navigate(from ?? `/centers/${center.id}`)
   }
 
   return (

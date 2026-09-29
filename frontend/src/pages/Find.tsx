@@ -145,7 +145,7 @@ export function Find() {
                 <Button variant="outline" onClick={() => navigate(`/centers/${selectedCenter.id}`)} className="flex-1">
                   상세 보기
                 </Button>
-                <Button onClick={() => navigate(`/centers/${selectedCenter.id}/consult`)} className="flex-1">
+                <Button onClick={() => navigate(`/centers/${selectedCenter.id}/consult`, { state: { from: '/find' } })} className="flex-1">
                   상담 신청
                 </Button>
               </div>

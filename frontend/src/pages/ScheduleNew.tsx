@@ -5,7 +5,7 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { RepeatFields } from '../components/RepeatFields'
 import { noRepeat, repeatDates, type Repeat } from '../data/repeat'
-import { centers } from '../data/centers'
+import { CenterRecommendations } from '../components/CenterRecommendations'
 import { useScheduleStore } from '../store/scheduleStore'
 
 const inputClass = 'focus-ring mt-1.5 w-full rounded-xl border border-line-2 bg-ivory-card px-4 py-2.5 text-sm font-normal'
@@ -78,17 +78,14 @@ export function ScheduleNew() {
               </label>
             </div>
             {!editing && <RepeatFields date={date} value={repeat} onChange={setRepeat} />}
-            <label className="text-sm font-semibold text-ink">
-              돌봄 센터 (선택)
-              <select value={centerId} onChange={(e) => setCenterId(e.target.value)} className={inputClass}>
-                <option value="">선택 안 함</option>
-                {centers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <CenterRecommendations
+              date={date}
+              start={start}
+              end={end}
+              repeat={editing ? noRepeat : repeat}
+              value={centerId}
+              onChange={setCenterId}
+            />
             <label className="text-sm font-semibold text-ink">
               메모 (선택)
               <textarea value={memo} onChange={(e) => setMemo(e.target.value)} rows={3} className={inputClass} />
