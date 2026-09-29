@@ -1,48 +1,40 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import LoginPage from './pages/LoginPage'
-import AuthCallbackPage from './pages/AuthCallbackPage'
+import { Outlet, Route, Routes } from 'react-router-dom'
+import { Header } from './components/Header'
+import { Footer } from './components/Footer'
+import { Home } from './pages/Home'
+import { Find } from './pages/Find'
+import { RequestPage } from './pages/Request'
+import { Events } from './pages/Events'
+import { Info } from './pages/Info'
+import { Guide } from './pages/Guide'
+import { Login } from './pages/Login'
+import { Signup } from './pages/Signup'
 
-function Home() {
-  const { user, loading, logout } = useAuth()
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <p>로딩 중...</p>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div style={{ padding: '2rem' }}>
-        <h1>돌봄 매칭</h1>
-        <p>돌봄이 필요한 사람과 돌봄 제공자를 연결합니다</p>
-        <Link to="/login">로그인</Link>
-      </div>
-    )
-  }
-
+function Layout() {
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>안녕하세요, {user.name ?? '사용자'}님!</h1>
-      {user.email && <p>{user.email}</p>}
-      <button onClick={logout}>로그아웃</button>
+    <div className="flex min-h-screen flex-col bg-ivory">
+      <Header />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
     </div>
   )
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/find" element={<Find />} />
+        <Route path="/request" element={<RequestPage />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/info" element={<Info />} />
+        <Route path="/guide" element={<Guide />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+      </Route>
+    </Routes>
   )
 }
