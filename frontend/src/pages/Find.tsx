@@ -7,7 +7,9 @@ import { MapView } from '../components/MapView'
 import { useMatchStore } from '../store/matchStore'
 import { centers } from '../data/centers'
 import { gradesOverlap } from '../data/grade'
-import { matchesConditions } from '../data/match'
+import { toISO } from '../data/date'
+import { fitsSlot, matchesConditions } from '../data/match'
+import { useScheduleStore } from '../store/scheduleStore'
 import type { Center } from '../data/types'
 
 const filterDefs: { label: string; test: (c: Center) => boolean }[] = [
@@ -27,20 +29,32 @@ export function Find() {
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [sort, setSort] = useState<SortKey>('match')
   const [selected, setSelected] = useState<string | null>(centers[0]?.id ?? null)
+  const schedules = useScheduleStore((s) => s.schedules)
+  const [fitMine, setFitMine] = useState(false)
+
+  const today = toISO(new Date())
+  const upcoming = useMemo(() => schedules.filter((s) => s.date >= today), [schedules, today])
+  const fitsMine = fitMine && upcoming.length > 0
 
   const toggleFilter = (label: string) =>
     setActiveFilters((prev) => (prev.includes(label) ? prev.filter((f) => f !== label) : [...prev, label]))
 
   const results = useMemo(() => {
     const active = filterDefs.filter((f) => activeFilters.includes(f.label))
-    const filtered = centers.filter((c) => matchesConditions(c, match) && active.every((f) => f.test(c)))
+    const filtered = centers.filter(
+      (c) =>
+        matchesConditions(c, match) &&
+        active.every((f) => f.test(c)) &&
+        // Open for every upcoming schedule's weekday and time
+        (!fitsMine || upcoming.every((s) => fitsSlot(c, s.date, s.start, s.end))),
+    )
     const sorted = [...filtered].sort((a, b) => {
       if (sort === 'match') return b.match - a.match
       if (sort === 'distance') return a.distanceM - b.distanceM
       return b.rating - a.rating
     })
     return sorted
-  }, [activeFilters, sort, match])
+  }, [activeFilters, sort, match, fitsMine, upcoming])
 
   const selectedCenter = results.find((c) => c.id === selected) ?? null
   const conditionSummary = [match.area, match.grade, match.time, match.selectedDates.length ? `${match.selectedDates.length}일` : '']
@@ -74,6 +88,11 @@ export function Find() {
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
+          {upcoming.length > 0 && (
+            <Chip selected={fitsMine} onClick={() => setFitMine((v) => !v)}>
+              내 일정에 맞는 센터
+            </Chip>
+          )}
           {filterDefs.map((f) => (
             <Chip key={f.label} selected={activeFilters.includes(f.label)} onClick={() => toggleFilter(f.label)}>
               {f.label}
@@ -91,6 +110,12 @@ export function Find() {
           <option value="rating">평점순</option>
         </select>
       </div>
+
+      {fitsMine && (
+        <p className="mt-3 rounded-xl bg-green-soft px-3.5 py-2.5 text-xs font-semibold text-green">
+          다가오는 일정 {upcoming.length}건에 모두 맞는 센터만 보여줘요
+        </p>
+      )}
 
       <div className="mt-5 flex flex-col gap-4 lg:flex-row">
         <div className="flex w-full flex-col gap-3 lg:w-[440px]">
