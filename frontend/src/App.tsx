@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
@@ -14,7 +14,15 @@ function Home() {
     )
   }
 
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) {
+    return (
+      <div style={{ padding: '2rem' }}>
+        <h1>돌봄 매칭</h1>
+        <p>돌봄이 필요한 사람과 돌봄 제공자를 연결합니다</p>
+        <Link to="/login">로그인</Link>
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: '2rem' }}>
