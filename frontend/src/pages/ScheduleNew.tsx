@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import { RepeatFields } from '../components/RepeatFields'
+import { noRepeat, repeatDates, type Repeat } from '../data/repeat'
 import { centers } from '../data/centers'
 import { useScheduleStore } from '../store/scheduleStore'
 
@@ -12,7 +14,7 @@ export function ScheduleNew() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const { id } = useParams()
-  const { addSchedule, updateSchedule } = useScheduleStore()
+  const { addSchedule, addRepeating, updateSchedule } = useScheduleStore()
   const editing = useScheduleStore((s) => s.schedules.find((x) => x.id === id))
   const [title, setTitle] = useState(editing?.title ?? '')
   const [date, setDate] = useState(editing?.date ?? params.get('date') ?? '')
@@ -20,6 +22,7 @@ export function ScheduleNew() {
   const [end, setEnd] = useState(editing?.end ?? '')
   const [centerId, setCenterId] = useState(editing?.centerId ?? '')
   const [memo, setMemo] = useState(editing?.memo ?? '')
+  const [repeat, setRepeat] = useState<Repeat>(noRepeat)
   const [error, setError] = useState('')
 
   if (id && !editing) {
@@ -42,7 +45,11 @@ export function ScheduleNew() {
     if (start >= end) return setError('종료 시간은 시작 시간보다 늦어야 해요')
     const data = { title, date, start, end, centerId, memo }
     if (editing) updateSchedule(editing.id, data)
-    else addSchedule(data)
+    else if (repeat.on) {
+      const dates = repeatDates(date, repeat)
+      if (typeof dates === 'string') return setError(dates)
+      addRepeating({ title, start, end, centerId, memo }, dates)
+    } else addSchedule(data)
     navigate(`/calendar?date=${date}`)
   }
 
@@ -70,6 +77,7 @@ export function ScheduleNew() {
                 <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={inputClass} />
               </label>
             </div>
+            {!editing && <RepeatFields date={date} value={repeat} onChange={setRepeat} />}
             <label className="text-sm font-semibold text-ink">
               돌봄 센터 (선택)
               <select value={centerId} onChange={(e) => setCenterId(e.target.value)} className={inputClass}>

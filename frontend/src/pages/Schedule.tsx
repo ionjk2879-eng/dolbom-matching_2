@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
+import { RepeatBadge } from '../components/RepeatBadge'
 import { centers } from '../data/centers'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
 import { useScheduleStore } from '../store/scheduleStore'
 
 export function Schedule() {
-  const { schedules, shareWithFamily, shareWithCenters, removeSchedule } = useScheduleStore()
+  const { schedules, shareWithFamily, shareWithCenters, removeSchedule, removeRepeat } = useScheduleStore()
   const [params] = useSearchParams()
   // ?date= comes back from the create/edit page so the calendar reopens on that day
   const paramDate = params.get('date') ?? ''
@@ -112,7 +113,10 @@ export function Schedule() {
           {dayItems.length === 0 && <p className="text-sm text-ink-3">등록된 일정이 없어요</p>}
           {dayItems.map((s) => (
             <div key={s.id} className="rounded-xl border border-line p-3">
-              <p className="text-sm font-bold text-ink">{s.title}</p>
+              <p className="flex items-center gap-1.5 text-sm font-bold text-ink">
+                {s.title}
+                {s.repeatId && <RepeatBadge />}
+              </p>
               <p className="mt-1 text-xs text-ink-3">
                 {s.start}~{s.end}
                 {s.centerId && ` · ${centers.find((c) => c.id === s.centerId)?.name}`}
@@ -134,6 +138,19 @@ export function Schedule() {
                 >
                   삭제
                 </button>
+                {s.repeatId && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      s.repeatId &&
+                      window.confirm(`'${s.title}' 반복 일정을 모두 삭제할까요?`) &&
+                      removeRepeat(s.repeatId)
+                    }
+                    className="focus-ring text-error hover:opacity-80"
+                  >
+                    반복 전체 삭제
+                  </button>
+                )}
               </div>
             </div>
           ))}

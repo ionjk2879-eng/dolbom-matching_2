@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { centers } from '../data/centers'
-import { WEEKDAY_LABELS, toISO } from '../data/date'
+import { WEEKDAY_LABELS, toISO, weekdayOf } from '../data/date'
+import { RepeatBadge } from './RepeatBadge'
+import { RepeatFields } from './RepeatFields'
+import { noRepeat, repeatDates, type Repeat } from '../data/repeat'
 import { fitsSlot } from '../data/match'
 import type { Schedule } from '../data/types'
 import { useScheduleStore } from '../store/scheduleStore'
@@ -11,11 +14,6 @@ const toForm = (s: Schedule): Form => ({ title: s.title, start: s.start, end: s.
 
 const inputClass =
   'focus-ring rounded-xl border border-line-2 bg-ivory-card px-4 py-2.5 text-sm font-normal text-ink'
-
-const weekdayOf = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number)
-  return WEEKDAY_LABELS[new Date(y, m - 1, d).getDay()]
-}
 
 const centerName = (id: string) => centers.find((c) => c.id === id)?.name
 
@@ -29,7 +27,7 @@ export function ScheduleManager({
   startEditId?: string
   onClose: () => void
 }) {
-  const { schedules, addSchedule, updateSchedule, removeSchedule } = useScheduleStore()
+  const { schedules, addSchedule, addRepeating, updateSchedule, removeSchedule, removeRepeat } = useScheduleStore()
   const today = toISO(new Date())
   const initialEdit = schedules.find((s) => s.id === startEditId)
 
@@ -42,6 +40,7 @@ export function ScheduleManager({
   const [confirmId, setConfirmId] = useState('')
   const [form, setForm] = useState<Form>(() => (initialEdit ? toForm(initialEdit) : blank))
   const [error, setError] = useState('')
+  const [repeat, setRepeat] = useState<Repeat>(noRepeat)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -64,6 +63,7 @@ export function ScheduleManager({
   const startEdit = (id: string) => {
     const s = schedules.find((x) => x.id === id)
     setForm(s ? toForm(s) : blank)
+    setRepeat(noRepeat)
     setEditing(id)
     setConfirmId('')
     setError('')
@@ -75,9 +75,12 @@ export function ScheduleManager({
     e.preventDefault()
     if (!form.title || !form.start || !form.end) return setError('제목, 날짜, 시간을 모두 입력해주세요')
     if (form.start >= form.end) return setError('종료 시간은 시작 시간보다 늦어야 해요')
-    const data = { ...form, date: picked }
-    if (editing === 'new') addSchedule(data)
-    else updateSchedule(editing, data)
+    if (editing !== 'new') updateSchedule(editing, { ...form, date: picked })
+    else if (repeat.on) {
+      const dates = repeatDates(picked, repeat)
+      if (typeof dates === 'string') return setError(dates)
+      addRepeating(form, dates)
+    } else addSchedule({ ...form, date: picked })
     setEditing('')
     setError('')
   }
@@ -196,15 +199,18 @@ export function ScheduleManager({
         {picked && !editing && (
           <div className="flex flex-col gap-2">
             {dayItems.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 rounded-xl border border-line p-3">
+              <div key={s.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-3">
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-sm font-bold text-ink">{s.title}</span>
+                  <span className="flex items-center gap-1.5 text-sm font-bold text-ink">
+                    {s.title}
+                    {s.repeatId && <RepeatBadge />}
+                  </span>
                   <span className="text-xs text-ink-3">
                     {s.start}~{s.end} · {centerName(s.centerId) ?? '센터 연결 안 됨'}
                   </span>
                 </span>
                 {confirmId === s.id ? (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex basis-full flex-wrap items-center justify-end gap-1.5">
                     <span className="text-xs font-semibold text-error">삭제할까요?</span>
                     <button
                       type="button"
@@ -221,8 +227,20 @@ export function ScheduleManager({
                       }}
                       className="focus-ring rounded-[10px] bg-error px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
                     >
-                      삭제
+                      {s.repeatId ? '이 일정만' : '삭제'}
                     </button>
+                    {s.repeatId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (s.repeatId) removeRepeat(s.repeatId)
+                          setConfirmId('')
+                        }}
+                        className="focus-ring rounded-[10px] bg-error px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                      >
+                        반복 전체
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex gap-1.5">
@@ -286,6 +304,7 @@ export function ScheduleManager({
                 />
               </label>
             </div>
+            {editing === 'new' && <RepeatFields date={picked} value={repeat} onChange={setRepeat} />}
 
             <div className="flex flex-col gap-2">
               <div className="flex items-baseline justify-between gap-2">

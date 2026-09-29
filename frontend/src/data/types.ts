@@ -91,4 +91,6 @@ export type Schedule = {
   end: string
   centerId: string
   memo: string
+  // Shared by every schedule created from the same weekly repeat
+  repeatId?: string
 }
