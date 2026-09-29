@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { isIdAvailable, signup } from '../api/auth'
 import { Button } from '../components/Button'
 import { Chip } from '../components/Chip'
 import { Card } from '../components/Card'
+import type { Role } from '../data/accounts'
 
-type Role = 'user' | 'center'
 type Step = 1 | 2 | 3
 
 const requiredTerms = ['이용약관 동의 (필수)', '개인정보 수집·이용 동의 (필수)', '만 14세 이상입니다 (필수)']
@@ -21,6 +22,8 @@ export function Signup() {
   const [name, setName] = useState('')
   const [loginId, setLoginId] = useState('')
   const [idChecked, setIdChecked] = useState(false)
+  const [idTaken, setIdTaken] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [phone, setPhone] = useState('')
@@ -44,6 +47,21 @@ export function Signup() {
     password === passwordConfirm &&
     phone &&
     (role === 'user' || (centerName && bizNumber && address))
+
+  const checkId = async () => {
+    const available = await isIdAvailable(loginId)
+    setIdChecked(available)
+    setIdTaken(!available)
+  }
+
+  const submit = async () => {
+    try {
+      await signup({ id: loginId, password, name, role })
+      setStep(3)
+    } catch (err) {
+      setSubmitError((err as Error).message)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-14">
@@ -133,14 +151,16 @@ export function Signup() {
                 onChange={(e) => {
                   setLoginId(e.target.value)
                   setIdChecked(false)
+                  setIdTaken(false)
                 }}
                 className="focus-ring flex-1 rounded-xl border border-line-2 bg-ivory-card px-4 py-2.5 text-sm"
               />
-              <Button type="button" variant="outline" disabled={!loginId} onClick={() => setIdChecked(true)}>
+              <Button type="button" variant="outline" disabled={!loginId} onClick={checkId}>
                 중복 확인
               </Button>
             </div>
             {idChecked && <p className="mt-1 text-xs text-green">사용 가능한 아이디예요</p>}
+            {idTaken && <p className="mt-1 text-xs text-error">이미 사용 중인 아이디예요</p>}
           </div>
 
           <div>
@@ -251,10 +271,11 @@ export function Signup() {
             <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
               이전
             </Button>
-            <Button disabled={!step2Valid} onClick={() => setStep(3)} className="flex-1">
+            <Button disabled={!step2Valid} onClick={submit} className="flex-1">
               다음
             </Button>
           </div>
+          {submitError && <p className="text-center text-sm text-error">{submitError}</p>}
         </div>
       )}
 

@@ -1,20 +1,22 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
 import { centers } from '../data/centers'
+import { WEEKDAY_LABELS, toISO } from '../data/date'
 import { useScheduleStore } from '../store/scheduleStore'
-
-const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
-
-function toISO(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 export function Schedule() {
   const { schedules, shareWithFamily, shareWithCenters, removeSchedule } = useScheduleStore()
-  const [viewDate, setViewDate] = useState(() => new Date())
-  const [selected, setSelected] = useState(() => toISO(new Date()))
+  const [params] = useSearchParams()
+  // ?date= comes back from the create/edit page so the calendar reopens on that day
+  const paramDate = params.get('date') ?? ''
+  const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(paramDate) ? paramDate : toISO(new Date())
+  const [viewDate, setViewDate] = useState(() => {
+    const [y, m] = initialDate.split('-').map(Number)
+    return new Date(y, m - 1, 1)
+  })
+  const [selected, setSelected] = useState(initialDate)
   const year = viewDate.getFullYear()
   const month = viewDate.getMonth()
 

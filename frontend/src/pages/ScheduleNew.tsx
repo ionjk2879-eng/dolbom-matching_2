@@ -34,6 +34,7 @@ export function ScheduleNew() {
   }
 
   const pageTitle = editing ? '일정 수정' : '일정 등록'
+  const originalDate = editing?.date ?? params.get('date') ?? ''
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -42,7 +43,7 @@ export function ScheduleNew() {
     const data = { title, date, start, end, centerId, memo }
     if (editing) updateSchedule(editing.id, data)
     else addSchedule(data)
-    navigate('/calendar')
+    navigate(`/calendar?date=${date}`)
   }
 
   return (
@@ -86,7 +87,7 @@ export function ScheduleNew() {
             </label>
             {error && <p className="text-sm text-error">{error}</p>}
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => navigate('/calendar')} className="flex-1">
+              <Button type="button" variant="outline" onClick={() => navigate(`/calendar?date=${originalDate}`)} className="flex-1">
                 취소
               </Button>
               <Button type="submit" className="flex-1">

@@ -36,6 +36,7 @@ export function ConsultNew() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (!grade || !phone || !date) return setError('아이 학년, 연락처, 희망 상담일을 입력해주세요')
+    if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)) return setError('휴대폰 번호 형식이 올바르지 않아요 (예: 010-1234-5678)')
     addConsult({ centerId: center.id, grade, phone, date, message })
     navigate(`/centers/${center.id}`)
   }

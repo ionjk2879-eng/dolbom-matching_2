@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { login } from '../api/auth'
 import { Button } from '../components/Button'
 import { PlaceholderImage } from '../components/PlaceholderImage'
@@ -14,6 +14,8 @@ export function Login() {
   const [keepLoggedIn, setKeepLoggedIn] = useState(false)
   const [errors, setErrors] = useState<{ id?: string; password?: string; form?: string }>({})
   const navigate = useNavigate()
+  // Set by RequireAuth when a logged-out visitor opened a members-only page
+  const from = (useLocation().state as { from?: string } | null)?.from
   const setUser = useAuthStore((s) => s.setUser)
 
   const idLabel = role === 'center' ? '센터 아이디' : '아이디'
@@ -28,7 +30,7 @@ export function Login() {
 
     try {
       setUser(await login(id, password, role), keepLoggedIn)
-      navigate('/')
+      navigate(from ?? '/', { replace: true })
     } catch (err) {
       setErrors({ form: (err as Error).message })
     }

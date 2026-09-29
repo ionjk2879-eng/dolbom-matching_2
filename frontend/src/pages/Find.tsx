@@ -56,9 +56,20 @@ export function Find() {
             {conditionSummary || '조건을 선택해주세요'}
           </span>
         </div>
-        <Link to="/" className="focus-ring rounded-full border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-green/50">
-          조건 변경
-        </Link>
+        <div className="flex gap-2">
+          {conditionSummary && (
+            <button
+              type="button"
+              onClick={match.reset}
+              className="focus-ring rounded-full border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-green/50"
+            >
+              조건 초기화
+            </button>
+          )}
+          <Link to="/" className="focus-ring rounded-full border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-green/50">
+            조건 변경
+          </Link>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">

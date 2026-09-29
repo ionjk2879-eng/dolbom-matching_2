@@ -1,10 +1,5 @@
 import { useMemo, useState } from 'react'
-
-const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
-
-function toISO(y: number, m: number, d: number) {
-  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-}
+import { WEEKDAY_LABELS, toISO } from '../data/date'
 
 export function Calendar({
   selectedDates,
@@ -20,8 +15,7 @@ export function Calendar({
   const month = viewDate.getMonth()
 
   const cells = useMemo(() => {
-    const now = new Date()
-    const today = toISO(now.getFullYear(), now.getMonth(), now.getDate())
+    const today = toISO(new Date())
     const first = new Date(year, month, 1)
     const daysInMonth = new Date(year, month + 1, 0).getDate()
     const startOffset = first.getDay()
@@ -29,7 +23,7 @@ export function Calendar({
     for (let i = 0; i < startOffset; i++) list.push({ day: null, iso: null, weekend: false, disabled: false })
     for (let d = 1; d <= daysInMonth; d++) {
       const dow = new Date(year, month, d).getDay()
-      const iso = toISO(year, month, d)
+      const iso = toISO(new Date(year, month, d))
       list.push({ day: d, iso, weekend: dow === 0 || dow === 6, disabled: iso < today })
     }
     return list

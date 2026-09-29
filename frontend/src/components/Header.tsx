@@ -129,11 +129,11 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link to="/calendar" className="focus-ring text-sm font-semibold text-ink-2 hover:text-ink">
-            내 일정
-          </Link>
           {user ? (
             <>
+              <Link to="/mypage" className="focus-ring text-sm font-semibold text-ink-2 hover:text-ink">
+                마이 페이지
+              </Link>
               <span className="text-sm font-semibold text-ink">{user.name}님</span>
               <button
                 type="button"

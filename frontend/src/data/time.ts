@@ -1,3 +1,5 @@
+import { WEEKDAY_LABELS } from './date'
+
 // Center hours like '13:00~19:30'; time options from the match form like '~오후5시'
 function closingMinutes(hours: string) {
   const [h, m] = hours.split('~')[1].split(':').map(Number)
@@ -11,8 +13,6 @@ export function coversTime(hours: string, time: string) {
   if (time === '오후7시 이후') return close > 19 * 60
   return true
 }
-
-const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
 // Selected dates are ISO strings like '2026-09-29'; center days are labels like '월'
 export function coversDates(days: string[], dates: string[]) {
