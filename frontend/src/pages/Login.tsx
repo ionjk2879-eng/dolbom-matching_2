@@ -1,11 +1,18 @@
-import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { PlaceholderImage } from '../components/PlaceholderImage'
+import { useAuth } from '../context/AuthContext'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
 
 type Role = 'user' | 'center'
 
 export function Login() {
+  const { user, loading } = useAuth()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const oauthError = searchParams.get('error')
   const [role, setRole] = useState<Role>('user')
   const [id, setId] = useState('')
   const [password, setPassword] = useState('')
@@ -14,6 +21,10 @@ export function Login() {
   const [errors, setErrors] = useState<{ id?: string; password?: string }>({})
 
   const idLabel = role === 'center' ? '센터 아이디' : '아이디'
+
+  useEffect(() => {
+    if (!loading && user) navigate('/', { replace: true })
+  }, [user, loading, navigate])
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -104,14 +115,26 @@ export function Login() {
           </Button>
         </form>
 
+        {oauthError && (
+          <p className="mt-4 text-center text-sm text-error">
+            {oauthError === 'cancelled' ? '로그인이 취소됐습니다.' : '로그인 중 오류가 발생했습니다.'}
+          </p>
+        )}
+
         {role === 'user' && (
           <div className="mt-4 flex flex-col gap-2">
-            <button className="focus-ring rounded-xl bg-[#FEE500] px-4 py-2.5 text-sm font-semibold text-ink">
+            <a
+              href={`${API_URL}/auth/kakao`}
+              className="focus-ring rounded-xl bg-[#FEE500] px-4 py-2.5 text-center text-sm font-semibold text-ink"
+            >
               카카오로 로그인
-            </button>
-            <button className="focus-ring rounded-xl bg-[#03C75A] px-4 py-2.5 text-sm font-semibold text-white">
+            </a>
+            <a
+              href={`${API_URL}/auth/naver`}
+              className="focus-ring rounded-xl bg-[#03C75A] px-4 py-2.5 text-center text-sm font-semibold text-white"
+            >
               네이버로 로그인
-            </button>
+            </a>
           </div>
         )}
 

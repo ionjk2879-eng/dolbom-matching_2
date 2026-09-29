@@ -9,6 +9,7 @@ import { Info } from './pages/Info'
 import { Guide } from './pages/Guide'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 
 function Layout() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
       </Route>
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
     </Routes>
   )
 }
