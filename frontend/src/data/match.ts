@@ -1,4 +1,5 @@
 import { gradesOverlap } from './grade'
+import { weekdayOf } from './date'
 import { coversDates, coversTime } from './time'
 import type { Center } from './types'
 
@@ -13,8 +14,12 @@ export function matchesConditions(c: Center, { area, grade, time, selectedDates 
   )
 }
 
-// Center is open on that date's weekday for the whole start~end slot ('HH:MM')
-export function fitsSlot(c: Center, date: string, start: string, end: string) {
+// Center is open on every given weekday ('월'…) for the whole start~end slot ('HH:MM')
+export function fitsWeekly(c: Center, weekdays: string[], start: string, end: string) {
   const [open, close] = c.hours.split('~')
-  return coversDates(c.days, [date]) && open <= start && close >= end
+  return weekdays.every((d) => c.days.includes(d)) && open <= start && close >= end
+}
+
+export function fitsSlot(c: Center, date: string, start: string, end: string) {
+  return fitsWeekly(c, [weekdayOf(date)], start, end)
 }

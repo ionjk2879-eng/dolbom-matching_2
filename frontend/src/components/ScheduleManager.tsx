@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { centers } from '../data/centers'
 import { WEEKDAY_LABELS, toISO, weekdayOf } from '../data/date'
+import { ConsultLink } from './ConsultLink'
 import { RepeatBadge } from './RepeatBadge'
 import { RepeatFields } from './RepeatFields'
 import { noRepeat, repeatDates, type Repeat } from '../data/repeat'
-import { fitsSlot } from '../data/match'
+import { fitsWeekly } from '../data/match'
 import type { Schedule } from '../data/types'
 import { useScheduleStore } from '../store/scheduleStore'
 
@@ -88,7 +89,14 @@ export function ScheduleManager({
   const dayItems = schedules.filter((s) => s.date === picked).sort((a, b) => a.start.localeCompare(b.start))
 
   const ready = !!picked && !!form.start && !!form.end && form.start < form.end
-  const fits = ready ? centers.filter((c) => fitsSlot(c, picked, form.start, form.end)) : []
+  // With a weekly repeat, recommend only centers open on every repeated weekday
+  const recDays =
+    ready && repeat.on && repeat.days.length
+      ? WEEKDAY_LABELS.filter((d) => repeat.days.includes(d))
+      : ready
+        ? [weekdayOf(picked)]
+        : []
+  const fits = ready ? centers.filter((c) => fitsWeekly(c, recDays, form.start, form.end)) : []
   const recs = [...fits]
     .sort((a, b) => Number(b.seats > 0) - Number(a.seats > 0) || a.distanceM - b.distanceM)
     .slice(0, 3)
@@ -208,6 +216,7 @@ export function ScheduleManager({
                   <span className="text-xs text-ink-3">
                     {s.start}~{s.end} · {centerName(s.centerId) ?? '센터 연결 안 됨'}
                   </span>
+                  {s.centerId && <ConsultLink centerId={s.centerId} className="mt-1 self-start text-xs" />}
                 </span>
                 {confirmId === s.id ? (
                   <div className="flex basis-full flex-wrap items-center justify-end gap-1.5">
@@ -311,7 +320,7 @@ export function ScheduleManager({
                 <span className="text-sm font-semibold text-ink">돌봄 센터 (선택)</span>
                 {ready && (
                   <span className="text-xs text-ink-3">
-                    {weekdayOf(picked)}요일 {form.start}~{form.end} 운영 {fits.length}곳
+                    {recDays.join('·')}요일 {form.start}~{form.end} 운영 {fits.length}곳
                   </span>
                 )}
               </div>

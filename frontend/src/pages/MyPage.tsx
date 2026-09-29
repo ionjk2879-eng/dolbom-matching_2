@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../components/Card'
+import { ConsultLink } from '../components/ConsultLink'
 import { ScheduleManager } from '../components/ScheduleManager'
 import { ShareToggle } from '../components/ShareToggle'
 import { centers } from '../data/centers'
@@ -172,14 +173,12 @@ export function MyPage() {
           )}
           <div className="flex flex-col gap-2">
             {matches.map(({ c, covered }) => (
-              <Link
-                key={c.id}
-                to={`/centers/${c.id}`}
-                className="focus-ring flex items-center gap-3.5 rounded-xl border border-line p-3 hover:border-green/40"
-              >
+              <div key={c.id} className="flex items-center gap-3.5 rounded-xl border border-line p-3">
                 <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <span className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-sm font-bold text-ink">{c.name}</span>
+                    <Link to={`/centers/${c.id}`} className="focus-ring text-sm font-bold text-ink hover:text-green">
+                      {c.name}
+                    </Link>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
                         c.seats ? 'bg-green-soft text-green' : 'bg-ivory-deep text-ink-2b'
@@ -195,8 +194,9 @@ export function MyPage() {
                 <span className="flex flex-col items-end">
                   <span className="text-xl font-extrabold text-green">{c.match}%</span>
                   <span className="text-[11px] text-ink-3">매칭</span>
+                  <ConsultLink centerId={c.id} className="mt-1 whitespace-nowrap text-xs" />
                 </span>
-              </Link>
+              </div>
             ))}
           </div>
         </Card>
