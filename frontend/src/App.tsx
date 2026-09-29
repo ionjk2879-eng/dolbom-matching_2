@@ -17,6 +17,7 @@ import { ConsultNew } from './pages/ConsultNew'
 import { Consults } from './pages/Consults'
 import { MyPage } from './pages/MyPage'
 import { RequireAuth } from './components/RequireAuth'
+import { NotFound } from './pages/NotFound'
 
 function Layout() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="/centers/:id/consult" element={<ConsultNew />} />
           <Route path="/consults" element={<Consults />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   )
