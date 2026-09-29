@@ -122,16 +122,16 @@ export function Login() {
         )}
 
         {role === 'user' && (
-          <div className="mt-4 flex flex-col gap-2">
+          <div className="mt-4 flex flex-row gap-2">
             <a
               href={`${API_URL}/auth/kakao`}
-              className="focus-ring rounded-xl bg-[#FEE500] px-4 py-2.5 text-center text-sm font-semibold text-ink"
+              className="focus-ring flex-1 rounded-xl bg-[#FEE500] px-4 py-2.5 text-center text-sm font-semibold text-ink"
             >
               카카오로 로그인
             </a>
             <a
               href={`${API_URL}/auth/naver`}
-              className="focus-ring rounded-xl bg-[#03C75A] px-4 py-2.5 text-center text-sm font-semibold text-white"
+              className="focus-ring flex-1 rounded-xl bg-[#03C75A] px-4 py-2.5 text-center text-sm font-semibold text-white"
             >
               네이버로 로그인
             </a>
