@@ -1,5 +1,6 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
 
 type MenuItem = {
   label: string
@@ -66,6 +67,8 @@ const menu: MenuItem[] = [
 export function Header() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
+  const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
   const navRef = useRef<HTMLElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   // Set when Escape moves focus back to the nav, so that focus doesn't reopen the menu
@@ -126,15 +129,33 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link to="/login" className="focus-ring text-sm font-semibold text-ink-2 hover:text-ink">
-            로그인
+          <Link to="/calendar" className="focus-ring text-sm font-semibold text-ink-2 hover:text-ink">
+            내 일정
           </Link>
-          <Link
-            to="/signup"
-            className="focus-ring rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-          >
-            회원가입
-          </Link>
+          {user ? (
+            <>
+              <span className="text-sm font-semibold text-ink">{user.name}님</span>
+              <button
+                type="button"
+                onClick={logout}
+                className="focus-ring rounded-xl border border-line-2 px-4 py-2 text-sm font-semibold text-ink-2 hover:text-ink"
+              >
+                로그아웃
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="focus-ring text-sm font-semibold text-ink-2 hover:text-ink">
+                로그인
+              </Link>
+              <Link
+                to="/signup"
+                className="focus-ring rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              >
+                회원가입
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

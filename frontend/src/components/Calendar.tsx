@@ -20,19 +20,22 @@ export function Calendar({
   const month = viewDate.getMonth()
 
   const cells = useMemo(() => {
+    const now = new Date()
+    const today = toISO(now.getFullYear(), now.getMonth(), now.getDate())
     const first = new Date(year, month, 1)
     const daysInMonth = new Date(year, month + 1, 0).getDate()
     const startOffset = first.getDay()
-    const list: { day: number | null; iso: string | null; weekend: boolean }[] = []
-    for (let i = 0; i < startOffset; i++) list.push({ day: null, iso: null, weekend: false })
+    const list: { day: number | null; iso: string | null; weekend: boolean; disabled: boolean }[] = []
+    for (let i = 0; i < startOffset; i++) list.push({ day: null, iso: null, weekend: false, disabled: false })
     for (let d = 1; d <= daysInMonth; d++) {
       const dow = new Date(year, month, d).getDay()
-      list.push({ day: d, iso: toISO(year, month, d), weekend: dow === 0 || dow === 6 })
+      const iso = toISO(year, month, d)
+      list.push({ day: d, iso, weekend: dow === 0 || dow === 6, disabled: iso < today })
     }
     return list
   }, [year, month])
 
-  const weekdayIsosInMonth = cells.filter((c) => c.iso && !c.weekend).map((c) => c.iso as string)
+  const weekdayIsosInMonth = cells.filter((c) => c.iso && !c.weekend && !c.disabled).map((c) => c.iso as string)
 
   return (
     <div>
@@ -73,10 +76,10 @@ export function Calendar({
             <button
               key={c.iso}
               type="button"
-              disabled={c.weekend}
+              disabled={c.disabled}
               onClick={() => c.iso && onToggle(c.iso)}
               className={`focus-ring aspect-square rounded-lg text-sm transition ${
-                c.weekend
+                c.disabled
                   ? 'cursor-not-allowed text-ink-3/50'
                   : selected
                     ? 'bg-green text-white'

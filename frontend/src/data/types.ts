@@ -2,9 +2,11 @@ export type Center = {
   id: string
   name: string
   area: string
+  district: string
   distanceM: number
   grade: string
   hours: string
+  days: string[]
   feeMonthly: number
   seats: number
   rating: number
@@ -69,4 +71,24 @@ export type NewsItem = {
   tag: string
   title: string
   date: string
+}
+
+export type Consult = {
+  id: string
+  centerId: string
+  grade: string
+  phone: string
+  date: string
+  message: string
+  createdAt: string
+}
+
+export type Schedule = {
+  id: string
+  title: string
+  date: string
+  start: string
+  end: string
+  centerId: string
+  memo: string
 }
