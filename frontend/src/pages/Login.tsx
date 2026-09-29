@@ -121,22 +121,28 @@ export function Login() {
           </p>
         )}
 
-        {role === 'user' && (
-          <div className="mt-4 flex flex-row gap-2">
-            <a
-              href={`${API_URL}/auth/kakao`}
-              className="focus-ring flex-1 rounded-xl bg-[#FEE500] px-4 py-2.5 text-center text-sm font-semibold text-ink"
-            >
-              카카오로 로그인
-            </a>
-            <a
-              href={`${API_URL}/auth/naver`}
-              className="focus-ring flex-1 rounded-xl bg-[#03C75A] px-4 py-2.5 text-center text-sm font-semibold text-white"
-            >
-              네이버로 로그인
-            </a>
-          </div>
-        )}
+        <div className="mt-4 flex flex-row gap-2">
+          {role === 'user' ? (
+            <>
+              <a
+                href={`${API_URL}/auth/kakao`}
+                className="focus-ring flex-1 rounded-xl bg-[#FEE500] px-4 py-2.5 text-center text-sm font-semibold text-ink"
+              >
+                카카오로 로그인
+              </a>
+              <a
+                href={`${API_URL}/auth/naver`}
+                className="focus-ring flex-1 rounded-xl bg-[#03C75A] px-4 py-2.5 text-center text-sm font-semibold text-white"
+              >
+                네이버로 로그인
+              </a>
+            </>
+          ) : (
+            <p className="flex-1 rounded-xl border border-line-2 bg-ivory-deep-2 px-4 py-2.5 text-center text-sm text-ink-3">
+              센터 운영자는 아이디/비밀번호로만 로그인할 수 있어요
+            </p>
+          )}
+        </div>
 
         <p className="mt-6 text-center text-sm text-ink-3">
           아직 계정이 없으신가요?{' '}
