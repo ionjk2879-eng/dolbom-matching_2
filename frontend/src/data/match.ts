@@ -12,3 +12,9 @@ export function matchesConditions(c: Center, { area, grade, time, selectedDates 
     coversDates(c.days, selectedDates)
   )
 }
+
+// Center is open on that date's weekday for the whole start~end slot ('HH:MM')
+export function fitsSlot(c: Center, date: string, start: string, end: string) {
+  const [open, close] = c.hours.split('~')
+  return coversDates(c.days, [date]) && open <= start && close >= end
+}
