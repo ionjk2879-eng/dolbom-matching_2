@@ -29,7 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json() as Promise<{ user: User | null }>)
-      .then(({ user }) => setUser(user))
+      .then(({ user }) => {
+        setUser(user)
+        if (!user) logout()
+      })
       .catch(() => setUser(null))
       .finally(() => setLoading(false))
   }, [token])
