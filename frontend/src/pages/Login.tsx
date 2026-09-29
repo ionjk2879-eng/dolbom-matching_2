@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/Button'
-import { PlaceholderImage } from '../components/PlaceholderImage'
 import { useAuth } from '../context/AuthContext'
+import loginHero from '../assets/login-hero.png'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
 
@@ -153,7 +153,11 @@ export function Login() {
           <br />
           안심할 수 있도록
         </p>
-        <PlaceholderImage caption="로그인 이미지" className="mt-6" />
+        <img
+          src={loginHero}
+          alt="아이와 선생님이 함께 공부하는 모습"
+          className="mt-6 aspect-video w-full rounded-xl border border-line-3 object-cover"
+        />
       </div>
     </div>
   )
