@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuthStore } from '../store/authStore'
+import { getMe } from '../api/auth'
 
 export default function AuthCallbackPage() {
-  const { saveToken } = useAuth()
+  const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -11,17 +12,28 @@ export default function AuthCallbackPage() {
     const token = params.get('token')
     const error = params.get('error')
 
-    if (token) {
-      saveToken(token)
-      navigate('/', { replace: true })
-    } else {
+    if (!token) {
       navigate(`/login?error=${error ?? 'unknown'}`, { replace: true })
+      return
     }
-  }, [saveToken, navigate])
+
+    getMe(token)
+      .then((user) => {
+        if (!user) {
+          navigate('/login?error=auth_failed', { replace: true })
+          return
+        }
+        setAuth(token, user, true)
+        navigate('/', { replace: true })
+      })
+      .catch(() => {
+        navigate('/login?error=auth_failed', { replace: true })
+      })
+  }, [setAuth, navigate])
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-      <p>로그인 처리 중...</p>
+    <div className="flex min-h-screen items-center justify-center bg-ivory">
+      <p className="text-ink-2">로그인 처리 중...</p>
     </div>
   )
 }

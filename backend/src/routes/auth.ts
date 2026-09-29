@@ -72,50 +72,56 @@ auth.get('/kakao', async (c) => {
 })
 
 auth.get('/kakao/callback', async (c) => {
-  const { code, state, error } = c.req.query()
-  if (error || !code || !state)
-    return c.redirect(`${c.env.FRONTEND_URL}/login?error=cancelled`)
-  if (!(await verifyState(state, c.env.JWT_SECRET)))
-    return c.redirect(`${c.env.FRONTEND_URL}/login?error=invalid_state`)
+  const frontendUrl = c.env.FRONTEND_URL
+  try {
+    const { code, state, error } = c.req.query()
+    if (error || !code || !state)
+      return c.redirect(`${frontendUrl}/login?error=cancelled`)
+    if (!(await verifyState(state, c.env.JWT_SECRET)))
+      return c.redirect(`${frontendUrl}/login?error=invalid_state`)
 
-  const tokenRes = await fetch(KAKAO_TOKEN, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: c.env.KAKAO_CLIENT_ID,
-      client_secret: c.env.KAKAO_CLIENT_SECRET,
-      redirect_uri: getCallbackUrl(c.req.raw, 'kakao'),
-      code,
-    }),
-  })
-  if (!tokenRes.ok) return c.redirect(`${c.env.FRONTEND_URL}/login?error=token_failed`)
+    const tokenRes = await fetch(KAKAO_TOKEN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: c.env.KAKAO_CLIENT_ID,
+        client_secret: c.env.KAKAO_CLIENT_SECRET,
+        redirect_uri: getCallbackUrl(c.req.raw, 'kakao'),
+        code,
+      }),
+    })
+    if (!tokenRes.ok) return c.redirect(`${frontendUrl}/login?error=token_failed`)
 
-  const { access_token } = (await tokenRes.json()) as { access_token: string }
+    const { access_token } = (await tokenRes.json()) as { access_token: string }
 
-  const userRes = await fetch(KAKAO_USER, {
-    headers: { Authorization: `Bearer ${access_token}` },
-  })
-  const kakao = (await userRes.json()) as {
-    id: number
-    kakao_account?: {
-      email?: string
-      profile?: { nickname?: string; profile_image_url?: string }
+    const userRes = await fetch(KAKAO_USER, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+    const kakao = (await userRes.json()) as {
+      id: number
+      kakao_account?: {
+        email?: string
+        profile?: { nickname?: string; profile_image_url?: string }
+      }
     }
+
+    const sql = createDb(c.env.DATABASE_URL)
+    const user = await upsertUser(sql, {
+      provider: 'kakao',
+      provider_id: String(kakao.id),
+      email: kakao.kakao_account?.email,
+      name: kakao.kakao_account?.profile?.nickname,
+      profile_image: kakao.kakao_account?.profile?.profile_image_url,
+    })
+    await sql.end()
+
+    const token = await issueJwt(user.id, c.env.JWT_SECRET)
+    return c.redirect(`${frontendUrl}/auth/callback?token=${token}`)
+  } catch (e) {
+    console.error('kakao callback error:', e)
+    return c.redirect(`${frontendUrl}/login?error=unknown`)
   }
-
-  const sql = createDb(c.env.DATABASE_URL)
-  const user = await upsertUser(sql, {
-    provider: 'kakao',
-    provider_id: String(kakao.id),
-    email: kakao.kakao_account?.email,
-    name: kakao.kakao_account?.profile?.nickname,
-    profile_image: kakao.kakao_account?.profile?.profile_image_url,
-  })
-  await sql.end()
-
-  const token = await issueJwt(user.id, c.env.JWT_SECRET)
-  return c.redirect(`${c.env.FRONTEND_URL}/auth/callback?token=${token}`)
 })
 
 // ── Naver ──────────────────────────────────────────────────────────────────
@@ -132,47 +138,53 @@ auth.get('/naver', async (c) => {
 })
 
 auth.get('/naver/callback', async (c) => {
-  const { code, state, error } = c.req.query()
-  if (error || !code || !state)
-    return c.redirect(`${c.env.FRONTEND_URL}/login?error=cancelled`)
-  if (!(await verifyState(state, c.env.JWT_SECRET)))
-    return c.redirect(`${c.env.FRONTEND_URL}/login?error=invalid_state`)
+  const frontendUrl = c.env.FRONTEND_URL
+  try {
+    const { code, state, error } = c.req.query()
+    if (error || !code || !state)
+      return c.redirect(`${frontendUrl}/login?error=cancelled`)
+    if (!(await verifyState(state, c.env.JWT_SECRET)))
+      return c.redirect(`${frontendUrl}/login?error=invalid_state`)
 
-  const tokenRes = await fetch(NAVER_TOKEN, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: c.env.NAVER_CLIENT_ID,
-      client_secret: c.env.NAVER_CLIENT_SECRET,
-      redirect_uri: getCallbackUrl(c.req.raw, 'naver'),
-      code,
-      state,
-    }),
-  })
-  if (!tokenRes.ok) return c.redirect(`${c.env.FRONTEND_URL}/login?error=token_failed`)
+    const tokenRes = await fetch(NAVER_TOKEN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: c.env.NAVER_CLIENT_ID,
+        client_secret: c.env.NAVER_CLIENT_SECRET,
+        redirect_uri: getCallbackUrl(c.req.raw, 'naver'),
+        code,
+        state,
+      }),
+    })
+    if (!tokenRes.ok) return c.redirect(`${frontendUrl}/login?error=token_failed`)
 
-  const { access_token } = (await tokenRes.json()) as { access_token: string }
+    const { access_token } = (await tokenRes.json()) as { access_token: string }
 
-  const userRes = await fetch(NAVER_USER, {
-    headers: { Authorization: `Bearer ${access_token}` },
-  })
-  const { response: naver } = (await userRes.json()) as {
-    response: { id: string; email?: string; name?: string; profile_image?: string }
+    const userRes = await fetch(NAVER_USER, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+    const { response: naver } = (await userRes.json()) as {
+      response: { id: string; email?: string; name?: string; profile_image?: string }
+    }
+
+    const sql = createDb(c.env.DATABASE_URL)
+    const user = await upsertUser(sql, {
+      provider: 'naver',
+      provider_id: naver.id,
+      email: naver.email,
+      name: naver.name,
+      profile_image: naver.profile_image,
+    })
+    await sql.end()
+
+    const token = await issueJwt(user.id, c.env.JWT_SECRET)
+    return c.redirect(`${frontendUrl}/auth/callback?token=${token}`)
+  } catch (e) {
+    console.error('naver callback error:', e)
+    return c.redirect(`${frontendUrl}/login?error=unknown`)
   }
-
-  const sql = createDb(c.env.DATABASE_URL)
-  const user = await upsertUser(sql, {
-    provider: 'naver',
-    provider_id: naver.id,
-    email: naver.email,
-    name: naver.name,
-    profile_image: naver.profile_image,
-  })
-  await sql.end()
-
-  const token = await issueJwt(user.id, c.env.JWT_SECRET)
-  return c.redirect(`${c.env.FRONTEND_URL}/auth/callback?token=${token}`)
 })
 
 // ── /me & logout ───────────────────────────────────────────────────────────
@@ -183,7 +195,7 @@ auth.get('/me', async (c) => {
 
   const token = authHeader.slice(7)
   try {
-    const payload = await verify(token, c.env.JWT_SECRET)
+    const payload = await verify(token, c.env.JWT_SECRET, 'HS256')
     const sql = createDb(c.env.DATABASE_URL)
     const user = await findUserById(sql, payload.sub as string)
     await sql.end()
