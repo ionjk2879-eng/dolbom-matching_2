@@ -7,8 +7,9 @@ import { Card } from '../components/Card'
 import { useHashTab } from '../hooks/useHashTab'
 import { centers } from '../data/centers'
 import { gradesOverlap } from '../data/grade'
-import { offers as initialOffers } from '../data/offers'
-import type { CenterRequest, Offer } from '../data/types'
+import { coversTime } from '../data/time'
+import { toISO } from '../data/date'
+import { useRequestStore } from '../store/requestStore'
 
 const TABS = ['new', 'offers', 'manage']
 const gradeOptions = ['유아', '초1~2', '초3~4', '초5~6']
@@ -20,21 +21,6 @@ const needOptions = ['차량 운행', '무료·저비용', '평점 높은 곳', 
 function toggle<T>(list: T[], v: T): T[] {
   return list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
 }
-
-const initialRequests: CenterRequest[] = [
-  {
-    id: 'r1',
-    grade: '초1~2',
-    areas: ['유성구'],
-    days: ['월', '화', '수'],
-    pickupTime: '~오후7시',
-    needs: ['차량 운행'],
-    memo: '',
-    createdAt: '2026-09-20',
-    offerCount: 2,
-    status: 'open',
-  },
-]
 
 export function RequestPage() {
   const [tab, setTab] = useHashTab(TABS, 'new')
@@ -48,40 +34,31 @@ export function RequestPage() {
   const [memo, setMemo] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
-  // #offers
-  const [offers, setOffers] = useState<Offer[]>(initialOffers)
+  // #offers, #manage
+  const { offers, requests, addRequest, respondOffer, toggleRequestStatus } = useRequestStore()
 
-  // #manage
-  const [requests, setRequests] = useState<CenterRequest[]>(initialRequests)
-
-  const matchedCount = grade ? centers.filter((c) => gradesOverlap(c.grade, grade)).length : centers.length
+  const matchedCount = centers.filter(
+    (c) =>
+      (!grade || gradesOverlap(c.grade, grade)) &&
+      (areas.length === 0 || areas.includes(c.district)) &&
+      days.every((d) => c.days.includes(d)) &&
+      coversTime(c.hours, pickupTime),
+  ).length
 
   const submitRequest = () => {
-    setRequests((prev) => [
-      {
-        id: `r${prev.length + 1}`,
-        grade,
-        areas,
-        days,
-        pickupTime,
-        needs,
-        memo,
-        createdAt: new Date().toISOString().slice(0, 10),
-        offerCount: 0,
-        status: 'open',
-      },
-      ...prev,
-    ])
+    addRequest({
+      grade,
+      areas,
+      days,
+      pickupTime,
+      needs,
+      memo,
+      createdAt: toISO(new Date()),
+      offerCount: 0,
+      status: 'open',
+    })
     setSubmitted(true)
   }
-
-  const respondOffer = (id: string, status: Offer['status']) =>
-    setOffers((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)))
-
-  const toggleRequestStatus = (id: string) =>
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: r.status === 'open' ? 'closed' : 'open' } : r)),
-    )
 
   return (
     <div>

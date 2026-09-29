@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { login } from '../api/auth'
 import { Button } from '../components/Button'
 import { PlaceholderImage } from '../components/PlaceholderImage'
-
-type Role = 'user' | 'center'
+import type { Role } from '../data/accounts'
+import { useAuthStore } from '../store/authStore'
 
 export function Login() {
   const [role, setRole] = useState<Role>('user')
@@ -11,16 +12,28 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [keepLoggedIn, setKeepLoggedIn] = useState(false)
-  const [errors, setErrors] = useState<{ id?: string; password?: string }>({})
+  const [errors, setErrors] = useState<{ id?: string; password?: string; form?: string }>({})
+  const navigate = useNavigate()
+  // Set by RequireAuth when a logged-out visitor opened a members-only page
+  const from = (useLocation().state as { from?: string } | null)?.from
+  const setUser = useAuthStore((s) => s.setUser)
 
   const idLabel = role === 'center' ? '센터 아이디' : '아이디'
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const next: typeof errors = {}
     if (!id) next.id = `${idLabel}를 입력해주세요`
     if (!password) next.password = '비밀번호를 입력해주세요'
     setErrors(next)
+    if (next.id || next.password) return
+
+    try {
+      setUser(await login(id, password, role), keepLoggedIn)
+      navigate(from ?? '/', { replace: true })
+    } catch (err) {
+      setErrors({ form: (err as Error).message })
+    }
   }
 
   return (
@@ -98,6 +111,8 @@ export function Login() {
               </button>
             </div>
           </div>
+
+          {errors.form && <p className="text-sm text-error">{errors.form}</p>}
 
           <Button type="submit" className="w-full">
             로그인

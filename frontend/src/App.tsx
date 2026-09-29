@@ -9,6 +9,14 @@ import { Info } from './pages/Info'
 import { Guide } from './pages/Guide'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
+import { Schedule } from './pages/Schedule'
+import { ScheduleNew } from './pages/ScheduleNew'
+import { ScheduleSettings } from './pages/ScheduleSettings'
+import { CenterDetail } from './pages/CenterDetail'
+import { ConsultNew } from './pages/ConsultNew'
+import { Consults } from './pages/Consults'
+import { MyPage } from './pages/MyPage'
+import { RequireAuth } from './components/RequireAuth'
 
 function Layout() {
   return (
@@ -34,6 +42,16 @@ export default function App() {
         <Route path="/guide" element={<Guide />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/centers/:id" element={<CenterDetail />} />
+        <Route element={<RequireAuth />}>
+          <Route path="/mypage" element={<MyPage />} />
+          <Route path="/calendar" element={<Schedule />} />
+          <Route path="/calendar/new" element={<ScheduleNew />} />
+          <Route path="/calendar/:id/edit" element={<ScheduleNew />} />
+          <Route path="/calendar/settings" element={<ScheduleSettings />} />
+          <Route path="/centers/:id/consult" element={<ConsultNew />} />
+          <Route path="/consults" element={<Consults />} />
+        </Route>
       </Route>
     </Routes>
   )

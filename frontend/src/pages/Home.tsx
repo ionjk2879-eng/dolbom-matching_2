@@ -9,7 +9,7 @@ import { PlaceholderImage } from '../components/PlaceholderImage'
 import { useMatchStore } from '../store/matchStore'
 import { useEventStore } from '../store/eventStore'
 import { centers } from '../data/centers'
-import { gradesOverlap } from '../data/grade'
+import { matchesConditions } from '../data/match'
 import { events } from '../data/events'
 import { newsItems, infoArticles } from '../data/info'
 
@@ -22,9 +22,9 @@ const partners = ['대전광역시', '유성구청', '동구청', '중구청', '
 export function Home() {
   const navigate = useNavigate()
   const match = useMatchStore()
-  const [heroArea, setHeroArea] = useState('')
-  const [heroGrade, setHeroGrade] = useState('')
-  const [heroTime, setHeroTime] = useState('')
+  const [heroArea, setHeroArea] = useState(match.area)
+  const [heroGrade, setHeroGrade] = useState(match.grade)
+  const [heroTime, setHeroTime] = useState(match.time)
   const [selectedOrgTypes, setSelectedOrgTypes] = useState<string[]>([])
   const [infoTab, setInfoTab] = useState<'play' | 'care' | 'card'>('play')
   const { applied: appliedEvents, toggleApply } = useEventStore()
@@ -41,9 +41,7 @@ export function Home() {
 
   const goMatch = () => navigate('/find')
 
-  const matchedCount = match.grade
-    ? centers.filter((c) => gradesOverlap(c.grade, match.grade)).length
-    : centers.length
+  const matchedCount = centers.filter((c) => matchesConditions(c, match)).length
 
   return (
     <div>

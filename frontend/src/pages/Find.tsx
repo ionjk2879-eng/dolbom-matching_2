@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Chip } from '../components/Chip'
 import { Button } from '../components/Button'
 import { SeatBadge } from '../components/SeatBadge'
@@ -7,6 +7,7 @@ import { MapView } from '../components/MapView'
 import { useMatchStore } from '../store/matchStore'
 import { centers } from '../data/centers'
 import { gradesOverlap } from '../data/grade'
+import { matchesConditions } from '../data/match'
 import type { Center } from '../data/types'
 
 const filterDefs: { label: string; test: (c: Center) => boolean }[] = [
@@ -22,6 +23,7 @@ type SortKey = 'match' | 'distance' | 'rating'
 
 export function Find() {
   const match = useMatchStore()
+  const navigate = useNavigate()
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [sort, setSort] = useState<SortKey>('match')
   const [selected, setSelected] = useState<string | null>(centers[0]?.id ?? null)
@@ -31,14 +33,14 @@ export function Find() {
 
   const results = useMemo(() => {
     const active = filterDefs.filter((f) => activeFilters.includes(f.label))
-    const filtered = centers.filter((c) => active.every((f) => f.test(c)))
+    const filtered = centers.filter((c) => matchesConditions(c, match) && active.every((f) => f.test(c)))
     const sorted = [...filtered].sort((a, b) => {
       if (sort === 'match') return b.match - a.match
       if (sort === 'distance') return a.distanceM - b.distanceM
       return b.rating - a.rating
     })
     return sorted
-  }, [activeFilters, sort])
+  }, [activeFilters, sort, match])
 
   const selectedCenter = results.find((c) => c.id === selected) ?? null
   const conditionSummary = [match.area, match.grade, match.time, match.selectedDates.length ? `${match.selectedDates.length}일` : '']
@@ -54,9 +56,20 @@ export function Find() {
             {conditionSummary || '조건을 선택해주세요'}
           </span>
         </div>
-        <Link to="/" className="focus-ring rounded-full border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-green/50">
-          조건 변경
-        </Link>
+        <div className="flex gap-2">
+          {conditionSummary && (
+            <button
+              type="button"
+              onClick={match.reset}
+              className="focus-ring rounded-full border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-green/50"
+            >
+              조건 초기화
+            </button>
+          )}
+          <Link to="/" className="focus-ring rounded-full border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-green/50">
+            조건 변경
+          </Link>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -129,10 +142,12 @@ export function Find() {
                 {selectedCenter.area} · {selectedCenter.grade} · {selectedCenter.hours}
               </p>
               <div className="mt-3 flex gap-2">
-                <Button variant="outline" className="flex-1">
+                <Button variant="outline" onClick={() => navigate(`/centers/${selectedCenter.id}`)} className="flex-1">
                   상세 보기
                 </Button>
-                <Button className="flex-1">상담 신청</Button>
+                <Button onClick={() => navigate(`/centers/${selectedCenter.id}/consult`)} className="flex-1">
+                  상담 신청
+                </Button>
               </div>
             </div>
           )}
