@@ -45,24 +45,29 @@ export function MapView({
   const mapRef = useRef<any>(null)
   const markersRef = useRef<Map<string, any>>(new Map())
   const [ready, setReady] = useState(typeof naver !== 'undefined')
+  const [mapError, setMapError] = useState('')
 
   // 스크립트 로드
   useEffect(() => {
     if (ready) return
     loadNaverMapsScript()
       .then(() => setReady(true))
-      .catch((e) => console.error('Naver Maps 로드 실패', e))
+      .catch((e) => setMapError(`SDK 로드 실패: ${e}`))
   }, [ready])
 
   // 지도 초기화 (스크립트 로드 후 1회)
   useEffect(() => {
     if (!ready || !containerRef.current || mapRef.current) return
-    mapRef.current = new naver.maps.Map(containerRef.current, {
-      center: new naver.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
-      zoom: DEFAULT_ZOOM,
-      mapTypeControl: false,
-      scaleControl: false,
-    })
+    try {
+      mapRef.current = new naver.maps.Map(containerRef.current, {
+        center: new naver.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
+        zoom: DEFAULT_ZOOM,
+        mapTypeControl: false,
+        scaleControl: false,
+      })
+    } catch (e) {
+      setMapError(`지도 초기화 실패: ${e}`)
+    }
   }, [ready])
 
   // 핀 & 선택 상태 동기화
@@ -104,6 +109,17 @@ export function MapView({
       if (pin) mapRef.current.panTo(new naver.maps.LatLng(pin.lat, pin.lng))
     }
   }, [pins, selected, onSelect, ready])
+
+  if (mapError) {
+    return (
+      <div className="flex h-full min-h-[420px] w-full items-center justify-center rounded-2xl border border-line-3 bg-ivory-deep p-6 text-center">
+        <div>
+          <p className="text-sm font-semibold text-error">지도를 불러오지 못했어요</p>
+          <p className="mt-1 text-xs text-ink-3 break-all">{mapError}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
