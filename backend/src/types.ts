@@ -10,11 +10,12 @@ export type Env = {
 
 export type User = {
   id: string
-  provider: 'kakao' | 'naver'
+  provider: 'kakao' | 'naver' | 'local'
   provider_id: string
   email: string | null
   name: string | null
   profile_image: string | null
+  login_id: string | null
   created_at: string
   updated_at: string
 }

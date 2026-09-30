@@ -4,9 +4,9 @@ import { isIdAvailable, signup } from '../api/auth'
 import { Button } from '../components/Button'
 import { Chip } from '../components/Chip'
 import { Card } from '../components/Card'
-import type { Role } from '../data/accounts'
 
 type Step = 1 | 2 | 3
+type Role = 'user' | 'center'
 
 const requiredTerms = ['이용약관 동의 (필수)', '개인정보 수집·이용 동의 (필수)', '만 14세 이상입니다 (필수)']
 const optionalTerms = ['마케팅 정보 수신 동의 (선택)']
@@ -56,7 +56,7 @@ export function Signup() {
 
   const submit = async () => {
     try {
-      await signup({ id: loginId, password, name, role })
+      await signup({ loginId, password, name })
       setStep(3)
     } catch (err) {
       setSubmitError((err as Error).message)
