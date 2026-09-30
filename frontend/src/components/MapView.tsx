@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Center } from '../data/types'
 
 declare const naver: any // eslint-disable-line @typescript-eslint/no-explicit-any
 
-export type MapPin = Pick<Center, 'id' | 'lat' | 'lng' | 'name' | 'feeMonthly'>
+export type MapPin = {
+  id: string
+  lat: number
+  lng: number
+  name: string
+  costPerHour: number
+}
 
 const NAVER_CLIENT_ID = 'l889wyovvq'
 const DEFAULT_CENTER = { lat: 36.351, lng: 127.385 }
@@ -69,7 +74,7 @@ export function MapView({
 
     pins.forEach((pin) => {
       const isSel = pin.id === selected
-      const label = pin.feeMonthly === 0 ? '무료' : `${Math.round(pin.feeMonthly / 10000)}만`
+      const label = pin.costPerHour === 0 ? '무료' : `${pin.costPerHour.toLocaleString()}원`
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(pin.lat, pin.lng),
         map: mapRef.current,
