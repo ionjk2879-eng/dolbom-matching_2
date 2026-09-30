@@ -96,18 +96,20 @@ export function Login() {
               <span className="flex-1 h-px bg-line-2" />
             </div>
 
-            <a
-              href={`${API_URL}/auth/kakao`}
-              className="focus-ring block rounded-xl bg-[#FEE500] px-4 py-3 text-center text-sm font-semibold text-ink"
-            >
-              카카오로 로그인
-            </a>
-            <a
-              href={`${API_URL}/auth/naver`}
-              className="focus-ring block rounded-xl bg-[#03C75A] px-4 py-3 text-center text-sm font-semibold text-white"
-            >
-              네이버로 로그인
-            </a>
+            <div className="flex gap-2">
+              <a
+                href={`${API_URL}/auth/kakao`}
+                className="focus-ring flex-1 rounded-xl bg-[#FEE500] px-4 py-3 text-center text-sm font-semibold text-ink"
+              >
+                카카오로 로그인
+              </a>
+              <a
+                href={`${API_URL}/auth/naver`}
+                className="focus-ring flex-1 rounded-xl bg-[#03C75A] px-4 py-3 text-center text-sm font-semibold text-white"
+              >
+                네이버로 로그인
+              </a>
+            </div>
           </div>
         ) : (
           <div className="rounded-xl border border-line bg-ivory-deep-2 px-6 py-8 text-center">
