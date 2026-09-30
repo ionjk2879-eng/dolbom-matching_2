@@ -1,13 +1,31 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Center } from '../data/types'
 
-/* global naver */
 declare const naver: any // eslint-disable-line @typescript-eslint/no-explicit-any
 
 export type MapPin = Pick<Center, 'id' | 'lat' | 'lng' | 'name' | 'feeMonthly'>
 
+const NAVER_CLIENT_ID = 'l889wyovvq'
 const DEFAULT_CENTER = { lat: 36.351, lng: 127.385 }
 const DEFAULT_ZOOM = 14
+
+function loadNaverMapsScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof naver !== 'undefined') { resolve(); return }
+    const existing = document.getElementById('naver-maps-sdk')
+    if (existing) {
+      existing.addEventListener('load', () => resolve())
+      existing.addEventListener('error', reject)
+      return
+    }
+    const script = document.createElement('script')
+    script.id = 'naver-maps-sdk'
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`
+    script.onload = () => resolve()
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+}
 
 export function MapView({
   pins,
@@ -21,22 +39,30 @@ export function MapView({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const markersRef = useRef<Map<string, any>>(new Map())
+  const [ready, setReady] = useState(typeof naver !== 'undefined')
 
-  // 지도 초기화 (마운트 1회)
+  // 스크립트 로드
   useEffect(() => {
-    if (!containerRef.current || typeof naver === 'undefined') return
+    if (ready) return
+    loadNaverMapsScript()
+      .then(() => setReady(true))
+      .catch((e) => console.error('Naver Maps 로드 실패', e))
+  }, [ready])
+
+  // 지도 초기화 (스크립트 로드 후 1회)
+  useEffect(() => {
+    if (!ready || !containerRef.current || mapRef.current) return
     mapRef.current = new naver.maps.Map(containerRef.current, {
       center: new naver.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
       zoom: DEFAULT_ZOOM,
       mapTypeControl: false,
       scaleControl: false,
-      logoControl: true,
     })
-  }, [])
+  }, [ready])
 
   // 핀 & 선택 상태 동기화
   useEffect(() => {
-    if (!mapRef.current || typeof naver === 'undefined') return
+    if (!mapRef.current) return
 
     markersRef.current.forEach((m) => m.setMap(null))
     markersRef.current.clear()
@@ -68,17 +94,22 @@ export function MapView({
       markersRef.current.set(pin.id, marker)
     })
 
-    // 선택된 센터로 지도 이동
     if (selected) {
       const pin = pins.find((p) => p.id === selected)
       if (pin) mapRef.current.panTo(new naver.maps.LatLng(pin.lat, pin.lng))
     }
-  }, [pins, selected, onSelect])
+  }, [pins, selected, onSelect, ready])
 
   return (
     <div
       ref={containerRef}
       className="h-full min-h-[420px] w-full overflow-hidden rounded-2xl border border-line-3"
-    />
+    >
+      {!ready && (
+        <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-ink-3">
+          지도 로딩 중...
+        </div>
+      )}
+    </div>
   )
 }
