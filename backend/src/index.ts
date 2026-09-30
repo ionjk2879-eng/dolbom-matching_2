@@ -2,6 +2,9 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { createDb } from './db/index'
 import auth from './routes/auth'
+import schedulesRoute from './routes/schedules'
+import childrenRoute from './routes/children'
+import gapsRoute from './routes/gaps'
 import type { Env } from './types'
 
 const app = new Hono<{ Bindings: Env }>()
@@ -15,6 +18,9 @@ app.use('*', async (c, next) => {
 })
 
 app.route('/auth', auth)
+app.route('/schedules', schedulesRoute)
+app.route('/children', childrenRoute)
+app.route('/', gapsRoute)
 
 app.get('/', (c) => c.json({ message: 'dolbom-matching API' }))
 
