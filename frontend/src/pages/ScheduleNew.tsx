@@ -6,7 +6,6 @@ import { Card } from '../components/Card'
 import { Chip } from '../components/Chip'
 import { WEEKDAY_LABELS } from '../data/date'
 import type { ScheduleType } from '../data/types'
-import { useScheduleStore } from '../store/scheduleStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 
 const typeLabels: Record<ScheduleType, string> = {
@@ -18,15 +17,14 @@ const typeLabels: Record<ScheduleType, string> = {
 export function ScheduleNew() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const { addSchedule, updateSchedule } = useScheduleStore()
-  const editing = useScheduleStore((s) => s.schedules.find((x) => x.id === id))
-  const children = useCareScheduleStore((s) => s.children)
+  const { addSchedule, updateSchedule, children } = useCareScheduleStore()
+  const editing = useCareScheduleStore((s) => s.schedules.find((x) => x.id === id))
 
   const [type, setType] = useState<ScheduleType>(editing?.type ?? 'parent_work')
-  const [childId, setChildId] = useState(editing?.child_id ?? '')
-  const [days, setDays] = useState<number[]>(editing?.days_of_week ?? [1, 2, 3, 4, 5])
-  const [startTime, setStartTime] = useState(editing?.start_time ?? '09:00')
-  const [endTime, setEndTime] = useState(editing?.end_time ?? '18:00')
+  const [childId, setChildId] = useState(editing?.childId ?? '')
+  const [days, setDays] = useState<number[]>(editing?.daysOfWeek ?? [1, 2, 3, 4, 5])
+  const [startTime, setStartTime] = useState(editing?.startTime ?? '09:00')
+  const [endTime, setEndTime] = useState(editing?.endTime ?? '18:00')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -54,10 +52,10 @@ export function ScheduleNew() {
 
     const data = {
       type,
-      child_id: needsChild ? childId : null,
-      days_of_week: days,
-      start_time: startTime,
-      end_time: endTime,
+      childId: needsChild ? childId : null,
+      daysOfWeek: days,
+      startTime,
+      endTime,
     }
 
     setSubmitting(true)
