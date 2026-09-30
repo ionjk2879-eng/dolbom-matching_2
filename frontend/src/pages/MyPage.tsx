@@ -1,14 +1,19 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
-import { centers } from '../data/centers'
-import { toISO } from '../data/date'
+import { WEEKDAY_LABELS, toISO } from '../data/date'
+import type { ScheduleType } from '../data/types'
 import { useAuthStore } from '../store/authStore'
 import { useScheduleStore } from '../store/scheduleStore'
-import { useConsultStore } from '../store/consultStore'
-import { useRequestStore } from '../store/requestStore'
+import { useCareScheduleStore } from '../store/careScheduleStore'
+import { computeGaps } from '../data/gaps'
 
-const centerName = (id: string) => centers.find((c) => c.id === id)?.name
+const typeLabels: Record<ScheduleType, string> = {
+  parent_work: '부모 근무',
+  child_school: '아이 학교',
+  care: '돌봄(선택한 옵션)',
+}
 
 function Section({ title, to, children }: { title: string; to: string; children: React.ReactNode }) {
   return (
@@ -26,18 +31,16 @@ function Section({ title, to, children }: { title: string; to: string; children:
 
 export function MyPage() {
   const user = useAuthStore((s) => s.user)
-  const schedules = useScheduleStore((s) => s.schedules)
-  const consults = useConsultStore((s) => s.consults)
-  const { requests, offers } = useRequestStore()
+  const { schedules, loadSchedules } = useScheduleStore()
+  const { children, schedules: careSchedules, exceptions } = useCareScheduleStore()
 
+  useEffect(() => {
+    loadSchedules()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const recentSchedules = schedules.slice(0, 3)
   const today = toISO(new Date())
-  const upcoming = schedules
-    .filter((s) => s.date >= today)
-    .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start))
-    .slice(0, 3)
-  const recentConsults = [...consults].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 3)
-  const openRequests = requests.filter((r) => r.status === 'open').length
-  const pendingOffers = offers.filter((o) => o.status === 'pending').length
 
   return (
     <div>
@@ -51,44 +54,46 @@ export function MyPage() {
           </p>
         </Card>
 
-        <Section title="돌봄 요청" to="/request#manage">
-          <div className="flex gap-6 text-sm">
-            <p className="text-ink-2">
-              진행 중인 요청 <span className="font-bold text-ink">{openRequests}건</span>
+        <Section title="오늘의 돌봄 공백" to="/gaps">
+          {children.length === 0 && (
+            <p className="text-sm text-ink-3">
+              등록된 아이/일정이 없어요.{' '}
+              <Link to="/gaps/setup" className="font-semibold text-green underline">
+                등록하기
+              </Link>
             </p>
-            <Link to="/request#offers" className="focus-ring text-ink-2 hover:text-ink">
-              답변 대기 제안 <span className="font-bold text-ink">{pendingOffers}건</span>
-            </Link>
-          </div>
+          )}
+          {children.map((child) => {
+            const gaps = computeGaps(child, today, careSchedules, exceptions)
+            return (
+              <div key={child.id} className="rounded-xl border border-line p-3">
+                <p className="text-sm font-bold text-ink">{child.name}</p>
+                {gaps.length === 0 ? (
+                  <p className="mt-1 text-xs text-ink-3">오늘은 돌봄 공백이 없어요</p>
+                ) : (
+                  gaps.map((g, i) => (
+                    <span key={i} className="mt-1 inline-block rounded-lg bg-warn-bg px-2 py-1 text-xs font-bold text-warn">
+                      {g.start}~{g.end}
+                    </span>
+                  ))
+                )}
+              </div>
+            )
+          })}
         </Section>
 
-        <Section title="다가오는 일정" to="/calendar">
-          {upcoming.length === 0 && <p className="text-sm text-ink-3">예정된 일정이 없어요</p>}
-          {upcoming.map((s) => (
+        <Section title="등록된 일정" to="/calendar">
+          {recentSchedules.length === 0 && <p className="text-sm text-ink-3">등록된 일정이 없어요</p>}
+          {recentSchedules.map((s) => (
             <Link
               key={s.id}
-              to={`/calendar?date=${s.date}`}
+              to="/calendar"
               className="focus-ring rounded-xl border border-line p-3 hover:border-green/40"
             >
-              <p className="text-sm font-bold text-ink">{s.title}</p>
+              <p className="text-sm font-bold text-ink">{typeLabels[s.type]}</p>
               <p className="mt-1 text-xs text-ink-3">
-                {s.date} {s.start}~{s.end}
-                {s.centerId && ` · ${centerName(s.centerId)}`}
+                {s.days_of_week.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.start_time}~{s.end_time}
               </p>
-            </Link>
-          ))}
-        </Section>
-
-        <Section title="최근 상담 신청" to="/consults">
-          {recentConsults.length === 0 && <p className="text-sm text-ink-3">아직 신청한 상담이 없어요</p>}
-          {recentConsults.map((c) => (
-            <Link
-              key={c.id}
-              to={`/centers/${c.centerId}`}
-              className="focus-ring rounded-xl border border-line p-3 hover:border-green/40"
-            >
-              <p className="text-sm font-bold text-ink">{centerName(c.centerId) ?? '알 수 없는 센터'}</p>
-              <p className="mt-1 text-xs text-ink-3">희망 상담일 {c.date}</p>
             </Link>
           ))}
         </Section>

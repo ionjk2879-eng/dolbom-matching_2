@@ -1,94 +1,60 @@
-export type Center = {
+export type CareProviderType = 'school_care' | 'community_care' | 'child_care_service' | 'academy' | 'babysitter'
+
+// GET /care-options 응답 모양 (backend/src/db/schema.sql 의 care_providers 테이블과 동일)
+export type CareOption = {
   id: string
   name: string
-  area: string
-  district: string
-  distanceM: number
-  grade: string
-  hours: string
-  days: string[]
-  feeMonthly: number
-  seats: number
-  rating: number
-  reviews: number
-  bus: boolean
-  tags: string[]
-  match: number
-  lat: number
-  lng: number
-  type: string
+  type: CareProviderType
+  address: string
+  latitude: number | null
+  longitude: number | null
+  min_grade: number | null
+  max_grade: number | null
+  open_time: string
+  close_time: string
+  cost_per_hour: number
+  phone: string | null
+  created_at: string
 }
 
-export type Offer = {
-  id: string
-  centerId: string
-  message: string
-  start: string
-  time: string
-  fee: number
-  bus: boolean
-  status: 'pending' | 'accepted' | 'declined'
-}
+export type ScheduleType = 'child_school' | 'parent_work' | 'care'
 
-export type CenterRequest = {
-  id: string
-  grade: string
-  areas: string[]
-  days: string[]
-  pickupTime: string
-  needs: string[]
-  memo: string
-  createdAt: string
-  offerCount: number
-  status: 'open' | 'closed'
-}
-
-export type EventItem = {
-  id: string
-  gu: string
-  kind: string
-  title: string
-  date: string
-  age: string
-  ageGroup: '유아' | '초등' | '양육자'
-  place: string
-  fee: string
-  edu: boolean
-  full?: boolean
-  applied?: boolean
-}
-
-export type InfoArticle = {
-  id: string
-  category: 'play' | 'care' | 'card'
-  title: string
-  desc: string
-  featured?: boolean
-}
-
-export type NewsItem = {
-  id: number
-  tag: string
-  title: string
-  date: string
-}
-
-export type Consult = {
-  id: string
-  centerId: string
-  grade: string
-  phone: string
-  date: string
-  message: string
-  createdAt: string
-}
-
+// GET/POST /schedules 응답 모양 (backend/src/db/schema.sql 의 schedules 테이블과 동일)
 export type Schedule = {
   id: string
-  title: string
-  date: string
-  start: string
-  end: string
-  centerId: string
-  memo: string
+  user_id: string
+  child_id: string | null
+  type: ScheduleType
+  days_of_week: number[]
+  start_time: string
+  end_time: string
+  created_at: string
+}
+
+// -- 반복 주간 일정 / 돌봄 공백 계산 (careScheduleStore 전용 로컬 mock 모델) --
+
+export type Child = {
+  id: string
+  name: string
+  grade: number // 1~6
+  commuteMinutes: number
+}
+
+export type RecurringSchedule = {
+  id: string
+  childId: string | null // null = 부모 본인 일정(parent_work)
+  type: ScheduleType
+  daysOfWeek: number[] // 0(일)~6(토), WEEKDAY_LABELS와 동일한 인덱스
+  startTime: string // 'HH:mm'
+  endTime: string
+  careOptionId?: string // type: 'care'일 때, 어느 CareOption을 선택해서 생긴 일정인지
+}
+
+export type ScheduleException = {
+  id: string
+  scheduleId: string
+  date: string // 'YYYY-MM-DD'
+  startTime: string | null
+  endTime: string | null
+  isCancelled: boolean
 }

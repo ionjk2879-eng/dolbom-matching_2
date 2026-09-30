@@ -1,6 +1,10 @@
-import type { Center } from '../data/types'
-
-export type MapPin = Pick<Center, 'id' | 'lat' | 'lng' | 'name' | 'feeMonthly'>
+export type MapPin = {
+  id: string
+  lat: number
+  lng: number
+  name: string
+  costPerHour: number
+}
 
 // ponytail: mock pin layout via lat/lng min-max normalization; swap for Kakao/Naver Map SDK when a real key is available
 export function MapView({
@@ -37,7 +41,7 @@ export function MapView({
                 : 'border-line-2 bg-ivory-card text-ink hover:border-green/50'
             }`}
           >
-            {p.feeMonthly === 0 ? '무료' : `${Math.round(p.feeMonthly / 10000)}만`}
+            {p.costPerHour === 0 ? '무료' : `${p.costPerHour.toLocaleString()}원`}
           </button>
         )
       })}

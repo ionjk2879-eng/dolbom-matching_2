@@ -1,0 +1,95 @@
+import type { CareOption, Child, RecurringSchedule, ScheduleException } from './types'
+
+type Interval = { start: number; end: number } // minutes from midnight
+
+export function toMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
+export function toTime(mins: number): string {
+  const h = Math.floor(mins / 60).toString().padStart(2, '0')
+  const m = (mins % 60).toString().padStart(2, '0')
+  return `${h}:${m}`
+}
+
+// Resolves one schedule's interval for a specific date, applying exceptions.
+// Returns null if the schedule doesn't apply that day (wrong weekday, cancelled).
+function resolveInterval(
+  schedule: RecurringSchedule,
+  date: string,
+  exceptions: ScheduleException[],
+): Interval | null {
+  const dow = new Date(`${date}T00:00:00`).getDay()
+  const exception = exceptions.find((e) => e.scheduleId === schedule.id && e.date === date)
+  if (exception?.isCancelled) return null
+  if (!exception && !schedule.daysOfWeek.includes(dow)) return null
+  const start = exception?.startTime ?? schedule.startTime
+  const end = exception?.endTime ?? schedule.endTime
+  return { start: toMinutes(start), end: toMinutes(end) }
+}
+
+// Subtracts `covered` intervals from `busy` intervals.
+export function subtract(busy: Interval[], covered: Interval[]): Interval[] {
+  let result = busy
+  for (const c of covered) {
+    const next: Interval[] = []
+    for (const b of result) {
+      if (c.end <= b.start || c.start >= b.end) {
+        next.push(b) // no overlap
+        continue
+      }
+      if (c.start > b.start) next.push({ start: b.start, end: Math.min(c.start, b.end) })
+      if (c.end < b.end) next.push({ start: Math.max(c.end, b.start), end: b.end })
+    }
+    result = next.filter((i) => i.end > i.start)
+  }
+  return result
+}
+
+export type Gap = { start: string; end: string }
+
+// 돌봄 공백 = 부모가 근무 중(parent_work)인데 아이가 학교/돌봄(child_school, care)으로
+// 커버되지 않는 시간. child_school은 통학시간만큼 커버 종료 시각을 늦춰 계산한다.
+// 예: 아이 학교 09:00~15:00 + 통학 20분, 부모 근무 09:00~18:30 -> 공백 15:20~18:30
+export function computeGaps(
+  child: Child,
+  date: string,
+  schedules: RecurringSchedule[],
+  exceptions: ScheduleException[],
+): Gap[] {
+  const parentBusy = schedules
+    .filter((s) => s.type === 'parent_work' && s.childId === null)
+    .map((s) => resolveInterval(s, date, exceptions))
+    .filter((i): i is Interval => i !== null)
+
+  const childCovered = schedules
+    .filter((s) => s.childId === child.id && (s.type === 'child_school' || s.type === 'care'))
+    .map((s) => {
+      const interval = resolveInterval(s, date, exceptions)
+      if (!interval) return null
+      const commuteBuffer = s.type === 'child_school' ? child.commuteMinutes : 0
+      return { start: interval.start, end: interval.end + commuteBuffer }
+    })
+    .filter((i): i is Interval => i !== null)
+
+  return subtract(parentBusy, childCovered)
+    .sort((a, b) => a.start - b.start)
+    .map((i) => ({ start: toTime(i.start), end: toTime(i.end) }))
+}
+
+// 돌봄 옵션의 운영시간이 공백과 겹치는 구간. 안 겹치면 null.
+export function overlapWithGap(option: CareOption, gap: Gap): Gap | null {
+  const start = Math.max(toMinutes(gap.start), toMinutes(option.open_time))
+  const end = Math.min(toMinutes(gap.end), toMinutes(option.close_time))
+  if (start >= end) return null
+  return { start: toTime(start), end: toTime(end) }
+}
+
+// 공백에서 이미 선택한(체크된) 옵션들의 커버 구간을 뺀 나머지
+export function remainingGap(gap: Gap, covered: Gap[]): Gap[] {
+  return subtract(
+    [{ start: toMinutes(gap.start), end: toMinutes(gap.end) }],
+    covered.map((c) => ({ start: toMinutes(c.start), end: toMinutes(c.end) })),
+  ).map((i) => ({ start: toTime(i.start), end: toTime(i.end) }))
+}
