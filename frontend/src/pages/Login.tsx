@@ -64,25 +64,6 @@ export function Login() {
 
         {role === 'user' ? (
           <div className="flex flex-col gap-3">
-            <a
-              href={`${API_URL}/auth/kakao`}
-              className="focus-ring block rounded-xl bg-[#FEE500] px-4 py-3 text-center text-sm font-semibold text-ink"
-            >
-              카카오로 로그인
-            </a>
-            <a
-              href={`${API_URL}/auth/naver`}
-              className="focus-ring block rounded-xl bg-[#03C75A] px-4 py-3 text-center text-sm font-semibold text-white"
-            >
-              네이버로 로그인
-            </a>
-
-            <div className="flex items-center gap-3 my-1">
-              <span className="flex-1 h-px bg-line-2" />
-              <span className="text-xs text-ink-3">또는</span>
-              <span className="flex-1 h-px bg-line-2" />
-            </div>
-
             <form onSubmit={handleLogin} className="flex flex-col gap-3">
               <input
                 value={loginId}
@@ -108,6 +89,25 @@ export function Login() {
                 {loading ? '로그인 중...' : '로그인'}
               </button>
             </form>
+
+            <div className="flex items-center gap-3 my-1">
+              <span className="flex-1 h-px bg-line-2" />
+              <span className="text-xs text-ink-3">또는</span>
+              <span className="flex-1 h-px bg-line-2" />
+            </div>
+
+            <a
+              href={`${API_URL}/auth/kakao`}
+              className="focus-ring block rounded-xl bg-[#FEE500] px-4 py-3 text-center text-sm font-semibold text-ink"
+            >
+              카카오로 로그인
+            </a>
+            <a
+              href={`${API_URL}/auth/naver`}
+              className="focus-ring block rounded-xl bg-[#03C75A] px-4 py-3 text-center text-sm font-semibold text-white"
+            >
+              네이버로 로그인
+            </a>
           </div>
         ) : (
           <div className="rounded-xl border border-line bg-ivory-deep-2 px-6 py-8 text-center">
