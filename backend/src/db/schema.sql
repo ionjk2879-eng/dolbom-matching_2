@@ -1,7 +1,6 @@
 CREATE TYPE schedule_type AS ENUM ('child_school', 'parent_work', 'care');
 CREATE TYPE care_provider_type AS ENUM ('school_care', 'community_care', 'child_care_service', 'academy', 'babysitter');
 
--- OAuth 기반 users 테이블 (카카오/네이버)
 CREATE TABLE IF NOT EXISTS users (
   id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
   provider      VARCHAR(20)  NOT NULL,
@@ -9,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
   email         VARCHAR(255),
   name          VARCHAR(100),
   profile_image TEXT,
+  login_id      VARCHAR(100) UNIQUE,
+  password_hash TEXT,
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   UNIQUE (provider, provider_id)

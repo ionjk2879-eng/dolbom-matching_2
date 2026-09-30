@@ -1,8 +1,7 @@
-import { neon } from '@neondatabase/serverless'
+import postgres from 'postgres'
 
 export function createDb(databaseUrl: string) {
-  const sql = neon(databaseUrl)
-  return Object.assign(sql, { end: async () => {} })
+  return postgres(databaseUrl, { max: 1 })
 }
 
 export type Db = ReturnType<typeof createDb>

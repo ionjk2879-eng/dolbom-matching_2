@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
@@ -14,15 +14,9 @@ const typeLabels: Record<ScheduleType, string> = {
 }
 
 export function Schedule() {
-  const { schedules, loading, error, shareWithFamily, shareWithCenters, loadSchedules, removeSchedule } =
-    useScheduleStore()
-  const children = useCareScheduleStore((s) => s.children)
+  const { shareWithFamily, shareWithCenters } = useScheduleStore()
+  const { schedules, children, removeSchedule } = useCareScheduleStore()
   const childName = (id: string | null) => children.find((c) => c.id === id)?.name
-
-  useEffect(() => {
-    loadSchedules()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const [viewDate, setViewDate] = useState(() => {
     const d = new Date()
@@ -41,8 +35,8 @@ export function Schedule() {
   }, [year, month])
 
   const weekdayOf = (iso: string) => new Date(`${iso}T00:00:00`).getDay()
-  const schedulesOn = (iso: string) => schedules.filter((s) => s.days_of_week.includes(weekdayOf(iso)))
-  const dayItems = schedulesOn(selected).sort((a, b) => a.start_time.localeCompare(b.start_time))
+  const schedulesOn = (iso: string) => schedules.filter((s) => s.daysOfWeek.includes(weekdayOf(iso)))
+  const dayItems = schedulesOn(selected).sort((a, b) => a.startTime.localeCompare(b.startTime))
 
   return (
     <div>
@@ -59,8 +53,6 @@ export function Schedule() {
         </Link>
       </div>
 
-      {loading && <p className="mx-auto max-w-6xl px-4 pt-4 text-sm text-ink-3">불러오는 중...</p>}
-      {error && <p className="mx-auto max-w-6xl px-4 pt-4 text-sm text-error">{error}</p>}
 
       <div className="mx-auto grid max-w-6xl gap-4 px-4 pb-10 pt-4 md:grid-cols-[1fr_320px]">
         <Card>
@@ -132,8 +124,8 @@ export function Schedule() {
             <div key={s.id} className="rounded-xl border border-line p-3">
               <p className="text-sm font-bold text-ink">{typeLabels[s.type]}</p>
               <p className="mt-1 text-xs text-ink-3">
-                {s.start_time}~{s.end_time}
-                {s.child_id && ` · ${childName(s.child_id) ?? '알 수 없는 아이'}`}
+                {s.startTime}~{s.endTime}
+                {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}
               </p>
               <div className="mt-2 flex justify-end gap-3 text-xs font-semibold">
                 <Link to={`/calendar/${s.id}/edit`} className="focus-ring text-ink-2 hover:text-ink">

@@ -3,3 +3,5 @@ node_modules/
 .dev.vars
 dist/
 .wrangler/
+HANDOFF.md
+CLAUDE.md

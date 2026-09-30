@@ -1,11 +1,9 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
 import type { ScheduleType } from '../data/types'
 import { useAuthStore } from '../store/authStore'
-import { useScheduleStore } from '../store/scheduleStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { computeGaps } from '../data/gaps'
 
@@ -31,13 +29,7 @@ function Section({ title, to, children }: { title: string; to: string; children:
 
 export function MyPage() {
   const user = useAuthStore((s) => s.user)
-  const { schedules, loadSchedules } = useScheduleStore()
-  const { children, schedules: careSchedules, exceptions } = useCareScheduleStore()
-
-  useEffect(() => {
-    loadSchedules()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const { children, schedules, exceptions } = useCareScheduleStore()
 
   const recentSchedules = schedules.slice(0, 3)
   const today = toISO(new Date())
@@ -64,7 +56,7 @@ export function MyPage() {
             </p>
           )}
           {children.map((child) => {
-            const gaps = computeGaps(child, today, careSchedules, exceptions)
+            const gaps = computeGaps(child, today, schedules, exceptions)
             return (
               <div key={child.id} className="rounded-xl border border-line p-3">
                 <p className="text-sm font-bold text-ink">{child.name}</p>
@@ -92,7 +84,7 @@ export function MyPage() {
             >
               <p className="text-sm font-bold text-ink">{typeLabels[s.type]}</p>
               <p className="mt-1 text-xs text-ink-3">
-                {s.days_of_week.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.start_time}~{s.end_time}
+                {s.daysOfWeek.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
               </p>
             </Link>
           ))}
