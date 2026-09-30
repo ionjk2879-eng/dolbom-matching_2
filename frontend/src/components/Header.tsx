@@ -47,17 +47,12 @@ export function Header() {
               </button>
             </>
           ) : (
-            <>
-              <Link to="/login" className="focus-ring text-sm font-semibold text-ink-2 hover:text-ink">
-                로그인
-              </Link>
-              <Link
-                to="/signup"
-                className="focus-ring rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-              >
-                회원가입
-              </Link>
-            </>
+            <Link
+              to="/login"
+              className="focus-ring rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+            >
+              로그인
+            </Link>
           )}
         </div>
       </div>

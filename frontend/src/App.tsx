@@ -5,7 +5,6 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import { Home } from './pages/Home'
 import { Find } from './pages/Find'
 import { Login } from './pages/Login'
-import { Signup } from './pages/Signup'
 import { Schedule } from './pages/Schedule'
 import { ScheduleNew } from './pages/ScheduleNew'
 import { ScheduleSettings } from './pages/ScheduleSettings'
@@ -34,7 +33,6 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/find" element={<Find />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
         <Route element={<RequireAuth />}>
           <Route path="/mypage" element={<MyPage />} />
           <Route path="/gaps" element={<GapCalendar />} />

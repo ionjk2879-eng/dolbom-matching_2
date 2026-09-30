@@ -8,7 +8,7 @@ import { CareScheduleEditor } from '../components/CareScheduleEditor'
 import { useMatchStore } from '../store/matchStore'
 import { useAuthStore } from '../store/authStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
-import { fetchCareOptions } from '../api/careOptions'
+import { fetchCareOptions, fetchCareOptionsForGap } from '../api/careOptions'
 import { matchesCareOption } from '../data/careMatch'
 import type { CareOption } from '../data/types'
 import { toISO } from '../data/date'
@@ -43,10 +43,21 @@ export function Home() {
   const todaysGap = primaryChild ? computeGaps(primaryChild, today, schedules, exceptions)[0] : undefined
 
   useEffect(() => {
-    fetchCareOptions()
-      .then(setCareOptions)
-      .catch(() => setCareOptions([]))
-  }, [])
+    if (primaryChild && todaysGap) {
+      fetchCareOptionsForGap(primaryChild.grade, todaysGap)
+        .then(setCareOptions)
+        .catch(() => setCareOptions([]))
+    } else {
+      fetchCareOptions()
+        .then(setCareOptions)
+        .catch(() => setCareOptions([]))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primaryChild?.id, primaryChild?.grade, todaysGap?.start, todaysGap?.end])
+
+  useEffect(() => {
+    if (user) useCareScheduleStore.getState().loadAll()
+  }, [user])
 
   // 등록된 아이/공백이 있으면, 아직 직접 고르지 않은 조건에 한해 기본값으로 채워준다
   useEffect(() => {
