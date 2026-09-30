@@ -187,6 +187,79 @@ auth.get('/naver/callback', async (c) => {
   }
 })
 
+// ── Password hashing (PBKDF2 via Web Crypto) ───────────────────────────────
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, key, 256)
+  const saltHex = Array.from(salt, (b) => b.toString(16).padStart(2, '0')).join('')
+  const hashHex = Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${saltHex}:${hashHex}`
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [saltHex, hashHex] = stored.split(':')
+  const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map((b) => parseInt(b, 16)))
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, key, 256)
+  const computed = Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, '0')).join('')
+  return computed === hashHex
+}
+
+// ── ID/PW 회원가입 & 로그인 ─────────────────────────────────────────────────
+
+auth.get('/check-id', async (c) => {
+  const loginId = c.req.query('loginId')
+  if (!loginId) return c.json({ available: false })
+  const sql = createDb(c.env.DATABASE_URL)
+  const rows = await sql`SELECT id FROM users WHERE login_id = ${loginId}`
+  await sql.end()
+  return c.json({ available: rows.length === 0 })
+})
+
+auth.post('/register', async (c) => {
+  const { loginId, password, name } = await c.req.json<{ loginId: string; password: string; name: string }>()
+  if (!loginId || !password || !name) return c.json({ error: '필수 항목이 없어요' }, 400)
+  if (password.length < 6) return c.json({ error: '비밀번호는 6자 이상이어야 해요' }, 400)
+
+  const sql = createDb(c.env.DATABASE_URL)
+  const existing = await sql`SELECT id FROM users WHERE login_id = ${loginId}`
+  if (existing.length > 0) {
+    await sql.end()
+    return c.json({ error: '이미 사용 중인 아이디예요' }, 409)
+  }
+
+  const passwordHash = await hashPassword(password)
+  const [user] = await sql<import('../types').User[]>`
+    INSERT INTO users (provider, provider_id, name, login_id, password_hash)
+    VALUES ('local', ${loginId}, ${name}, ${loginId}, ${passwordHash})
+    RETURNING id, provider, provider_id, email, name, profile_image, login_id, created_at, updated_at
+  `
+  await sql.end()
+
+  const token = await issueJwt(user.id, c.env.JWT_SECRET)
+  return c.json({ token, user })
+})
+
+auth.post('/login', async (c) => {
+  const { loginId, password } = await c.req.json<{ loginId: string; password: string }>()
+  if (!loginId || !password) return c.json({ error: '아이디와 비밀번호를 입력해주세요' }, 400)
+
+  const sql = createDb(c.env.DATABASE_URL)
+  const [row] = await sql<(import('../types').User & { password_hash: string | null })[]>`
+    SELECT * FROM users WHERE login_id = ${loginId} AND provider = 'local'
+  `
+  await sql.end()
+
+  if (!row?.password_hash) return c.json({ error: '아이디 또는 비밀번호가 틀렸어요' }, 401)
+  if (!(await verifyPassword(password, row.password_hash))) return c.json({ error: '아이디 또는 비밀번호가 틀렸어요' }, 401)
+
+  const { password_hash: _, ...user } = row
+  const token = await issueJwt(user.id, c.env.JWT_SECRET)
+  return c.json({ token, user })
+})
+
 // ── /me & logout ───────────────────────────────────────────────────────────
 
 auth.get('/me', async (c) => {

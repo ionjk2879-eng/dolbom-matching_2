@@ -5,7 +5,7 @@ export type AuthUser = {
   email: string | null
   name: string | null
   profile_image: string | null
-  login_id?: string | null
+  login_id: string | null
   created_at: string
   updated_at: string
 }
@@ -20,4 +20,3 @@ export async function getMe(token: string): Promise<AuthUser | null> {
   const data = (await res.json()) as { user: AuthUser | null }
   return data.user
 }
-
