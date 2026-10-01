@@ -134,6 +134,12 @@ export function Find() {
                     {selectedOption.phone} 전화 문의
                   </a>
                 )}
+                <Link
+                  to={`/find/${selectedOption.id}`}
+                  className="focus-ring mt-2 block rounded-xl border border-line-2 px-4 py-2 text-center text-sm font-semibold text-ink hover:bg-ivory-deep"
+                >
+                  상세 보기
+                </Link>
               </div>
             )}
           </div>
