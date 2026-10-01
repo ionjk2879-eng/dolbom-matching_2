@@ -14,6 +14,12 @@ import type { CareOption } from '../data/types'
 import { toISO } from '../data/date'
 import { computeGaps } from '../data/gaps'
 
+const steps = [
+  { title: '반복 일정 등록', desc: '부모 근무·아이 학교 시간을 한 번만' },
+  { title: '공백 자동 계산', desc: '돌봄이 필요한 시간을 찾아드려요' },
+  { title: '돌봄 조합 선택', desc: '옵션을 체크해 공백을 채워요' },
+]
+
 const partners = ['대전광역시', '유성구청', '동구청', '중구청', '서구청', '대덕구청', '육아종합지원센터']
 
 // 아이 학년(1~6) -> 맞춤 매칭 학년 구간, 공백 종료시각 -> 필요한 시간 구간으로 변환
@@ -80,15 +86,28 @@ export function Home() {
           <p className="mt-3 text-sm text-ink-2">
             아이/근무 일정을 등록하면 돌봄 공백을 자동으로 계산해서 딱 맞는 돌봄 옵션을 추천해드려요
           </p>
+          <ol className="mx-auto mt-8 grid max-w-3xl gap-3 text-left sm:grid-cols-3">
+            {steps.map((step, i) => (
+              <li key={step.title} className="flex gap-3 rounded-2xl border border-line bg-ivory-card p-4">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-ink">{step.title}</p>
+                  <p className="mt-0.5 text-xs text-ink-3">{step.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
       {/* 반복 일정 등록 + 맞춤 매칭: 캘린더는 왼쪽, 매칭 결과는 오른쪽 */}
       <section className="mx-auto max-w-6xl px-4 py-14">
-        <div className="grid gap-8 md:grid-cols-2">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
           {/* 왼쪽: 캘린더 */}
           <div>
-            <h2 className="text-xl font-extrabold text-ink">반복 일정 등록</h2>
+            <h2 className="text-xl font-extrabold text-ink"><span className="mr-1.5 text-green">1</span>반복 일정 등록</h2>
             <p className="mt-1 text-sm text-ink-3">부모 근무·아이 학교 시간을 캘린더에 등록하면 돌봄 공백을 자동 계산해요</p>
             {user ? (
               <Card className="mt-5">
@@ -110,7 +129,7 @@ export function Home() {
           {/* 오른쪽: 맞춤 매칭 (돌봄 공백 기반) */}
           <div>
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-extrabold text-ink">맞춤 매칭</h2>
+              <h2 className="text-xl font-extrabold text-ink"><span className="mr-1.5 text-green">2</span>맞춤 매칭</h2>
               {user && children.length > 0 && (
                 <Link to="/gaps" className="focus-ring text-sm font-semibold text-green hover:underline">
                   공백 캘린더 전체 보기

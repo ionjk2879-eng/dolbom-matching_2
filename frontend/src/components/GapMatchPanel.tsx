@@ -32,6 +32,9 @@ export function GapMatchPanel({
     .filter((c) => checkedFor(c.option.id))
     .map((c) => c.overlap)
   const remaining = remainingGap(gap, checkedOverlaps)
+  const gapStart = toMinutes(gap.start)
+  const gapLength = toMinutes(gap.end) - gapStart
+  const toPercent = (t: string) => ((toMinutes(t) - gapStart) / gapLength) * 100
 
   const toggle = (option: CareOption, overlap: Gap) => {
     const existing = checkedFor(option.id)
@@ -63,7 +66,25 @@ export function GapMatchPanel({
         에 맞는 돌봄 옵션이에요. 체크해서 조합해보세요.
       </p>
 
-      <p className="mt-3 text-xs font-semibold">
+      <div
+        className="relative mt-4 h-3 overflow-hidden rounded-full bg-warn-bg"
+        role="img"
+        aria-label={remaining.length === 0 ? '공백이 모두 커버됨' : '공백 커버 현황'}
+      >
+        {checkedOverlaps.map((o) => (
+          <div
+            key={`${o.start}-${o.end}`}
+            className="absolute inset-y-0 bg-green"
+            style={{ left: `${toPercent(o.start)}%`, width: `${toPercent(o.end) - toPercent(o.start)}%` }}
+          />
+        ))}
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-ink-3">
+        <span>{gap.start}</span>
+        <span>{gap.end}</span>
+      </div>
+
+      <p className="mt-2 text-xs font-semibold">
         {remaining.length === 0 ? (
           <span className="text-green">공백이 모두 커버됐어요</span>
         ) : (
@@ -83,15 +104,15 @@ export function GapMatchPanel({
           return (
             <label
               key={option.id}
-              className={`focus-ring flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${
-                checked ? 'border-green bg-green-soft/40' : 'border-line bg-ivory-card'
+              className={`focus-ring flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                checked ? 'border-green bg-green-soft/40' : 'border-line bg-ivory-card hover:border-green/40'
               }`}
             >
               <input
                 type="checkbox"
                 checked={checked}
                 onChange={() => toggle(option, overlap)}
-                className="mt-1"
+                className="mt-1 h-4 w-4 accent-green"
               />
               <div>
                 <p className="text-sm font-bold text-ink">
