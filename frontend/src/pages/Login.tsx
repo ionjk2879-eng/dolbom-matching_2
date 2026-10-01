@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
+import { LOGIN_REDIRECT_KEY, useAuthStore } from '../store/authStore'
 import loginHero from '../assets/login-hero.png'
 
 const API_URL = import.meta.env.VITE_API_URL as string
@@ -27,7 +27,8 @@ export function Login() {
           </p>
         )}
 
-        <div className="flex flex-row gap-2">
+        {/* OAuth leaves the SPA, so keep the destination for AuthCallbackPage */}
+        <div className="flex flex-row gap-2" onClick={() => sessionStorage.setItem(LOGIN_REDIRECT_KEY, from)}>
           <a
             href={`${API_URL}/auth/kakao`}
             className="focus-ring flex-1 rounded-xl bg-[#FEE500] px-4 py-3 text-center text-sm font-semibold text-ink"

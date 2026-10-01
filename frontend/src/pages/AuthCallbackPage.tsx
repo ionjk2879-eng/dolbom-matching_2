@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
+import { LOGIN_REDIRECT_KEY, useAuthStore } from '../store/authStore'
 import { getMe } from '../api/auth'
 
 export default function AuthCallbackPage() {
@@ -24,7 +24,9 @@ export default function AuthCallbackPage() {
           return
         }
         setAuth(token, user, true)
-        navigate('/', { replace: true })
+        const redirect = sessionStorage.getItem(LOGIN_REDIRECT_KEY) ?? '/'
+        sessionStorage.removeItem(LOGIN_REDIRECT_KEY)
+        navigate(redirect, { replace: true })
       })
       .catch(() => {
         navigate('/login?error=auth_failed', { replace: true })

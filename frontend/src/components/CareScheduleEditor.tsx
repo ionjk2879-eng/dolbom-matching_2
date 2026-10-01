@@ -9,11 +9,10 @@ function ChildForm() {
   const [grade, setGrade] = useState(1)
   const [commuteMinutes, setCommuteMinutes] = useState(20)
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!name) return
-    addChild({ name, grade, commuteMinutes })
-    setName('')
+    if (await addChild({ name, grade, commuteMinutes })) setName('')
   }
 
   return (
@@ -75,18 +74,13 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (startTime >= endTime) return setError('끝나는 시간이 시작 시간보다 늦어야 해요')
-    try {
-      const { id: _id, ...rest } = schedule // eslint-disable-line @typescript-eslint/no-unused-vars
-      await updateSchedule(id, { ...rest, startTime, endTime })
-      onClose()
-    } catch {
-      setError('저장하지 못했어요. 잠시 후 다시 시도해주세요')
-    }
+    const { id: _id, ...rest } = schedule // eslint-disable-line @typescript-eslint/no-unused-vars
+    // On failure the form stays open and StoreErrorBanner shows the error
+    if (await updateSchedule(id, { ...rest, startTime, endTime })) onClose()
   }
 
   const onRemove = async () => {
-    await removeSchedule(id)
-    onClose()
+    if (await removeSchedule(id)) onClose()
   }
 
   return (

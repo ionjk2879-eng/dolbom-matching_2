@@ -13,10 +13,14 @@ import {
   type ApiScheduleException,
   type NewSchedule,
 } from '../api/schedules'
+import { useAuthStore } from './authStore'
 
 function toChild(row: ApiChild): Child {
   return { id: row.id, name: row.name, grade: row.grade, commuteMinutes: row.commute_minutes }
 }
+
+// Postgres TIME comes back as 'HH:mm:ss'; the UI and gap math use 'HH:mm'
+const hhmm = (t: string) => t.slice(0, 5)
 
 function toRecurring(row: {
   id: string
@@ -31,8 +35,8 @@ function toRecurring(row: {
     childId: row.child_id,
     type: row.type,
     daysOfWeek: row.days_of_week,
-    startTime: row.start_time,
-    endTime: row.end_time,
+    startTime: hhmm(row.start_time),
+    endTime: hhmm(row.end_time),
   }
 }
 
@@ -41,8 +45,8 @@ function toException(row: ApiScheduleException): ScheduleException {
     id: row.id,
     scheduleId: row.schedule_id,
     date: row.exception_date.slice(0, 10), // DATE가 ISO 타임스탬프로 직렬화돼 올 수 있음
-    startTime: row.start_time,
-    endTime: row.end_time,
+    startTime: row.start_time && hhmm(row.start_time),
+    endTime: row.end_time && hhmm(row.end_time),
     isCancelled: row.is_cancelled,
   }
 }
@@ -52,14 +56,18 @@ type CareScheduleState = {
   schedules: RecurringSchedule[]
   exceptions: ScheduleException[]
   loaded: boolean
-  loadAll: () => Promise<void>
-  addChild: (c: Omit<Child, 'id'>) => Promise<void>
-  removeChild: (id: string) => Promise<void>
-  addSchedule: (s: Omit<RecurringSchedule, 'id'>) => Promise<void>
-  updateSchedule: (id: string, s: Omit<RecurringSchedule, 'id'>) => Promise<void>
-  removeSchedule: (id: string) => Promise<void>
-  addException: (e: Omit<ScheduleException, 'id'>) => Promise<void>
-  removeException: (id: string) => Promise<void>
+  // Last failed request's message; shown by StoreErrorBanner
+  error: string | null
+  clearError: () => void
+  // Actions resolve to false on failure (and set `error`) instead of throwing
+  loadAll: () => Promise<boolean>
+  addChild: (c: Omit<Child, 'id'>) => Promise<boolean>
+  removeChild: (id: string) => Promise<boolean>
+  addSchedule: (s: Omit<RecurringSchedule, 'id'>) => Promise<boolean>
+  updateSchedule: (id: string, s: Omit<RecurringSchedule, 'id'>) => Promise<boolean>
+  removeSchedule: (id: string) => Promise<boolean>
+  addException: (e: Omit<ScheduleException, 'id'>) => Promise<boolean>
+  removeException: (id: string) => Promise<boolean>
 }
 
 // care_option_id는 백엔드 schedules 테이블에 없는 컬럼이라, 어떤 돌봄 옵션을 선택해서
@@ -70,97 +78,122 @@ const useCareOptionTags = create<CareOptionTagState>()(
   persist(() => ({ careOptionIdBySchedule: {} }), { name: 'care-option-tags' }),
 )
 
-export const useCareScheduleStore = create<CareScheduleState>()((set, get) => ({
-  children: [],
-  schedules: [],
-  exceptions: [],
-  loaded: false,
+const initialData = { children: [], schedules: [], exceptions: [], loaded: false, error: null }
 
-  loadAll: async () => {
-    if (get().loaded) return
-    const [childRows, scheduleRows] = await Promise.all([fetchChildren(), fetchSchedules()])
-    // ponytail: 예외 일정 GET이 일정별 라우트뿐이라 일정 수만큼 요청함 — 많아지면 백엔드에 일괄 조회 요청
-    const exceptionRows = await Promise.all(scheduleRows.map((r) => fetchExceptions(r.id)))
-    const tags = useCareOptionTags.getState().careOptionIdBySchedule
-    set({
-      children: childRows.map(toChild),
-      schedules: scheduleRows.map((r) => ({ ...toRecurring(r), careOptionId: tags[r.id] })),
-      exceptions: exceptionRows.flat().map(toException),
-      loaded: true,
-    })
-  },
-
-  addChild: async (c) => {
-    const row = await createChild({ name: c.name, grade: c.grade, commute_minutes: c.commuteMinutes })
-    set((s) => ({ children: [...s.children, toChild(row)] }))
-  },
-
-  removeChild: async (id) => {
-    await deleteChild(id)
-    set((s) => ({
-      children: s.children.filter((c) => c.id !== id),
-      schedules: s.schedules.filter((sch) => sch.childId !== id),
-    }))
-  },
-
-  addSchedule: async (sch) => {
-    const payload: NewSchedule = {
-      child_id: sch.childId,
-      type: sch.type,
-      days_of_week: sch.daysOfWeek,
-      start_time: sch.startTime,
-      end_time: sch.endTime,
+export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
+  const attempt = async (fn: () => Promise<void>): Promise<boolean> => {
+    try {
+      await fn()
+      return true
+    } catch (err) {
+      set({ error: (err as Error).message })
+      return false
     }
-    const row = await createSchedule(payload)
-    if (sch.careOptionId) {
-      const tags = useCareOptionTags.getState().careOptionIdBySchedule
-      useCareOptionTags.setState({ careOptionIdBySchedule: { ...tags, [row.id]: sch.careOptionId } })
-    }
-    set((s) => ({ schedules: [...s.schedules, { ...toRecurring(row), careOptionId: sch.careOptionId }] }))
-  },
+  }
 
-  updateSchedule: async (id, sch) => {
-    const payload: NewSchedule = {
-      child_id: sch.childId,
-      type: sch.type,
-      days_of_week: sch.daysOfWeek,
-      start_time: sch.startTime,
-      end_time: sch.endTime,
-    }
-    const row = await apiUpdateSchedule(id, payload)
-    set((s) => ({
-      schedules: s.schedules.map((x) => (x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId } : x)),
-    }))
-  },
+  return {
+    ...initialData,
+    clearError: () => set({ error: null }),
 
-  removeSchedule: async (id) => {
-    await deleteSchedule(id)
-    const tags = useCareOptionTags.getState().careOptionIdBySchedule
-    if (id in tags) {
-      const next = { ...tags }
-      delete next[id]
-      useCareOptionTags.setState({ careOptionIdBySchedule: next })
-    }
-    set((s) => ({
-      schedules: s.schedules.filter((x) => x.id !== id),
-      exceptions: s.exceptions.filter((x) => x.scheduleId !== id),
-    }))
-  },
+    loadAll: () =>
+      attempt(async () => {
+        if (get().loaded) return
+        const [childRows, scheduleRows] = await Promise.all([fetchChildren(), fetchSchedules()])
+        // ponytail: 예외 일정 GET이 일정별 라우트뿐이라 일정 수만큼 요청함 — 많아지면 백엔드에 일괄 조회 요청
+        const exceptionRows = await Promise.all(scheduleRows.map((r) => fetchExceptions(r.id)))
+        const tags = useCareOptionTags.getState().careOptionIdBySchedule
+        set({
+          children: childRows.map(toChild),
+          schedules: scheduleRows.map((r) => ({ ...toRecurring(r), careOptionId: tags[r.id] })),
+          exceptions: exceptionRows.flat().map(toException),
+          loaded: true,
+        })
+      }),
 
-  addException: async (e) => {
-    const row = await createException(e.scheduleId, {
-      exception_date: e.date,
-      start_time: e.startTime,
-      end_time: e.endTime,
-      is_cancelled: e.isCancelled,
-    })
-    set((s) => ({ exceptions: [...s.exceptions, toException(row)] }))
-  },
+    addChild: (c) =>
+      attempt(async () => {
+        const row = await createChild({ name: c.name, grade: c.grade, commute_minutes: c.commuteMinutes })
+        set((s) => ({ children: [...s.children, toChild(row)] }))
+      }),
 
-  removeException: async (id) => {
-    const target = get().exceptions.find((x) => x.id === id)
-    if (!target) return
-    await deleteException(target.scheduleId, id)
-    set((s) => ({ exceptions: s.exceptions.filter((x) => x.id !== id) }))
-  },
-}))
+    removeChild: (id) =>
+      attempt(async () => {
+        await deleteChild(id)
+        set((s) => ({
+          children: s.children.filter((c) => c.id !== id),
+          schedules: s.schedules.filter((sch) => sch.childId !== id),
+        }))
+      }),
+
+    addSchedule: (sch) =>
+      attempt(async () => {
+        const payload: NewSchedule = {
+          child_id: sch.childId,
+          type: sch.type,
+          days_of_week: sch.daysOfWeek,
+          start_time: sch.startTime,
+          end_time: sch.endTime,
+        }
+        const row = await createSchedule(payload)
+        if (sch.careOptionId) {
+          const tags = useCareOptionTags.getState().careOptionIdBySchedule
+          useCareOptionTags.setState({ careOptionIdBySchedule: { ...tags, [row.id]: sch.careOptionId } })
+        }
+        set((s) => ({ schedules: [...s.schedules, { ...toRecurring(row), careOptionId: sch.careOptionId }] }))
+      }),
+
+    updateSchedule: (id, sch) =>
+      attempt(async () => {
+        const payload: NewSchedule = {
+          child_id: sch.childId,
+          type: sch.type,
+          days_of_week: sch.daysOfWeek,
+          start_time: sch.startTime,
+          end_time: sch.endTime,
+        }
+        const row = await apiUpdateSchedule(id, payload)
+        set((s) => ({
+          schedules: s.schedules.map((x) => (x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId } : x)),
+        }))
+      }),
+
+    removeSchedule: (id) =>
+      attempt(async () => {
+        await deleteSchedule(id)
+        const tags = useCareOptionTags.getState().careOptionIdBySchedule
+        if (id in tags) {
+          const next = { ...tags }
+          delete next[id]
+          useCareOptionTags.setState({ careOptionIdBySchedule: next })
+        }
+        set((s) => ({
+          schedules: s.schedules.filter((x) => x.id !== id),
+          exceptions: s.exceptions.filter((x) => x.scheduleId !== id),
+        }))
+      }),
+
+    addException: (e) =>
+      attempt(async () => {
+        const row = await createException(e.scheduleId, {
+          exception_date: e.date,
+          start_time: e.startTime,
+          end_time: e.endTime,
+          is_cancelled: e.isCancelled,
+        })
+        set((s) => ({ exceptions: [...s.exceptions, toException(row)] }))
+      }),
+
+    removeException: (id) =>
+      attempt(async () => {
+        const target = get().exceptions.find((x) => x.id === id)
+        if (!target) return
+        await deleteException(target.scheduleId, id)
+        set((s) => ({ exceptions: s.exceptions.filter((x) => x.id !== id) }))
+      }),
+  }
+})
+
+// Drop the previous user's data on logout or account switch
+useAuthStore.subscribe((state, prev) => {
+  if (state.user?.id !== prev.user?.id) useCareScheduleStore.setState(initialData)
+})

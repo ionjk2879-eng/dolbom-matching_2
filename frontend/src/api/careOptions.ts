@@ -1,13 +1,6 @@
 import type { CareOption } from '../data/types'
 import { overlapWithGap, toMinutes, toTime, type Gap } from '../data/gaps'
-import { useAuthStore } from '../store/authStore'
-
-const API_URL = import.meta.env.VITE_API_URL as string
-
-function authHeaders(): HeadersInit {
-  const token = useAuthStore.getState().token
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+import { apiFetch } from './client'
 
 // ponytail: 백엔드/네트워크가 준비 안 됐을 때를 위한 데모 옵션(비전 예시 그대로).
 const demoOptions: CareOption[] = [
@@ -59,11 +52,11 @@ const demoOptions: CareOption[] = [
 ]
 
 async function queryCareOptions(start: string, end: string, grade: number): Promise<CareOption[]> {
-  const res = await fetch(`${API_URL}/care-options?start=${start}&end=${end}&grade=${grade}`, {
-    headers: authHeaders(),
-  })
+  const res = await apiFetch(`/care-options?start=${start}&end=${end}&grade=${grade}`)
   if (!res.ok) throw new Error('돌봄 옵션을 불러오지 못했어요')
-  return res.json()
+  const rows: CareOption[] = await res.json()
+  // Postgres TIME comes back as 'HH:mm:ss'; the UI shows 'HH:mm'
+  return rows.map((o) => ({ ...o, open_time: o.open_time.slice(0, 5), close_time: o.close_time.slice(0, 5) }))
 }
 
 // 일반 둘러보기(공백 미확정 상태)용 — 실제 API는 start/end/grade가 필수라 이 호출은

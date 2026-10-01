@@ -1,6 +1,7 @@
 import { Outlet, Route, Routes } from 'react-router-dom'
 import { Header } from './components/Header'
 import { Footer } from './components/Footer'
+import { StoreErrorBanner } from './components/StoreErrorBanner'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import { Home } from './pages/Home'
 import { Find } from './pages/Find'
@@ -19,6 +20,7 @@ function Layout() {
   return (
     <div className="flex min-h-screen flex-col bg-ivory">
       <Header />
+      <StoreErrorBanner />
       <main className="flex-1">
         <Outlet />
       </main>
