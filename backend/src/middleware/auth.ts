@@ -8,7 +8,7 @@ export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: AuthVari
   const header = c.req.header('Authorization')
   if (!header?.startsWith('Bearer ')) return c.json({ error: 'Unauthorized' }, 401)
   try {
-    const payload = await verify(header.slice(7), c.env.JWT_SECRET)
+    const payload = await verify(header.slice(7), c.env.JWT_SECRET, 'HS256')
     c.set('userId', payload.sub as string)
     await next()
   } catch {
