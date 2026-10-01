@@ -1,5 +1,5 @@
 import type { CareOption } from '../data/types'
-import { overlapWithGap, type Gap } from '../data/gaps'
+import { overlapWithGap, toMinutes, toTime, type Gap } from '../data/gaps'
 import { useAuthStore } from '../store/authStore'
 
 const API_URL = import.meta.env.VITE_API_URL as string
@@ -78,18 +78,21 @@ export async function fetchCareOptions(): Promise<CareOption[]> {
 
 // 특정 공백(gap)에 맞는 돌봄 옵션 후보를 가져온다.
 // ponytail: /care-options는 [start,end] 구간을 "완전히 커버"하는 곳만 찾아주는 API라
-// 공백과 부분적으로만 겹치는 옵션(조합용)은 못 찾는다. 공백의 시작/끝 두 순간을 각각
-// 질의해서 합쳐 근사한다 — 공백 한가운데서만 열고 닫는 옵션은 놓칠 수 있음.
-// 백엔드에 overlap 전용 파라미터가 생기면 이 함수만 교체하면 됨.
+// 공백 안을 30분 간격(+끝 시각)으로 순간 질의해서 합쳐 근사한다 — 공백 안에서 30분 미만만
+// 여는 옵션은 놓칠 수 있음. 백엔드에 overlap 전용 파라미터가 생기면 이 함수만 교체하면 됨.
+const SAMPLE_STEP_MIN = 30
+
 export async function fetchCareOptionsForGap(grade: number, gap: Gap): Promise<CareOption[]> {
+  const start = toMinutes(gap.start)
+  const end = toMinutes(gap.end)
+  const times: string[] = []
+  for (let m = start; m < end; m += SAMPLE_STEP_MIN) times.push(toTime(m))
+  times.push(gap.end)
   try {
-    const [atStart, atEnd] = await Promise.all([
-      queryCareOptions(gap.start, gap.start, grade),
-      queryCareOptions(gap.end, gap.end, grade),
-    ])
+    const results = await Promise.all(times.map((t) => queryCareOptions(t, t, grade)))
     const byId = new Map<string, CareOption>()
-    for (const o of [...atStart, ...atEnd]) byId.set(o.id, o)
-    return [...byId.values()]
+    for (const o of results.flat()) byId.set(o.id, o)
+    return [...byId.values()].filter((o) => overlapWithGap(o, gap) !== null)
   } catch {
     return demoOptions.filter((o) => overlapWithGap(o, gap) !== null)
   }
