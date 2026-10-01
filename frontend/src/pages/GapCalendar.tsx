@@ -18,7 +18,6 @@ function durationLabel(start: string, end: string): string {
 
 export function GapCalendar() {
   const { children, schedules, exceptions, addException, removeException } = useCareScheduleStore()
-  const [exceptionError, setExceptionError] = useState('')
   const [viewDate, setViewDate] = useState(() => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -49,14 +48,10 @@ export function GapCalendar() {
     .filter((s) => s.daysOfWeek.includes(selectedDow))
     .map((s) => ({ schedule: s, cancel: exceptions.find((e) => e.scheduleId === s.id && e.date === selected && e.isCancelled) }))
 
-  const toggleCancel = async (scheduleId: string, cancelId: string | undefined) => {
-    setExceptionError('')
-    try {
-      if (cancelId) await removeException(cancelId)
-      else await addException({ scheduleId, date: selected, startTime: null, endTime: null, isCancelled: true })
-    } catch {
-      setExceptionError('변경하지 못했어요. 잠시 후 다시 시도해주세요')
-    }
+  // Failures show in StoreErrorBanner
+  const toggleCancel = (scheduleId: string, cancelId: string | undefined) => {
+    if (cancelId) removeException(cancelId)
+    else addException({ scheduleId, date: selected, startTime: null, endTime: null, isCancelled: true })
   }
 
   return (
@@ -169,9 +164,7 @@ export function GapCalendar() {
                     </button>
                   </div>
                 ))}
-              </div>
-              {exceptionError && <p className="mt-2 text-xs text-error">{exceptionError}</p>}
-            </div>
+              </div>            </div>
           )}
         </Card>
       </div>

@@ -60,15 +60,9 @@ export function ScheduleNew() {
 
     setSubmitting(true)
     setError('')
-    try {
-      if (editing) await updateSchedule(editing.id, data)
-      else await addSchedule(data)
-      navigate('/calendar')
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setSubmitting(false)
-    }
+    const ok = editing ? await updateSchedule(editing.id, data) : await addSchedule(data)
+    setSubmitting(false)
+    if (ok) navigate('/calendar')
   }
 
   return (
