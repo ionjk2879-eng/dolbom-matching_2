@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
-import { WEEKDAY_LABELS, toISO } from '../data/date'
+import { formatDayLabel, toISO } from '../data/date'
+import { MonthCalendar } from '../components/MonthCalendar'
 import type { ScheduleType } from '../data/types'
 import { useScheduleStore } from '../store/scheduleStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
@@ -18,21 +19,7 @@ export function Schedule() {
   const { schedules, children, removeSchedule } = useCareScheduleStore()
   const childName = (id: string | null) => children.find((c) => c.id === id)?.name
 
-  const [viewDate, setViewDate] = useState(() => {
-    const d = new Date()
-    return new Date(d.getFullYear(), d.getMonth(), 1)
-  })
   const [selected, setSelected] = useState(() => toISO(new Date()))
-  const year = viewDate.getFullYear()
-  const month = viewDate.getMonth()
-
-  const cells = useMemo(() => {
-    const startOffset = new Date(year, month, 1).getDay()
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    const list: (string | null)[] = Array(startOffset).fill(null)
-    for (let d = 1; d <= daysInMonth; d++) list.push(toISO(new Date(year, month, d)))
-    return list
-  }, [year, month])
 
   const weekdayOf = (iso: string) => new Date(`${iso}T00:00:00`).getDay()
   const schedulesOn = (iso: string) => schedules.filter((s) => s.daysOfWeek.includes(weekdayOf(iso)))
@@ -56,62 +43,17 @@ export function Schedule() {
 
       <div className="mx-auto grid max-w-6xl gap-4 px-4 pb-10 pt-4 md:grid-cols-[1fr_320px]">
         <Card>
-          <div className="mb-4 flex items-center justify-between">
-            <button
-              type="button"
-              aria-label="이전 달"
-              onClick={() => setViewDate(new Date(year, month - 1, 1))}
-              className="focus-ring rounded-lg border border-line-2 px-3 py-1.5 text-sm hover:bg-ivory-deep"
-            >
-              이전
-            </button>
-            <p className="text-sm font-bold text-ink">
-              {year}년 {month + 1}월
-            </p>
-            <button
-              type="button"
-              aria-label="다음 달"
-              onClick={() => setViewDate(new Date(year, month + 1, 1))}
-              className="focus-ring rounded-lg border border-line-2 px-3 py-1.5 text-sm hover:bg-ivory-deep"
-            >
-              다음
-            </button>
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs text-ink-3">
-            {WEEKDAY_LABELS.map((w) => (
-              <div key={w} className="py-1">
-                {w}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {cells.map((iso, i) => {
-              if (!iso) return <div key={i} />
+          <MonthCalendar selected={selected} onSelect={setSelected} renderBadge={(iso, sel) => {
               const count = schedulesOn(iso).length
-              return (
-                <button
-                  key={iso}
-                  type="button"
-                  onClick={() => setSelected(iso)}
-                  className={`focus-ring flex aspect-square flex-col items-center justify-center gap-1 rounded-lg text-sm transition ${
-                    selected === iso ? 'bg-green text-white' : 'text-ink hover:bg-ivory-deep'
-                  }`}
-                >
-                  {Number(iso.slice(8))}
-                  {count > 0 && (
-                    <span className={`text-[10px] font-bold ${selected === iso ? 'text-white' : 'text-green'}`}>
-                      {count}건
-                    </span>
-                  )}
-                </button>
+              return count > 0 && (
+                <span className={`text-[10px] font-bold ${sel ? 'text-white' : 'text-green'}`}>{count}건</span>
               )
-            })}
-          </div>
+            }} />
         </Card>
 
         <Card className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold text-ink">{selected}</p>
+            <p className="text-sm font-bold text-ink">{formatDayLabel(selected)}</p>
             <Link
               to="/calendar/new"
               className="focus-ring rounded-xl bg-green px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"

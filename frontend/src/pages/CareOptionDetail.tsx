@@ -60,7 +60,10 @@ export function CareOptionDetail() {
 
   return (
     <div>
-      <PageHero title={option.name} breadcrumb={[{ label: '돌봄 찾기', to: '/find' }, { label: option.name }]} />
+      <PageHero
+        title={option.name}
+        desc={`${careTypeLabels[option.type]} · ${option.open_time}~${option.close_time} · ${option.cost_per_hour === 0 ? '무료' : `시간당 ${option.cost_per_hour.toLocaleString()}원`}`}
+        breadcrumb={[{ label: '돌봄 찾기', to: '/find' }, { label: option.name }]} />
       <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 md:grid-cols-[360px_1fr]">
         <Card className="flex flex-col gap-4">
           <dl className="flex flex-col gap-3">
