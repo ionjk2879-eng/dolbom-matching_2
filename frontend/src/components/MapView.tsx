@@ -25,7 +25,7 @@ function loadNaverMapsScript(): Promise<void> {
     }
     const script = document.createElement('script')
     script.id = 'naver-maps-sdk'
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_CLIENT_ID}`
     script.onload = () => resolve()
     script.onerror = reject
     document.head.appendChild(script)
@@ -46,6 +46,12 @@ export function MapView({
   const markersRef = useRef<Map<string, any>>(new Map())
   const [ready, setReady] = useState(typeof naver !== 'undefined')
   const [mapError, setMapError] = useState('')
+
+  // 키/도메인 인증 실패는 예외가 아니라 이 전역 콜백으로만 알려준다
+  useEffect(() => {
+    ;(window as any).navermap_authFailure = () =>
+      setMapError('네이버 지도 인증 실패: Client ID 또는 콘솔에 등록된 서비스 URL을 확인하세요')
+  }, [])
 
   // 스크립트 로드
   useEffect(() => {
