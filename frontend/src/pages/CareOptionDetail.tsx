@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
-import { MapView } from '../components/MapView'
+import { MapView, type MapPin } from '../components/MapView'
 import { fetchCareOptions } from '../api/careOptions'
 import { careTypeLabels } from '../data/careMatch'
 import type { CareOption } from '../data/types'
+
+const noop = () => {}
 
 function gradeLabel(c: CareOption) {
   if (c.min_grade == null && c.max_grade == null) return '제한 없음'
@@ -24,6 +26,15 @@ export function CareOptionDetail() {
       .catch(() => setOption(null))
       .finally(() => setLoading(false))
   }, [id])
+
+  // Stable reference so MapView doesn't redraw its markers on every render
+  const pins = useMemo<MapPin[]>(
+    () =>
+      option?.latitude != null && option.longitude != null
+        ? [{ id: option.id, lat: option.latitude, lng: option.longitude, name: option.name, costPerHour: option.cost_per_hour }]
+        : [],
+    [option],
+  )
 
   if (loading) return <p className="mx-auto max-w-6xl px-4 py-20 text-sm text-ink-3">불러오는 중...</p>
 
@@ -70,20 +81,8 @@ export function CareOptionDetail() {
           )}
         </Card>
 
-        {option.latitude != null && option.longitude != null ? (
-          <MapView
-            pins={[
-              {
-                id: option.id,
-                lat: option.latitude,
-                lng: option.longitude,
-                name: option.name,
-                costPerHour: option.cost_per_hour,
-              },
-            ]}
-            selected={option.id}
-            onSelect={() => {}}
-          />
+        {pins.length > 0 ? (
+          <MapView pins={pins} selected={option.id} onSelect={noop} />
         ) : (
           <Card className="flex items-center justify-center text-sm text-ink-3">방문형 돌봄이라 위치 정보가 없어요</Card>
         )}
