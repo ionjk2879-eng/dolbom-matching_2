@@ -10,7 +10,7 @@ export type MapPin = {
   costPerHour: number
 }
 
-const NAVER_CLIENT_ID = 'l889wyovvq'
+const NAVER_CLIENT_ID = 'ujztcsarfi'
 const DEFAULT_CENTER = { lat: 36.351, lng: 127.385 }
 const DEFAULT_ZOOM = 14
 
