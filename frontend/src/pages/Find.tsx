@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Chip } from '../components/Chip'
 import { MapView, type MapPin } from '../components/MapView'
 import { useMatchStore } from '../store/matchStore'
 import { fetchCareOptions } from '../api/careOptions'
-import { careTypeLabels, matchesCareOption } from '../data/careMatch'
+import { careTypeLabels, matchesCareOption, gradeBuckets, timeBuckets } from '../data/careMatch'
 import type { CareOption } from '../data/types'
 
 type SortKey = 'name' | 'cost'
@@ -65,16 +66,23 @@ export function Find() {
               조건 초기화
             </button>
           )}
-          <Link
-            to="/"
-            className="focus-ring rounded-full border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-green/50"
-          >
-            조건 변경
-          </Link>
         </div>
       </div>
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {gradeBuckets.map((g) => (
+            <Chip key={g} selected={match.grade === g} onClick={() => match.setGrade(g)}>
+              {g}
+            </Chip>
+          ))}
+          <span className="mx-1 w-px self-stretch bg-line" />
+          {timeBuckets.map((t) => (
+            <Chip key={t} selected={match.time === t} onClick={() => match.setTime(t)}>
+              {t}
+            </Chip>
+          ))}
+        </div>
         <select
           aria-label="정렬"
           value={sort}

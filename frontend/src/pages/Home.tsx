@@ -9,13 +9,11 @@ import { useMatchStore } from '../store/matchStore'
 import { useAuthStore } from '../store/authStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { fetchCareOptions, fetchCareOptionsForGap } from '../api/careOptions'
-import { matchesCareOption } from '../data/careMatch'
+import { matchesCareOption, gradeBuckets as grades, timeBuckets as times } from '../data/careMatch'
 import type { CareOption } from '../data/types'
 import { toISO } from '../data/date'
 import { computeGaps } from '../data/gaps'
 
-const grades = ['유아', '초1~2', '초3~4', '초5~6']
-const times = ['~오후5시', '~오후7시', '오후7시 이후']
 const partners = ['대전광역시', '유성구청', '동구청', '중구청', '서구청', '대덕구청', '육아종합지원센터']
 
 // 아이 학년(1~6) -> 맞춤 매칭 학년 구간, 공백 종료시각 -> 필요한 시간 구간으로 변환

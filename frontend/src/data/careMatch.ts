@@ -8,6 +8,9 @@ export const careTypeLabels: Record<CareOption['type'], string> = {
   babysitter: '베이비시터',
 }
 
+export const gradeBuckets = ['유아', '초1~2', '초3~4', '초5~6']
+export const timeBuckets = ['~오후5시', '~오후7시', '오후7시 이후']
+
 // match.grade(학년 구간 라벨) <-> care_providers.min/max_grade(숫자) 변환
 export function gradeRange(bucket: string): [number, number] | null {
   if (bucket === '초1~2') return [1, 2]
