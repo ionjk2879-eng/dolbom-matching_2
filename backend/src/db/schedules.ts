@@ -79,3 +79,15 @@ export async function createException(
   const [row] = await sql<ScheduleException[]>`INSERT INTO schedule_exceptions ${sql(data)} RETURNING *`
   return row
 }
+
+export const getExceptionsBySchedule = (sql: Db, scheduleId: string) =>
+  sql<ScheduleException[]>`SELECT * FROM schedule_exceptions WHERE schedule_id = ${scheduleId} ORDER BY exception_date`
+
+export async function deleteException(sql: Db, exceptionId: string, userId: string): Promise<boolean> {
+  const result = await sql`
+    DELETE FROM schedule_exceptions se
+    USING schedules s
+    WHERE se.id = ${exceptionId} AND se.schedule_id = s.id AND s.user_id = ${userId}
+  `
+  return result.count > 0
+}

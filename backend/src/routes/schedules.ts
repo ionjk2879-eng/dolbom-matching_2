@@ -6,6 +6,8 @@ import {
   updateSchedule,
   deleteSchedule,
   createException,
+  getExceptionsBySchedule,
+  deleteException,
 } from '../db/schedules'
 import { requireAuth } from '../middleware/auth'
 import type { Env } from '../types'
@@ -86,6 +88,25 @@ schedules.delete('/:id', async (c) => {
   const id = c.req.param('id')
   const sql = createDb(c.env.DATABASE_URL)
   const ok = await deleteSchedule(sql, id, c.get('userId'))
+  await sql.end()
+  if (!ok) return c.json({ error: 'Not found' }, 404)
+  return c.json({ ok: true })
+})
+
+schedules.get('/:id/exceptions', async (c) => {
+  const scheduleId = c.req.param('id')
+  const sql = createDb(c.env.DATABASE_URL)
+  const [owned] = await sql`SELECT id FROM schedules WHERE id = ${scheduleId} AND user_id = ${c.get('userId')}`
+  if (!owned) { await sql.end(); return c.json({ error: 'Not found' }, 404) }
+  const rows = await getExceptionsBySchedule(sql, scheduleId)
+  await sql.end()
+  return c.json(rows)
+})
+
+schedules.delete('/:id/exceptions/:exceptionId', async (c) => {
+  const exceptionId = c.req.param('exceptionId')
+  const sql = createDb(c.env.DATABASE_URL)
+  const ok = await deleteException(sql, exceptionId, c.get('userId'))
   await sql.end()
   if (!ok) return c.json({ error: 'Not found' }, 404)
   return c.json({ ok: true })

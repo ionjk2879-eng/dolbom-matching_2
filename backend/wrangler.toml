@@ -2,7 +2,7 @@ name = "dolbom-matching-backend"
 main = "src/index.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
-account_id = "b46f3cf8042fcd8e95756c0b51aaa702"
+account_id = "41dd4027390600a4da0d487fe3ec8d17"
 
 [vars]
 FRONTEND_URL = "https://dolbom-matching-2.pages.dev"
