@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Card } from './Card'
+import { distanceKm, formatDistance, type LatLng } from '../data/geo'
 import { overlapWithGap, remainingGap, toMinutes, type Gap } from '../data/gaps'
 import { careTypeLabels } from '../data/careMatch'
 import type { CareOption, Child } from '../data/types'
@@ -16,11 +18,32 @@ export function GapMatchPanel({
   className?: string
 }) {
   const { schedules, addSchedule, removeSchedule } = useCareScheduleStore()
+  const [sortBy, setSortBy] = useState<'coverage' | 'distance'>('coverage')
+  const [here, setHere] = useState<LatLng | null>(null)
+  const [locationError, setLocationError] = useState('')
+
+  const sortByDistance = () => {
+    setSortBy('distance')
+    if (here) return
+    setLocationError('')
+    if (!navigator.geolocation) return setLocationError('이 브라우저는 위치 확인을 지원하지 않아요')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setHere({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setLocationError('위치 권한이 없어서 거리를 계산할 수 없어요'),
+    )
+  }
+
+  // 방문형 돌봄 등 좌표가 없는 곳은 거리 계산 불가 -> 가까운순에서 맨 뒤
+  const distanceOf = (o: CareOption) =>
+    here && o.latitude != null && o.longitude != null
+      ? distanceKm(here, { lat: o.latitude, lng: o.longitude })
+      : null
 
   const candidates = options
-    .map((option) => ({ option, overlap: overlapWithGap(option, gap) }))
-    .filter((c): c is { option: CareOption; overlap: Gap } => c.overlap !== null)
+    .map((option) => ({ option, overlap: overlapWithGap(option, gap), distance: distanceOf(option) }))
+    .filter((c): c is { option: CareOption; overlap: Gap; distance: number | null } => c.overlap !== null)
     .sort((a, b) => {
+      if (sortBy === 'distance' && here) return (a.distance ?? Infinity) - (b.distance ?? Infinity)
       const dur = (o: Gap) => toMinutes(o.end) - toMinutes(o.start)
       return dur(b.overlap) - dur(a.overlap)
     })
@@ -96,12 +119,37 @@ export function GapMatchPanel({
         )}
       </p>
 
+      {candidates.length > 1 && (
+        <div className="mt-4 flex items-center gap-1 text-xs font-semibold" role="group" aria-label="정렬">
+          {(
+            [
+              ['coverage', '공백 커버순', () => setSortBy('coverage')],
+              ['distance', '가까운순', sortByDistance],
+            ] as const
+          ).map(([key, label, onClick]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={sortBy === key}
+              onClick={onClick}
+              className={`focus-ring rounded-full border px-3 py-1 transition ${
+                sortBy === key ? 'border-green bg-green-soft text-green' : 'border-line-2 text-ink-2 hover:border-green/50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          {sortBy === 'distance' && !here && !locationError && <span className="ml-1 text-ink-3">위치 확인 중...</span>}
+          {locationError && <span className="ml-1 text-error">{locationError}</span>}
+        </div>
+      )}
+
       {candidates.length === 0 && (
         <p className="mt-3 text-sm text-ink-3">이 공백에 맞는 돌봄 옵션을 찾지 못했어요</p>
       )}
 
       <div className="mt-3 flex flex-col gap-2">
-        {candidates.map(({ option, overlap }) => {
+        {candidates.map(({ option, overlap, distance }) => {
           const checked = Boolean(checkedFor(option.id))
           return (
             <label
@@ -128,6 +176,7 @@ export function GapMatchPanel({
                 </p>
                 <p className="mt-1 text-xs text-ink-3">
                   시간당 {option.cost_per_hour === 0 ? '무료' : `${option.cost_per_hour.toLocaleString()}원`}
+                  {distance != null && ` · ${formatDistance(distance)}`}
                 </p>
               </div>
             </label>
