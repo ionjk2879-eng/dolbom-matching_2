@@ -12,6 +12,7 @@ import { MyPage } from './pages/MyPage'
 import { GapCalendar } from './pages/GapCalendar'
 import { GapSetup } from './pages/GapSetup'
 import { RequireAuth } from './components/RequireAuth'
+import { NotFound } from './pages/NotFound'
 
 function Layout() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/calendar/:id/edit" element={<ScheduleNew />} />
           <Route path="/calendar/settings" element={<ScheduleSettings />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   )
