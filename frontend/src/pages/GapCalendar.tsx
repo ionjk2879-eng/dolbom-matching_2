@@ -5,6 +5,7 @@ import { Card } from '../components/Card'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
 import { computeGaps } from '../data/gaps'
 import { useCareScheduleStore } from '../store/careScheduleStore'
+import { blockLabel } from '../components/WeekScheduleGrid'
 
 function durationLabel(start: string, end: string): string {
   const [sh, sm] = start.split(':').map(Number)
@@ -16,7 +17,8 @@ function durationLabel(start: string, end: string): string {
 }
 
 export function GapCalendar() {
-  const { children, schedules, exceptions } = useCareScheduleStore()
+  const { children, schedules, exceptions, addException, removeException } = useCareScheduleStore()
+  const [exceptionError, setExceptionError] = useState('')
   const [viewDate, setViewDate] = useState(() => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -40,6 +42,22 @@ export function GapCalendar() {
     child,
     gaps: computeGaps(child, selected, schedules, exceptions),
   }))
+
+  // 선택한 날짜에 원래 잡혀 있는 반복 일정 + 그 날의 취소 예외
+  const selectedDow = new Date(`${selected}T00:00:00`).getDay()
+  const selectedDaySchedules = schedules
+    .filter((s) => s.daysOfWeek.includes(selectedDow))
+    .map((s) => ({ schedule: s, cancel: exceptions.find((e) => e.scheduleId === s.id && e.date === selected && e.isCancelled) }))
+
+  const toggleCancel = async (scheduleId: string, cancelId: string | undefined) => {
+    setExceptionError('')
+    try {
+      if (cancelId) await removeException(cancelId)
+      else await addException({ scheduleId, date: selected, startTime: null, endTime: null, isCancelled: true })
+    } catch {
+      setExceptionError('변경하지 못했어요. 잠시 후 다시 시도해주세요')
+    }
+  }
 
   return (
     <div>
@@ -133,6 +151,28 @@ export function GapCalendar() {
               )}
             </div>
           ))}
+          {selectedDaySchedules.length > 0 && (
+            <div className="rounded-xl border border-line p-3">
+              <p className="text-sm font-bold text-ink">이 날의 일정</p>
+              <div className="mt-2 flex flex-col gap-2">
+                {selectedDaySchedules.map(({ schedule, cancel }) => (
+                  <div key={schedule.id} className="flex items-center justify-between gap-2 text-xs">
+                    <span className={cancel ? 'text-ink-3 line-through' : 'text-ink-2'}>
+                      {blockLabel(schedule, children)} {schedule.startTime}~{schedule.endTime}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleCancel(schedule.id, cancel?.id)}
+                      className={`focus-ring shrink-0 font-semibold ${cancel ? 'text-green' : 'text-error'}`}
+                    >
+                      {cancel ? '취소 되돌리기' : '이 날만 취소'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {exceptionError && <p className="mt-2 text-xs text-error">{exceptionError}</p>}
+            </div>
+          )}
         </Card>
       </div>
     </div>

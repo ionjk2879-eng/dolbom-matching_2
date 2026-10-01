@@ -29,7 +29,7 @@ function blockColor(schedule: RecurringSchedule, kids: Child[]): string {
   return childColors[Math.max(idx, 0) % childColors.length]
 }
 
-function blockLabel(schedule: RecurringSchedule, kids: Child[]): string {
+export function blockLabel(schedule: RecurringSchedule, kids: Child[]): string {
   if (schedule.type === 'parent_work') return '부모 근무'
   if (schedule.type === 'care') return '돌봄(선택)'
   return kids.find((c) => c.id === schedule.childId)?.name ?? '아이 학교'
