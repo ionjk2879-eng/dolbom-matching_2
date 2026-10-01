@@ -46,3 +46,38 @@ export async function deleteSchedule(id: string): Promise<void> {
   const res = await fetch(`${API_URL}/schedules/${id}`, { method: 'DELETE', headers: authHeaders() })
   if (!res.ok) throw new Error('일정을 삭제하지 못했어요')
 }
+
+export type ApiScheduleException = {
+  id: string
+  schedule_id: string
+  exception_date: string
+  start_time: string | null
+  end_time: string | null
+  is_cancelled: boolean
+}
+
+export type NewScheduleException = Pick<ApiScheduleException, 'exception_date' | 'start_time' | 'end_time' | 'is_cancelled'>
+
+export async function fetchExceptions(scheduleId: string): Promise<ApiScheduleException[]> {
+  const res = await fetch(`${API_URL}/schedules/${scheduleId}/exceptions`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('예외 일정을 불러오지 못했어요')
+  return res.json()
+}
+
+export async function createException(scheduleId: string, data: NewScheduleException): Promise<ApiScheduleException> {
+  const res = await fetch(`${API_URL}/schedules/${scheduleId}/exceptions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error('예외 일정을 등록하지 못했어요')
+  return res.json()
+}
+
+export async function deleteException(scheduleId: string, exceptionId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/schedules/${scheduleId}/exceptions/${exceptionId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error('예외 일정을 삭제하지 못했어요')
+}

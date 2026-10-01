@@ -7,6 +7,10 @@ import {
   createSchedule,
   updateSchedule as apiUpdateSchedule,
   deleteSchedule,
+  fetchExceptions,
+  createException,
+  deleteException,
+  type ApiScheduleException,
   type NewSchedule,
 } from '../api/schedules'
 
@@ -32,6 +36,17 @@ function toRecurring(row: {
   }
 }
 
+function toException(row: ApiScheduleException): ScheduleException {
+  return {
+    id: row.id,
+    scheduleId: row.schedule_id,
+    date: row.exception_date.slice(0, 10), // DATE가 ISO 타임스탬프로 직렬화돼 올 수 있음
+    startTime: row.start_time,
+    endTime: row.end_time,
+    isCancelled: row.is_cancelled,
+  }
+}
+
 type CareScheduleState = {
   children: Child[]
   schedules: RecurringSchedule[]
@@ -43,8 +58,8 @@ type CareScheduleState = {
   addSchedule: (s: Omit<RecurringSchedule, 'id'>) => Promise<void>
   updateSchedule: (id: string, s: Omit<RecurringSchedule, 'id'>) => Promise<void>
   removeSchedule: (id: string) => Promise<void>
-  addException: (e: Omit<ScheduleException, 'id'>) => void
-  removeException: (id: string) => void
+  addException: (e: Omit<ScheduleException, 'id'>) => Promise<void>
+  removeException: (id: string) => Promise<void>
 }
 
 // care_option_id는 백엔드 schedules 테이블에 없는 컬럼이라, 어떤 돌봄 옵션을 선택해서
@@ -64,10 +79,13 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => ({
   loadAll: async () => {
     if (get().loaded) return
     const [childRows, scheduleRows] = await Promise.all([fetchChildren(), fetchSchedules()])
+    // ponytail: 예외 일정 GET이 일정별 라우트뿐이라 일정 수만큼 요청함 — 많아지면 백엔드에 일괄 조회 요청
+    const exceptionRows = await Promise.all(scheduleRows.map((r) => fetchExceptions(r.id)))
     const tags = useCareOptionTags.getState().careOptionIdBySchedule
     set({
       children: childRows.map(toChild),
       schedules: scheduleRows.map((r) => ({ ...toRecurring(r), careOptionId: tags[r.id] })),
+      exceptions: exceptionRows.flat().map(toException),
       loaded: true,
     })
   },
@@ -123,10 +141,26 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => ({
       delete next[id]
       useCareOptionTags.setState({ careOptionIdBySchedule: next })
     }
-    set((s) => ({ schedules: s.schedules.filter((x) => x.id !== id) }))
+    set((s) => ({
+      schedules: s.schedules.filter((x) => x.id !== id),
+      exceptions: s.exceptions.filter((x) => x.scheduleId !== id),
+    }))
   },
 
-  // 서버에 GET/DELETE 라우트가 아직 없어서(POST만 있음) 화면에서도 아직 안 씀 — 로컬 상태만 유지
-  addException: (e) => set((s) => ({ exceptions: [...s.exceptions, { ...e, id: crypto.randomUUID() }] })),
-  removeException: (id) => set((s) => ({ exceptions: s.exceptions.filter((x) => x.id !== id) })),
+  addException: async (e) => {
+    const row = await createException(e.scheduleId, {
+      exception_date: e.date,
+      start_time: e.startTime,
+      end_time: e.endTime,
+      is_cancelled: e.isCancelled,
+    })
+    set((s) => ({ exceptions: [...s.exceptions, toException(row)] }))
+  },
+
+  removeException: async (id) => {
+    const target = get().exceptions.find((x) => x.id === id)
+    if (!target) return
+    await deleteException(target.scheduleId, id)
+    set((s) => ({ exceptions: s.exceptions.filter((x) => x.id !== id) }))
+  },
 }))
