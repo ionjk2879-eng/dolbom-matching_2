@@ -2,6 +2,9 @@ import { create } from 'zustand'
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware'
 import type { AuthUser } from '../api/auth'
 
+// sessionStorage key: where to go after the OAuth round trip (set by Login, read by AuthCallbackPage)
+export const LOGIN_REDIRECT_KEY = 'login-redirect'
+
 type AuthState = {
   token: string | null
   user: AuthUser | null

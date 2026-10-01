@@ -34,6 +34,9 @@ export function Header() {
               <Link to="/gaps" className="focus-ring text-sm font-semibold text-ink-2 hover:text-ink">
                 돌봄 공백
               </Link>
+              <Link to="/calendar" className="focus-ring text-sm font-semibold text-ink-2 hover:text-ink">
+                내 일정
+              </Link>
               <Link to="/mypage" className="focus-ring text-sm font-semibold text-ink-2 hover:text-ink">
                 마이 페이지
               </Link>
