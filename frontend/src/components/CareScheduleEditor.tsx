@@ -64,10 +64,76 @@ function ChildForm() {
   )
 }
 
+function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) {
+  const { schedules, updateSchedule, removeSchedule } = useCareScheduleStore()
+  const schedule = schedules.find((s) => s.id === id)
+  const [startTime, setStartTime] = useState(schedule?.startTime ?? '')
+  const [endTime, setEndTime] = useState(schedule?.endTime ?? '')
+  const [error, setError] = useState('')
+  if (!schedule) return null
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (startTime >= endTime) return setError('끝나는 시간이 시작 시간보다 늦어야 해요')
+    try {
+      const { id: _id, ...rest } = schedule // eslint-disable-line @typescript-eslint/no-unused-vars
+      await updateSchedule(id, { ...rest, startTime, endTime })
+      onClose()
+    } catch {
+      setError('저장하지 못했어요. 잠시 후 다시 시도해주세요')
+    }
+  }
+
+  const onRemove = async () => {
+    await removeSchedule(id)
+    onClose()
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border border-line p-3">
+      <div>
+        <label htmlFor="edit-start" className="text-xs font-semibold text-ink-2">
+          시작
+        </label>
+        <input
+          id="edit-start"
+          type="time"
+          step={1800}
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          className="focus-ring mt-1 block rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+        />
+      </div>
+      <div>
+        <label htmlFor="edit-end" className="text-xs font-semibold text-ink-2">
+          끝
+        </label>
+        <input
+          id="edit-end"
+          type="time"
+          step={1800}
+          value={endTime}
+          onChange={(e) => setEndTime(e.target.value)}
+          className="focus-ring mt-1 block rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+        />
+      </div>
+      <Button type="submit">저장</Button>
+      <button type="button" onClick={onRemove} className="focus-ring text-xs font-semibold text-error">
+        삭제
+      </button>
+      <button type="button" onClick={onClose} className="focus-ring text-xs font-semibold text-ink-2">
+        취소
+      </button>
+      {error && <p className="w-full text-xs text-error">{error}</p>}
+    </form>
+  )
+}
+
 // 아이 등록 + 부모/아이 반복 일정 캘린더. GapSetup 페이지와 Home 메인페이지에서 공용으로 쓴다.
 export function CareScheduleEditor() {
-  const { children, schedules, removeChild, addSchedule, removeSchedule } = useCareScheduleStore()
+  const { children, schedules, removeChild, addSchedule } = useCareScheduleStore()
   const [target, setTarget] = useState<Target>({ type: 'parent' })
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const onCreate = (daysOfWeek: number[], startTime: string, endTime: string) => {
     if (target.type === 'parent') {
@@ -134,8 +200,9 @@ export function CareScheduleEditor() {
           kids={children}
           target={target}
           onCreate={onCreate}
-          onDelete={removeSchedule}
+          onSelect={setEditingId}
         />
+        {editingId && <ScheduleEditForm key={editingId} id={editingId} onClose={() => setEditingId(null)} />}
       </div>
     </div>
   )

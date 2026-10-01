@@ -44,13 +44,13 @@ export function WeekScheduleGrid({
   kids,
   target,
   onCreate,
-  onDelete,
+  onSelect,
 }: {
   schedules: RecurringSchedule[]
   kids: Child[]
   target: Target
   onCreate: (daysOfWeek: number[], startTime: string, endTime: string) => void
-  onDelete: (id: string) => void
+  onSelect: (id: string) => void
 }) {
   const [dragStart, setDragStart] = useState<Cell | null>(null)
   const [dragEnd, setDragEnd] = useState<Cell | null>(null)
@@ -139,9 +139,9 @@ export function WeekScheduleGrid({
                     <button
                       key={s.id}
                       type="button"
-                      title="클릭하면 삭제돼요"
+                      title="클릭하면 수정/삭제할 수 있어요"
                       onMouseDown={(e) => e.stopPropagation()}
-                      onClick={() => onDelete(s.id)}
+                      onClick={() => onSelect(s.id)}
                       className={`focus-ring absolute inset-x-0.5 overflow-hidden rounded px-1 text-left text-[10px] font-semibold ${blockColor(s, kids)}`}
                       style={{ top, height }}
                     >
@@ -156,7 +156,7 @@ export function WeekScheduleGrid({
 
       <p className="mt-2 text-xs text-ink-3">
         빈 칸을 드래그하면 현재 대상({target.type === 'parent' ? '부모 근무' : '아이 학교'})으로 등록되고, 등록된
-        블록을 클릭하면 삭제돼요.
+        블록을 클릭하면 시간을 수정하거나 삭제할 수 있어요.
       </p>
     </div>
   )
