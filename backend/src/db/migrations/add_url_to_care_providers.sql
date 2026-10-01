@@ -1,0 +1,1 @@
+ALTER TABLE care_providers ADD COLUMN IF NOT EXISTS url TEXT;
