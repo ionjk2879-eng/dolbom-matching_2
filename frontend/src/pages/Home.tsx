@@ -44,7 +44,11 @@ export function Home() {
   const [today] = useState(() => toISO(new Date()))
   const [careOptions, setCareOptions] = useState<CareOption[]>([])
   const primaryChild = children[0]
-  const todaysGap = primaryChild ? computeGaps(primaryChild, today, schedules, exceptions)[0] : undefined
+  // Gap before chosen care is subtracted: GapMatchPanel subtracts its checked options itself,
+  // so checked options stay listed (and can be unchecked) even once they cover the gap
+  const todaysGap = primaryChild
+    ? computeGaps(primaryChild, today, schedules.filter((s) => s.type !== 'care'), exceptions)[0]
+    : undefined
 
   useEffect(() => {
     if (primaryChild && todaysGap) {
