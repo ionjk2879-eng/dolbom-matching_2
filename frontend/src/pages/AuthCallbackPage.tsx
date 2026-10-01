@@ -17,6 +17,10 @@ export default function AuthCallbackPage() {
       return
     }
 
+    // Read before the request: StrictMode runs this effect twice, and the first
+    // run's removeItem must not leave the second run with no destination
+    const redirect = sessionStorage.getItem(LOGIN_REDIRECT_KEY) ?? '/'
+
     getMe(token)
       .then((user) => {
         if (!user) {
@@ -24,7 +28,6 @@ export default function AuthCallbackPage() {
           return
         }
         setAuth(token, user, true)
-        const redirect = sessionStorage.getItem(LOGIN_REDIRECT_KEY) ?? '/'
         sessionStorage.removeItem(LOGIN_REDIRECT_KEY)
         navigate(redirect, { replace: true })
       })
