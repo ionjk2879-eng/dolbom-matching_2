@@ -4,7 +4,7 @@ import { Card } from '../components/Card'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
 import type { ScheduleType } from '../data/types'
 import { useAuthStore } from '../store/authStore'
-import { useCareScheduleStore } from '../store/careScheduleStore'
+import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 import { computeGaps } from '../data/gaps'
 
 const typeLabels: Record<ScheduleType, string> = {
@@ -30,6 +30,7 @@ function Section({ title, to, children }: { title: string; to: string; children:
 export function MyPage() {
   const user = useAuthStore((s) => s.user)
   const { children, schedules, exceptions } = useCareScheduleStore()
+  const loading = useCareScheduleLoading()
 
   const recentSchedules = schedules.slice(0, 3)
   const today = toISO(new Date())
@@ -40,14 +41,15 @@ export function MyPage() {
       <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 md:grid-cols-2">
         <Card className="flex flex-col gap-2">
           <p className="text-sm font-bold text-ink">내 정보</p>
-          <p className="text-lg font-extrabold text-ink">{user?.name}</p>
+          <p className="text-lg font-extrabold text-ink">{user?.name ?? user?.email ?? '사용자'}</p>
           <p className="text-xs text-ink-3">
             {user?.email ?? user?.id} · 사용자
           </p>
         </Card>
 
         <Section title="오늘의 돌봄 공백" to="/gaps">
-          {children.length === 0 && (
+          {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
+          {!loading && children.length === 0 && (
             <p className="text-sm text-ink-3">
               등록된 아이/일정이 없어요.{' '}
               <Link to="/gaps/setup" className="font-semibold text-green underline">
@@ -75,7 +77,8 @@ export function MyPage() {
         </Section>
 
         <Section title="등록된 일정" to="/calendar">
-          {recentSchedules.length === 0 && <p className="text-sm text-ink-3">등록된 일정이 없어요</p>}
+          {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
+          {!loading && recentSchedules.length === 0 && <p className="text-sm text-ink-3">등록된 일정이 없어요</p>}
           {recentSchedules.map((s) => (
             <Link
               key={s.id}

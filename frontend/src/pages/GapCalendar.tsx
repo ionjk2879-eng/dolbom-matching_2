@@ -5,7 +5,7 @@ import { Card } from '../components/Card'
 import { formatDayLabel, toISO } from '../data/date'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { computeGaps } from '../data/gaps'
-import { useCareScheduleStore } from '../store/careScheduleStore'
+import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 import { blockLabel } from '../components/WeekScheduleGrid'
 
 function durationLabel(start: string, end: string): string {
@@ -19,6 +19,7 @@ function durationLabel(start: string, end: string): string {
 
 export function GapCalendar() {
   const { children, schedules, exceptions, addException, removeException } = useCareScheduleStore()
+  const loading = useCareScheduleLoading()
   const [selected, setSelected] = useState(() => toISO(new Date()))
 
   const hasGapOn = (date: string) =>
@@ -60,7 +61,8 @@ export function GapCalendar() {
 
         <Card className="flex flex-col gap-4">
           <p className="text-sm font-bold text-ink">{formatDayLabel(selected)}</p>
-          {children.length === 0 && (
+          {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
+          {!loading && children.length === 0 && (
             <p className="text-sm text-ink-3">
               등록된 아이/일정이 없어요.{' '}
               <Link to="/gaps/setup" className="focus-ring font-semibold text-green underline">

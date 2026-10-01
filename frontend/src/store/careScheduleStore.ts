@@ -193,6 +193,9 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
   }
 })
 
+// True until the first load finishes; false on failure so pages fall back to their empty state
+export const useCareScheduleLoading = () => useCareScheduleStore((s) => !s.loaded && !s.error)
+
 // Drop the previous user's data on logout or account switch
 useAuthStore.subscribe((state, prev) => {
   if (state.user?.id !== prev.user?.id) useCareScheduleStore.setState(initialData)

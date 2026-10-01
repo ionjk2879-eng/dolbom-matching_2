@@ -6,7 +6,7 @@ import { formatDayLabel, toISO } from '../data/date'
 import { MonthCalendar } from '../components/MonthCalendar'
 import type { ScheduleType } from '../data/types'
 import { useScheduleStore } from '../store/scheduleStore'
-import { useCareScheduleStore } from '../store/careScheduleStore'
+import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 
 const typeLabels: Record<ScheduleType, string> = {
   parent_work: '부모 근무',
@@ -17,6 +17,7 @@ const typeLabels: Record<ScheduleType, string> = {
 export function Schedule() {
   const { shareWithFamily, shareWithCenters } = useScheduleStore()
   const { schedules, children, removeSchedule } = useCareScheduleStore()
+  const loading = useCareScheduleLoading()
   const childName = (id: string | null) => children.find((c) => c.id === id)?.name
 
   const [selected, setSelected] = useState(() => toISO(new Date()))
@@ -61,7 +62,8 @@ export function Schedule() {
               일정 등록
             </Link>
           </div>
-          {dayItems.length === 0 && <p className="text-sm text-ink-3">등록된 일정이 없어요</p>}
+          {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
+          {!loading && dayItems.length === 0 && <p className="text-sm text-ink-3">등록된 일정이 없어요</p>}
           {dayItems.map((s) => (
             <div key={s.id} className="rounded-xl border border-line p-3">
               <p className="text-sm font-bold text-ink">{typeLabels[s.type]}</p>
