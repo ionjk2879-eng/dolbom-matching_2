@@ -4,6 +4,7 @@ import { Footer } from './components/Footer'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import { Home } from './pages/Home'
 import { Find } from './pages/Find'
+import { CareOptionDetail } from './pages/CareOptionDetail'
 import { Login } from './pages/Login'
 import { Schedule } from './pages/Schedule'
 import { ScheduleNew } from './pages/ScheduleNew'
@@ -12,6 +13,7 @@ import { MyPage } from './pages/MyPage'
 import { GapCalendar } from './pages/GapCalendar'
 import { GapSetup } from './pages/GapSetup'
 import { RequireAuth } from './components/RequireAuth'
+import { NotFound } from './pages/NotFound'
 
 function Layout() {
   return (
@@ -32,6 +34,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/find" element={<Find />} />
+        <Route path="/find/:id" element={<CareOptionDetail />} />
         <Route path="/login" element={<Login />} />
         <Route element={<RequireAuth />}>
           <Route path="/mypage" element={<MyPage />} />
@@ -42,6 +45,7 @@ export default function App() {
           <Route path="/calendar/:id/edit" element={<ScheduleNew />} />
           <Route path="/calendar/settings" element={<ScheduleSettings />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   )
