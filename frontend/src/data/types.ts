@@ -31,7 +31,7 @@ export type Schedule = {
   created_at: string
 }
 
-// -- 반복 주간 일정 / 돌봄 공백 계산 (careScheduleStore 전용 로컬 mock 모델) --
+// -- 반복 주간 일정 / 돌봄 공백 계산 (careScheduleStore가 API 응답을 변환해 쓰는 UI 모델) --
 
 export type Child = {
   id: string
