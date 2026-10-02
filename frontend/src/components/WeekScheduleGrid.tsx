@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { WEEKDAY_LABELS } from '../data/date'
 import type { Child, RecurringSchedule } from '../data/types'
+import { blockLabel } from '../data/scheduleLabel'
 
 const START_HOUR = 6
 const END_HOUR = 22
@@ -27,12 +28,6 @@ function blockColor(schedule: RecurringSchedule, kids: Child[]): string {
   if (schedule.type === 'care') return 'bg-line-2 text-ink-2'
   const idx = kids.findIndex((c) => c.id === schedule.childId)
   return childColors[Math.max(idx, 0) % childColors.length]
-}
-
-export function blockLabel(schedule: RecurringSchedule, kids: Child[]): string {
-  if (schedule.type === 'parent_work') return '부모 근무'
-  if (schedule.type === 'care') return '돌봄(선택)'
-  return kids.find((c) => c.id === schedule.childId)?.name ?? '아이 학교'
 }
 
 // Splits a day's blocks into side-by-side lanes so overlapping ones (e.g. school inside work hours) stay visible

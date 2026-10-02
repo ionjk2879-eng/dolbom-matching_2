@@ -6,7 +6,7 @@ import { formatDayLabel, toISO } from '../data/date'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { computeGaps } from '../data/gaps'
 import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
-import { blockLabel } from '../components/WeekScheduleGrid'
+import { blockLabel } from '../data/scheduleLabel'
 
 function durationLabel(start: string, end: string): string {
   const [sh, sm] = start.split(':').map(Number)

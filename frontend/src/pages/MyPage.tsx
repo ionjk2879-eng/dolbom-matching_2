@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
@@ -33,7 +34,7 @@ export function MyPage() {
   const loading = useCareScheduleLoading()
 
   const recentSchedules = schedules.slice(0, 3)
-  const today = toISO(new Date())
+  const [today] = useState(() => toISO(new Date()))
 
   return (
     <div>

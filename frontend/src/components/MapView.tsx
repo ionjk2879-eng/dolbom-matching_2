@@ -72,6 +72,8 @@ export function MapView({
         scaleControl: false,
       })
     } catch (e) {
+      // Surfaces a failure from the external SDK; there is no render-time value to derive instead
+      // eslint-disable-next-line react/set-state-in-effect
       setMapError(`지도 초기화 실패: ${e}`)
     }
   }, [ready])
