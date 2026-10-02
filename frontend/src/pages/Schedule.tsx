@@ -66,11 +66,13 @@ export function Schedule() {
           {!loading && dayItems.length === 0 && <p className="text-sm text-ink-3">등록된 일정이 없어요</p>}
           {dayItems.map((s) => (
             <div key={s.id} className="rounded-xl border border-line p-3">
-              <p className="text-sm font-bold text-ink">{typeLabels[s.type]}</p>
+              <p className="text-sm font-bold text-ink">{s.title || typeLabels[s.type]}</p>
               <p className="mt-1 text-xs text-ink-3">
+                {s.title && `${typeLabels[s.type]} · `}
                 {s.startTime}~{s.endTime}
                 {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}
               </p>
+              {s.memo && <p className="mt-1.5 whitespace-pre-line text-xs text-ink-2">{s.memo}</p>}
               <div className="mt-2 flex justify-end gap-3 text-xs font-semibold">
                 <Link to={`/calendar/${s.id}/edit`} className="focus-ring text-ink-2 hover:text-ink">
                   수정

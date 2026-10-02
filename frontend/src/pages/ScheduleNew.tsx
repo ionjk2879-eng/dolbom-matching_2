@@ -25,6 +25,8 @@ export function ScheduleNew() {
   const [days, setDays] = useState<number[]>(editing?.daysOfWeek ?? [1, 2, 3, 4, 5])
   const [startTime, setStartTime] = useState(editing?.startTime ?? '09:00')
   const [endTime, setEndTime] = useState(editing?.endTime ?? '18:00')
+  const [title, setTitle] = useState(editing?.title ?? '')
+  const [memo, setMemo] = useState(editing?.memo ?? '')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -56,6 +58,9 @@ export function ScheduleNew() {
       daysOfWeek: days,
       startTime,
       endTime,
+      careOptionId: editing?.careOptionId,
+      title: title.trim() || undefined,
+      memo: memo.trim() || undefined,
     }
 
     setSubmitting(true)
@@ -71,6 +76,18 @@ export function ScheduleNew() {
       <div className="mx-auto max-w-2xl px-4 py-10">
         <Card>
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+            <label className="text-sm font-semibold text-ink">
+              일정 이름 <span className="font-normal text-ink-3">(선택)</span>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={30}
+                placeholder="예: 피아노 학원, 회사"
+                className="focus-ring mt-1.5 w-full rounded-xl border border-line-2 bg-ivory-card px-4 py-2.5 text-sm font-normal"
+              />
+            </label>
+
             <div>
               <p className="text-sm font-semibold text-ink">유형</p>
               <div className="mt-1.5 inline-flex rounded-xl border border-line bg-ivory-deep-2 p-1">
@@ -136,6 +153,19 @@ export function ScheduleNew() {
                 />
               </label>
             </div>
+
+            <label className="text-sm font-semibold text-ink">
+              메모 <span className="font-normal text-ink-3">(선택)</span>
+              <textarea
+                value={memo}
+                onChange={(e) => setMemo(e.target.value)}
+                maxLength={200}
+                rows={3}
+                placeholder="준비물, 연락처 등"
+                className="focus-ring mt-1.5 w-full resize-none rounded-xl border border-line-2 bg-ivory-card px-4 py-2.5 text-sm font-normal"
+              />
+            </label>
+            <p className="-mt-2 text-xs text-ink-3">이름과 메모는 아직 이 브라우저에만 저장돼요.</p>
 
             {error && <p className="text-sm text-error">{error}</p>}
 

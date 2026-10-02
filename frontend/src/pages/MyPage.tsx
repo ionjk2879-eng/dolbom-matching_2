@@ -86,7 +86,7 @@ export function MyPage() {
               to="/calendar"
               className="focus-ring rounded-xl border border-line p-3 hover:border-green/40"
             >
-              <p className="text-sm font-bold text-ink">{typeLabels[s.type]}</p>
+              <p className="text-sm font-bold text-ink">{s.title || typeLabels[s.type]}</p>
               <p className="mt-1 text-xs text-ink-3">
                 {s.daysOfWeek.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
               </p>
