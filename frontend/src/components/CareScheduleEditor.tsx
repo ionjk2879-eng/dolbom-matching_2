@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Button } from './Button'
 import { WeekScheduleGrid, type Target } from './WeekScheduleGrid'
 import { useCareScheduleStore } from '../store/careScheduleStore'
+import { blockLabel } from '../data/scheduleLabel'
 
 function ChildForm() {
   const addChild = useCareScheduleStore((s) => s.addChild)
@@ -64,7 +65,7 @@ function ChildForm() {
 }
 
 function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) {
-  const { schedules, updateSchedule, removeSchedule } = useCareScheduleStore()
+  const { children, schedules, updateSchedule, removeSchedule } = useCareScheduleStore()
   const schedule = schedules.find((s) => s.id === id)
   const [startTime, setStartTime] = useState(schedule?.startTime ?? '')
   const [endTime, setEndTime] = useState(schedule?.endTime ?? '')
@@ -80,6 +81,7 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
   }
 
   const onRemove = async () => {
+    if (!window.confirm(`'${blockLabel(schedule, children)}' 일정을 삭제할까요?`)) return
     if (await removeSchedule(id)) onClose()
   }
 
@@ -149,7 +151,13 @@ export function CareScheduleEditor() {
                 <span>
                   {c.name} · {c.grade}학년 · 통학 {c.commuteMinutes}분
                 </span>
-                <button type="button" onClick={() => removeChild(c.id)} className="focus-ring text-xs font-semibold text-error">
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.confirm(`${c.name}을(를) 삭제할까요? 이 아이의 학교·돌봄 일정도 함께 삭제돼요.`) && removeChild(c.id)
+                  }
+                  className="focus-ring text-xs font-semibold text-error"
+                >
                   삭제
                 </button>
               </div>

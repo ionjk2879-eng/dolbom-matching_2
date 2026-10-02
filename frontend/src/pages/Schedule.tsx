@@ -79,7 +79,9 @@ export function Schedule() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => window.confirm('이 일정을 삭제할까요?') && removeSchedule(s.id)}
+                  onClick={() =>
+                    window.confirm(`'${s.title || typeLabels[s.type]}' 일정을 삭제할까요?`) && removeSchedule(s.id)
+                  }
                   className="focus-ring text-error hover:opacity-80"
                 >
                   삭제

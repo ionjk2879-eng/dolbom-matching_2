@@ -62,13 +62,12 @@ export function Find() {
   const selectedOption = results.find((c) => c.id === selected) ?? null
   const conditionSummary = [match.area, match.grade, match.time].filter(Boolean).join(' · ')
 
-  const pins: MapPin[] = results.map((c) => ({
-    id: c.id,
-    lat: c.latitude ?? 36.35,
-    lng: c.longitude ?? 127.38,
-    name: c.name,
-    costPerHour: c.cost_per_hour,
-  }))
+  // Options without coordinates (visiting care) get no pin instead of a fake one at the city center
+  const pins: MapPin[] = results.flatMap((c) =>
+    c.latitude != null && c.longitude != null
+      ? [{ id: c.id, lat: c.latitude, lng: c.longitude, name: c.name, costPerHour: c.cost_per_hour }]
+      : [],
+  )
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
