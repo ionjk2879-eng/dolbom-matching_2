@@ -54,7 +54,7 @@ export type Target = { type: 'parent'; parentLabel: 'mom' | 'dad' } | { type: 'c
 export function WeekScheduleGrid({
   schedules,
   kids,
-  target,
+  target: _target,
   onCreate,
   onEdit,
   onDelete,

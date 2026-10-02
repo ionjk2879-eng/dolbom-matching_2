@@ -126,7 +126,7 @@ export function GapWeekGrid({
               ))}
 
               {/* 아이 학교 참고 */}
-              {children.map((child, ci) =>
+              {children.map((_child, ci) =>
                 schoolByChildDay[ci][day].map((b, i) => (
                   <div
                     key={`school-${ci}-${i}`}
