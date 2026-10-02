@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { WEEKDAY_LABELS } from '../data/date'
 import type { Child, RecurringSchedule } from '../data/types'
+import { blockLabel } from '../data/scheduleLabel'
 
 const START_HOUR = 6
 const END_HOUR = 22
@@ -29,10 +30,17 @@ function blockColor(schedule: RecurringSchedule, kids: Child[]): string {
   return childColors[Math.max(idx, 0) % childColors.length]
 }
 
-export function blockLabel(schedule: RecurringSchedule, kids: Child[]): string {
-  if (schedule.type === 'parent_work') return '부모 근무'
-  if (schedule.type === 'care') return '돌봄(선택)'
-  return kids.find((c) => c.id === schedule.childId)?.name ?? '아이 학교'
+// Splits a day's blocks into side-by-side lanes so overlapping ones (e.g. school inside work hours) stay visible
+function layoutLanes(items: RecurringSchedule[]) {
+  const laneEnds: string[] = []
+  const laneOf = new Map<string, number>()
+  for (const s of [...items].sort((a, b) => a.startTime.localeCompare(b.startTime))) {
+    let lane = laneEnds.findIndex((end) => end <= s.startTime)
+    if (lane === -1) lane = laneEnds.push(s.endTime) - 1
+    else laneEnds[lane] = s.endTime
+    laneOf.set(s.id, lane)
+  }
+  return { laneOf, lanes: Math.max(laneEnds.length, 1) }
 }
 
 type Cell = { day: number; slot: number }
@@ -73,6 +81,9 @@ export function WeekScheduleGrid({
     return () => window.removeEventListener('mouseup', finish)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragStart, dragEnd])
+
+  const isTarget = (s: RecurringSchedule) =>
+    target.type === 'parent' ? s.type === 'parent_work' : s.type === 'child_school' && s.childId === target.childId
 
   const inSelection = (day: number, slot: number) => {
     if (!dragStart || !dragEnd) return false
@@ -130,33 +141,47 @@ export function WeekScheduleGrid({
                 />
               ))}
 
-              {schedules
-                .filter((s) => s.daysOfWeek.includes(day))
-                .map((s) => {
+              {(() => {
+                const dayBlocks = schedules.filter((s) => s.daysOfWeek.includes(day))
+                const { laneOf, lanes } = layoutLanes(dayBlocks)
+                return dayBlocks.map((s) => {
                   const top = timeToSlot(s.startTime) * ROW_HEIGHT
                   const height = (timeToSlot(s.endTime) - timeToSlot(s.startTime)) * ROW_HEIGHT
+                  const lane = laneOf.get(s.id) ?? 0
+                  // Other targets' blocks let drags start/pass underneath; during a drag none of them catch the mouse
+                  const clickable = !dragStart && (isTarget(s) || s.type === 'care')
+                  const dimmed = !isTarget(s) && s.type !== 'care'
                   return (
                     <button
                       key={s.id}
                       type="button"
                       title="클릭하면 수정/삭제할 수 있어요"
+                      tabIndex={clickable ? undefined : -1}
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={() => onSelect(s.id)}
-                      className={`focus-ring absolute inset-x-0.5 overflow-hidden rounded px-1 text-left text-[10px] font-semibold ${blockColor(s, kids)}`}
-                      style={{ top, height }}
+                      className={`focus-ring absolute overflow-hidden rounded px-1 text-left text-[10px] font-semibold ${blockColor(s, kids)} ${
+                        clickable ? '' : 'pointer-events-none'
+                      } ${dimmed ? 'opacity-50' : ''}`}
+                      style={{
+                        top,
+                        height,
+                        left: `calc(${(lane / lanes) * 100}% + 2px)`,
+                        width: `calc(${100 / lanes}% - 4px)`,
+                      }}
                     >
                       {blockLabel(s, kids)} {s.startTime}~{s.endTime}
                     </button>
                   )
-                })}
+                })
+              })()}
             </div>
           </div>
         ))}
       </div>
 
       <p className="mt-2 text-xs text-ink-3">
-        빈 칸을 드래그하면 현재 대상({target.type === 'parent' ? '부모 근무' : '아이 학교'})으로 등록되고, 등록된
-        블록을 클릭하면 시간을 수정하거나 삭제할 수 있어요.
+        드래그하면 현재 대상({target.type === 'parent' ? '부모 근무' : '아이 학교'})으로 등록되고, 흐리게 보이는 다른
+        일정 위로도 드래그할 수 있어요. 진하게 보이는 블록을 클릭하면 시간을 수정하거나 삭제할 수 있어요.
       </p>
     </div>
   )

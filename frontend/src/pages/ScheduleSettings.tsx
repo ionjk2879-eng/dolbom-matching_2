@@ -56,6 +56,9 @@ export function ScheduleSettings() {
             onChange={setShareWithCenters}
           />
         </Card>
+        <p className="mt-3 text-xs text-ink-3">
+          설정은 이 브라우저에만 저장돼요. 실제로 가족·업체에 공유하는 기능은 준비 중이에요.
+        </p>
       </div>
     </div>
   )

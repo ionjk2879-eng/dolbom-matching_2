@@ -9,35 +9,47 @@ npm install
 npm run dev
 ```
 
-`npm run build`로 프로덕션 빌드, `npx tsc --noEmit`으로 타입 체크를 할 수 있습니다.
+`npm run build`로 프로덕션 빌드, `npx tsc -b --noEmit`으로 타입 체크, `npm run lint`로 린트를 할 수 있습니다.
+
+백엔드 주소는 `.env`의 `VITE_API_URL`로 지정합니다 (`.env.example` 참고).
 
 ## 폴더 구조
 
 ```
 src/
-  api/         목업 데이터를 Promise로 감싼 함수 (추후 실제 API로 교체 지점)
-  components/  공통 컴포넌트 (Header, PageHero, Chip, Button, Card, SeatBadge, Calendar, MapView, Footer 등)
-  data/        목업 데이터와 타입 정의
-  hooks/       공용 훅 (useHashTab: 탭 상태를 URL hash와 동기화)
-  pages/       라우트별 페이지 (Home, Find, Request, Events, Info, Guide, Login, Signup)
-  store/       matchStore (Zustand) — 메인 페이지 맞춤 매칭 조건을 /find와 공유
+  api/         백엔드 API 호출 (client.ts의 apiFetch가 인증 토큰을 붙이고 401이면 로그아웃)
+  components/  공통 컴포넌트 (Header, PageHero, Card, MonthCalendar, WeekScheduleGrid, GapMatchPanel, MapView 등)
+  data/        타입 정의와 순수 계산 로직 (돌봄 공백 계산, 날짜·거리 유틸, 매칭 조건)
+  hooks/       공용 훅
+  pages/       라우트별 페이지
+  store/       Zustand 스토어
+                 authStore          로그인 사용자·토큰
+                 careScheduleStore  아이·반복 일정·예외 일정 (백엔드 연동)
+                 matchStore         메인 ↔ /find 매칭 조건 공유
+                 scheduleStore      캘린더 공유 설정 (브라우저에만 저장)
 ```
 
 ## 라우트
 
-| 경로 | 페이지 |
-|---|---|
-| `/` | 메인 |
-| `/find` | 돌봄 찾기 |
-| `/request` | 돌봄 요청 (`#new` `#offers` `#manage`) |
-| `/events` | 문화·행사 (`#month` `#area` `#edu`) |
-| `/info` | 양육정보 (`#play` `#care` `#card` `#counsel`) |
-| `/guide` | 이용 안내 (`#how` `#cost` `#news` `#faq` `#sitemap`) |
-| `/login` | 로그인 |
-| `/signup` | 회원가입 (3단계) |
+| 경로 | 페이지 | 로그인 필요 |
+|---|---|---|
+| `/` | 메인 | |
+| `/find` | 돌봄 찾기 | |
+| `/find/:id` | 돌봄 기관 상세 | |
+| `/login` | 로그인 (카카오·네이버) | |
+| `/auth/callback` | 소셜 로그인 콜백 | |
+| `/mypage` | 마이페이지 | ✓ |
+| `/gaps` | 돌봄 공백 캘린더 | ✓ |
+| `/gaps/setup` | 아이·일정 등록 | ✓ |
+| `/calendar` | 내 일정 | ✓ |
+| `/calendar/new` | 일정 추가 | ✓ |
+| `/calendar/:id/edit` | 일정 수정 | ✓ |
+| `/calendar/settings` | 캘린더 공유 설정 | ✓ |
 
-## 알려진 단순화
+## 알려진 제약
 
-- 지도는 `MapView` 컴포넌트에 pin 목록을 넘기는 형태로 분리되어 있어, 실제 Kakao/Naver Map SDK 연동 시 내부 구현만 교체하면 됩니다.
+- 돌봄 기관 목록(`fetchCareOptions`)은 백엔드에 전체 목록 API가 없어 항상 예시 데이터로 대체되며, 화면에 `DemoNotice` 안내가 표시됩니다.
+- 공백별 기관 조회(`fetchCareOptionsForGap`)는 공백 구간을 30분 간격으로 나눠 질의해 근사합니다.
+- 캘린더 공유 설정은 백엔드 API가 없어 이 브라우저에만 저장되며, 실제 공유는 되지 않습니다.
+- 지도는 Naver Maps SDK를 `MapView` 안에서 불러옵니다.
 - 브랜드 로고 이미지 파일이 없어 헤더는 이니셜 마크로 대체했습니다.
-- 회원가입/로그인의 중복확인·인증요청·주소검색은 백엔드가 없어 클릭 시 성공 상태만 흉내 냅니다.

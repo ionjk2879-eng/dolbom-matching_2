@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
@@ -33,7 +34,7 @@ export function MyPage() {
   const loading = useCareScheduleLoading()
 
   const recentSchedules = schedules.slice(0, 3)
-  const today = toISO(new Date())
+  const [today] = useState(() => toISO(new Date()))
 
   return (
     <div>
@@ -85,7 +86,7 @@ export function MyPage() {
               to="/calendar"
               className="focus-ring rounded-xl border border-line p-3 hover:border-green/40"
             >
-              <p className="text-sm font-bold text-ink">{typeLabels[s.type]}</p>
+              <p className="text-sm font-bold text-ink">{s.title || typeLabels[s.type]}</p>
               <p className="mt-1 text-xs text-ink-3">
                 {s.daysOfWeek.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
               </p>

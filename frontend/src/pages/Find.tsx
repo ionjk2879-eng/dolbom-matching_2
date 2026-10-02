@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Chip } from '../components/Chip'
+import { DemoNotice } from '../components/DemoNotice'
 import { MapView, type MapPin } from '../components/MapView'
 import { useMatchStore } from '../store/matchStore'
+import { useAuthStore } from '../store/authStore'
+import { useCareScheduleStore } from '../store/careScheduleStore'
 import { fetchCareOptions } from '../api/careOptions'
-import { careTypeLabels, matchesCareOption, gradeBuckets, timeBuckets } from '../data/careMatch'
+import { careTypeLabels, matchesCareOption, districts, gradeBuckets, timeBuckets } from '../data/careMatch'
+import { computeGaps, overlapWithGap } from '../data/gaps'
+import { toISO } from '../data/date'
 import type { CareOption } from '../data/types'
 
 type SortKey = 'name' | 'cost'
@@ -16,6 +21,22 @@ export function Find() {
   const [error, setError] = useState('')
   const [sort, setSort] = useState<SortKey>('name')
   const [selected, setSelected] = useState<string | null>(null)
+  const user = useAuthStore((s) => s.user)
+  const { children, schedules, exceptions } = useCareScheduleStore()
+  const [today] = useState(() => toISO(new Date()))
+  const [fitMine, setFitMine] = useState(false)
+
+  // /find is public, so schedules may not be loaded yet when landing here directly
+  useEffect(() => {
+    if (user) useCareScheduleStore.getState().loadAll()
+  }, [user])
+
+  // Today's gaps still left after already chosen care, across all children
+  const todaysGaps = useMemo(
+    () => (user ? children.flatMap((c) => computeGaps(c, today, schedules, exceptions)) : []),
+    [user, children, schedules, exceptions, today],
+  )
+  const fitsMine = fitMine && todaysGaps.length > 0
 
   useEffect(() => {
     fetchCareOptions()
@@ -28,22 +49,30 @@ export function Find() {
   }, [])
 
   const results = useMemo(() => {
-    const filtered = options.filter((c) => matchesCareOption(c, match.grade, match.time))
+    const filtered = options.filter(
+      (c) =>
+        matchesCareOption(c, match.grade, match.time, match.area) &&
+        (!fitsMine || todaysGaps.some((g) => overlapWithGap(c, g) !== null)),
+    )
     return [...filtered].sort((a, b) =>
       sort === 'name' ? a.name.localeCompare(b.name) : a.cost_per_hour - b.cost_per_hour,
     )
-  }, [options, match.grade, match.time, sort])
+  }, [options, match.area, match.grade, match.time, sort, fitsMine, todaysGaps])
 
   const selectedOption = results.find((c) => c.id === selected) ?? null
-  const conditionSummary = [match.grade, match.time].filter(Boolean).join(' · ')
+  const conditionSummary = [match.area, match.grade, match.time].filter(Boolean).join(' · ')
 
-  const pins: MapPin[] = results.map((c) => ({
-    id: c.id,
-    lat: c.latitude ?? 36.35,
-    lng: c.longitude ?? 127.38,
-    name: c.name,
-    costPerHour: c.cost_per_hour,
-  }))
+  // Options without coordinates (visiting care) get no pin instead of a fake one at the city center.
+  // Memoized so MapView doesn't redraw markers and pan back to the selection on every render.
+  const pins = useMemo<MapPin[]>(
+    () =>
+      results.flatMap((c) =>
+        c.latitude != null && c.longitude != null
+          ? [{ id: c.id, lat: c.latitude, lng: c.longitude, name: c.name, costPerHour: c.cost_per_hour }]
+          : [],
+      ),
+    [results],
+  )
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
@@ -71,6 +100,20 @@ export function Find() {
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
+          {todaysGaps.length > 0 && (
+            <>
+              <Chip selected={fitsMine} onClick={() => setFitMine((v) => !v)}>
+                내 일정에 맞는 센터
+              </Chip>
+              <span className="mx-1 w-px self-stretch bg-line" />
+            </>
+          )}
+          {districts.map((d) => (
+            <Chip key={d} selected={match.area === d} onClick={() => match.setArea(d)}>
+              {d}
+            </Chip>
+          ))}
+          <span className="mx-1 w-px self-stretch bg-line" />
           {gradeBuckets.map((g) => (
             <Chip key={g} selected={match.grade === g} onClick={() => match.setGrade(g)}>
               {g}
@@ -94,8 +137,14 @@ export function Find() {
         </select>
       </div>
 
+      {fitsMine && (
+        <p className="mt-3 rounded-xl bg-green-soft px-3.5 py-2.5 text-xs font-semibold text-green">
+          오늘 돌봄 공백({todaysGaps.map((g) => `${g.start}~${g.end}`).join(', ')})과 운영 시간이 겹치는 곳만 보여드려요
+        </p>
+      )}
       {loading && <p className="mt-6 text-sm text-ink-3">불러오는 중...</p>}
       {error && <p className="mt-6 text-sm text-error">{error}</p>}
+      {!loading && <DemoNotice options={options} className="mt-5" />}
 
       {!loading && !error && (
         <div className="mt-5 flex flex-col gap-4 lg:flex-row">

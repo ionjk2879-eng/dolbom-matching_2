@@ -14,7 +14,7 @@ export function MonthCalendar({
   onSelect: (iso: string) => void
   renderBadge?: (iso: string, isSelected: boolean) => ReactNode
 }) {
-  const today = toISO(new Date())
+  const [today] = useState(() => toISO(new Date()))
   const [viewDate, setViewDate] = useState(() => new Date(`${selected}T00:00:00`))
   const year = viewDate.getFullYear()
   const month = viewDate.getMonth()

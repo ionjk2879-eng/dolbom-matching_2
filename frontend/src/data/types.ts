@@ -31,7 +31,7 @@ export type Schedule = {
   created_at: string
 }
 
-// -- 반복 주간 일정 / 돌봄 공백 계산 (careScheduleStore 전용 로컬 mock 모델) --
+// -- 반복 주간 일정 / 돌봄 공백 계산 (careScheduleStore가 API 응답을 변환해 쓰는 UI 모델) --
 
 export type Child = {
   id: string
@@ -48,6 +48,8 @@ export type RecurringSchedule = {
   startTime: string // 'HH:mm'
   endTime: string
   careOptionId?: string // type: 'care'일 때, 어느 CareOption을 선택해서 생긴 일정인지
+  title?: string // 사용자가 붙인 이름 (예: 피아노 학원). 없으면 유형 기본 이름을 씀
+  memo?: string
 }
 
 export type ScheduleException = {

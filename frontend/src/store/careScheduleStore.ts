@@ -78,6 +78,22 @@ const useCareOptionTags = create<CareOptionTagState>()(
   persist(() => ({ careOptionIdBySchedule: {} }), { name: 'care-option-tags' }),
 )
 
+// title/memo도 백엔드 schedules 테이블에 컬럼이 없어서 같은 방식으로 로컬에만 저장한다.
+// ponytail: 백엔드에 title/memo 컬럼이 생기면 NewSchedule payload로 옮기고 이 저장소는 제거
+type ScheduleNote = { title?: string; memo?: string }
+type ScheduleNoteState = { noteBySchedule: Record<string, ScheduleNote> }
+
+const useScheduleNotes = create<ScheduleNoteState>()(
+  persist(() => ({ noteBySchedule: {} }), { name: 'schedule-notes' }),
+)
+
+function saveNote(id: string, { title, memo }: ScheduleNote) {
+  const next = { ...useScheduleNotes.getState().noteBySchedule }
+  if (title || memo) next[id] = { title, memo }
+  else delete next[id]
+  useScheduleNotes.setState({ noteBySchedule: next })
+}
+
 const initialData = { children: [], schedules: [], exceptions: [], loaded: false, error: null }
 
 export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
@@ -102,9 +118,10 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
         // ponytail: 예외 일정 GET이 일정별 라우트뿐이라 일정 수만큼 요청함 — 많아지면 백엔드에 일괄 조회 요청
         const exceptionRows = await Promise.all(scheduleRows.map((r) => fetchExceptions(r.id)))
         const tags = useCareOptionTags.getState().careOptionIdBySchedule
+        const notes = useScheduleNotes.getState().noteBySchedule
         set({
           children: childRows.map(toChild),
-          schedules: scheduleRows.map((r) => ({ ...toRecurring(r), careOptionId: tags[r.id] })),
+          schedules: scheduleRows.map((r) => ({ ...toRecurring(r), careOptionId: tags[r.id], ...notes[r.id] })),
           exceptions: exceptionRows.flat().map(toException),
           loaded: true,
         })
@@ -139,7 +156,10 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
           const tags = useCareOptionTags.getState().careOptionIdBySchedule
           useCareOptionTags.setState({ careOptionIdBySchedule: { ...tags, [row.id]: sch.careOptionId } })
         }
-        set((s) => ({ schedules: [...s.schedules, { ...toRecurring(row), careOptionId: sch.careOptionId }] }))
+        saveNote(row.id, sch)
+        set((s) => ({
+          schedules: [...s.schedules, { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo }],
+        }))
       }),
 
     updateSchedule: (id, sch) =>
@@ -152,8 +172,11 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
           end_time: sch.endTime,
         }
         const row = await apiUpdateSchedule(id, payload)
+        saveNote(id, sch)
         set((s) => ({
-          schedules: s.schedules.map((x) => (x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId } : x)),
+          schedules: s.schedules.map((x) =>
+            x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo } : x,
+          ),
         }))
       }),
 
@@ -166,6 +189,7 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
           delete next[id]
           useCareOptionTags.setState({ careOptionIdBySchedule: next })
         }
+        saveNote(id, {})
         set((s) => ({
           schedules: s.schedules.filter((x) => x.id !== id),
           exceptions: s.exceptions.filter((x) => x.scheduleId !== id),

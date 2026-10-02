@@ -10,6 +10,19 @@ export const careTypeLabels: Record<CareOption['type'], string> = {
 
 export const gradeBuckets = ['유아', '초1~2', '초3~4', '초5~6']
 export const timeBuckets = ['~오후5시', '~오후7시', '오후7시 이후']
+export const districts = ['동구', '중구', '서구', '유성구', '대덕구']
+
+// '대전광역시 서구 봉명로 215' -> '서구'; null for addresses without a district (e.g. 방문 돌봄)
+export function districtOf(address: string): string | null {
+  return address.match(/(\S+구)(\s|$)/)?.[1] ?? null
+}
+
+// Options without a district (visiting care) are available in every area
+export function coversArea(c: CareOption, area: string): boolean {
+  if (!area) return true
+  const district = districtOf(c.address)
+  return district === null || district === area
+}
 
 // match.grade(학년 구간 라벨) <-> care_providers.min/max_grade(숫자) 변환
 export function gradeRange(bucket: string): [number, number] | null {
@@ -36,6 +49,6 @@ export function coversCloseTime(closeTime: string, time: string): boolean {
   return true
 }
 
-export function matchesCareOption(c: CareOption, grade: string, time: string): boolean {
-  return coversGrade(c, grade) && coversCloseTime(c.close_time, time)
+export function matchesCareOption(c: CareOption, grade: string, time: string, area = ''): boolean {
+  return coversArea(c, area) && coversGrade(c, grade) && coversCloseTime(c.close_time, time)
 }

@@ -6,7 +6,7 @@ import { formatDayLabel, toISO } from '../data/date'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { computeGaps } from '../data/gaps'
 import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
-import { blockLabel } from '../components/WeekScheduleGrid'
+import { blockLabel } from '../data/scheduleLabel'
 
 function durationLabel(start: string, end: string): string {
   const [sh, sm] = start.split(':').map(Number)
@@ -18,7 +18,7 @@ function durationLabel(start: string, end: string): string {
 }
 
 export function GapCalendar() {
-  const { children, schedules, exceptions, addException, removeException } = useCareScheduleStore()
+  const { children, schedules, exceptions, addException, removeException, removeSchedule } = useCareScheduleStore()
   const loading = useCareScheduleLoading()
   const [selected, setSelected] = useState(() => toISO(new Date()))
 
@@ -98,13 +98,26 @@ export function GapCalendar() {
                     <span className={cancel ? 'text-ink-3 line-through' : 'text-ink-2'}>
                       {blockLabel(schedule, children)} {schedule.startTime}~{schedule.endTime}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => toggleCancel(schedule.id, cancel?.id)}
-                      className={`focus-ring shrink-0 font-semibold ${cancel ? 'text-green' : 'text-error'}`}
-                    >
-                      {cancel ? '취소 되돌리기' : '이 날만 취소'}
-                    </button>
+                    <div className="flex shrink-0 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleCancel(schedule.id, cancel?.id)}
+                        className={`focus-ring font-semibold ${cancel ? 'text-green' : 'text-ink-2 hover:text-ink'}`}
+                      >
+                        {cancel ? '취소 되돌리기' : '이 날만 취소'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.confirm(
+                            `'${blockLabel(schedule, children)}' 일정을 삭제할까요? 이 날만이 아니라 매주 반복되는 일정 전체가 삭제돼요.`,
+                          ) && removeSchedule(schedule.id)
+                        }
+                        className="focus-ring font-semibold text-error"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>            </div>

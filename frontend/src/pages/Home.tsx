@@ -4,6 +4,7 @@ import { Chip } from '../components/Chip'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { GapMatchPanel } from '../components/GapMatchPanel'
+import { DemoNotice } from '../components/DemoNotice'
 import { CareScheduleEditor } from '../components/CareScheduleEditor'
 import { useMatchStore } from '../store/matchStore'
 import { useAuthStore } from '../store/authStore'
@@ -44,7 +45,11 @@ export function Home() {
   const [today] = useState(() => toISO(new Date()))
   const [careOptions, setCareOptions] = useState<CareOption[]>([])
   const primaryChild = children[0]
-  const todaysGap = primaryChild ? computeGaps(primaryChild, today, schedules, exceptions)[0] : undefined
+  // Gap before chosen care is subtracted: GapMatchPanel subtracts its checked options itself,
+  // so checked options stay listed (and can be unchecked) even once they cover the gap
+  const todaysGap = primaryChild
+    ? computeGaps(primaryChild, today, schedules.filter((s) => s.type !== 'care'), exceptions)[0]
+    : undefined
 
   useEffect(() => {
     if (primaryChild && todaysGap) {
@@ -73,7 +78,7 @@ export function Home() {
 
   const goMatch = () => navigate('/find')
 
-  const matchedCount = careOptions.filter((c) => matchesCareOption(c, match.grade, match.time)).length
+  const matchedCount = careOptions.filter((c) => matchesCareOption(c, match.grade, match.time, match.area)).length
 
   return (
     <div>
@@ -136,6 +141,8 @@ export function Home() {
                 </Link>
               )}
             </div>
+
+            <DemoNotice options={careOptions} className="mt-5" />
 
             {user && primaryChild && !todaysGap && (
               <Card className="mt-5">
