@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import logo from '../assets/logo.png'
 
 export function Header() {
   const location = useLocation()
@@ -10,11 +11,8 @@ export function Header() {
   return (
     <header className="border-b border-line bg-ivory-card">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link to="/" className="flex items-center gap-2.5">
-          <span className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-ivory-deep text-lg font-extrabold text-green">
-            AS
-          </span>
-          <span className="text-xl font-extrabold text-ink">After School</span>
+        <Link to="/" className="flex items-center">
+          <img src={logo} alt="After School" className="h-9 w-auto" />
         </Link>
 
         <nav aria-label="주요 메뉴">
