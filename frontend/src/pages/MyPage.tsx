@@ -5,6 +5,7 @@ import { Card } from '../components/Card'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
 import type { ScheduleType } from '../data/types'
 import { useAuthStore } from '../store/authStore'
+import type { AuthUser } from '../api/auth'
 import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 import { computeGaps } from '../data/gaps'
 
@@ -12,6 +13,12 @@ const typeLabels: Record<ScheduleType, string> = {
   parent_work: '부모 근무',
   child_school: '아이 학교',
   care: '돌봄(선택한 옵션)',
+}
+
+const providerLabels: Record<AuthUser['provider'], string> = {
+  kakao: '카카오',
+  naver: '네이버',
+  local: '아이디',
 }
 
 function Section({ title, to, children }: { title: string; to: string; children: React.ReactNode }) {
@@ -33,7 +40,9 @@ export function MyPage() {
   const { children, schedules, exceptions } = useCareScheduleStore()
   const loading = useCareScheduleLoading()
 
-  const recentSchedules = schedules.slice(0, 3)
+  // Earliest first so the list doesn't depend on the server's row order
+  const recentSchedules = [...schedules].sort((a, b) => a.startTime.localeCompare(b.startTime)).slice(0, 3)
+  const childName = (id: string | null) => children.find((c) => c.id === id)?.name
   const [today] = useState(() => toISO(new Date()))
 
   return (
@@ -44,7 +53,8 @@ export function MyPage() {
           <p className="text-sm font-bold text-ink">내 정보</p>
           <p className="text-lg font-extrabold text-ink">{user?.name ?? user?.email ?? '사용자'}</p>
           <p className="text-xs text-ink-3">
-            {user?.email ?? user?.id} · 사용자
+            {user?.email && `${user.email} · `}
+            {user ? `${providerLabels[user.provider] ?? '소셜'} 계정으로 로그인` : ''}
           </p>
         </Card>
 
@@ -89,6 +99,7 @@ export function MyPage() {
               <p className="text-sm font-bold text-ink">{s.title || typeLabels[s.type]}</p>
               <p className="mt-1 text-xs text-ink-3">
                 {s.daysOfWeek.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
+                {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}
               </p>
             </Link>
           ))}
