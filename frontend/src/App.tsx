@@ -6,6 +6,8 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import { Home } from './pages/Home'
 import { Find } from './pages/Find'
 import { CareOptionDetail } from './pages/CareOptionDetail'
+import { Centers } from './pages/Centers'
+import { Consult } from './pages/Consult'
 import { Login } from './pages/Login'
 import { Schedule } from './pages/Schedule'
 import { ScheduleNew } from './pages/ScheduleNew'
@@ -37,6 +39,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/find" element={<Find />} />
         <Route path="/find/:id" element={<CareOptionDetail />} />
+        <Route path="/centers" element={<Centers />} />
+        <Route path="/consult" element={<Consult />} />
         <Route path="/login" element={<Login />} />
         <Route element={<RequireAuth />}>
           <Route path="/mypage" element={<MyPage />} />

@@ -6,7 +6,12 @@ export function Header() {
   const location = useLocation()
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
-  const active = location.pathname === '/find'
+  const navItems = [
+    { to: '/find', label: '돌봄 찾기' },
+    { to: '/centers', label: '센터 찾기' },
+    { to: '/consult', label: '상담' },
+  ]
+  const isActive = (to: string) => location.pathname === to || location.pathname.startsWith(`${to}/`)
 
   return (
     <header className="border-b border-line bg-ivory-card">
@@ -15,15 +20,19 @@ export function Header() {
           <img src={logo} alt="After School" className="h-9 w-auto" />
         </Link>
 
-        <nav aria-label="주요 메뉴">
-          <Link
-            to="/find"
-            className={`focus-ring inline-block border-b-2 py-2 text-sm font-semibold transition ${
-              active ? 'border-green text-green' : 'border-transparent text-ink-2 hover:text-ink'
-            }`}
-          >
-            돌봄 찾기
-          </Link>
+        <nav aria-label="주요 메뉴" className="flex gap-6">
+          {navItems.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-current={isActive(item.to) ? 'page' : undefined}
+              className={`focus-ring inline-block border-b-2 py-2 text-sm font-semibold transition ${
+                isActive(item.to) ? 'border-green text-green' : 'border-transparent text-ink-2 hover:text-ink'
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
         <div className="flex items-center gap-3">
