@@ -7,7 +7,8 @@ import { useMatchStore } from '../store/matchStore'
 import { useAuthStore } from '../store/authStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { fetchCareOptions } from '../api/careOptions'
-import { careTypeLabels, matchesCareOption, districts, gradeBuckets, timeBuckets } from '../data/careMatch'
+import { careTypeLabels, matchesCareOption, gradeBuckets, timeBuckets, REGIONS } from '../data/careMatch'
+import { DISTRICTS } from '../data/districts'
 import { computeGaps, overlapWithGap } from '../data/gaps'
 import { toISO } from '../data/date'
 import type { CareOption } from '../data/types'
@@ -49,18 +50,17 @@ export function Find() {
   }, [])
 
   const results = useMemo(() => {
-    const filtered = options.filter(
-      (c) =>
-        matchesCareOption(c, match.grade, match.time, match.area) &&
-        (!fitsMine || todaysGaps.some((g) => overlapWithGap(c, g) !== null)),
+    const filtered = options.filter((c) =>
+      matchesCareOption(c, match.grade, match.time, match.region, match.district, match.costFilter) &&
+      (!fitsMine || todaysGaps.some((g) => overlapWithGap(c, g) !== null))
     )
     return [...filtered].sort((a, b) =>
       sort === 'name' ? a.name.localeCompare(b.name) : a.cost_per_hour - b.cost_per_hour,
     )
-  }, [options, match.area, match.grade, match.time, sort, fitsMine, todaysGaps])
+  }, [options, match.grade, match.time, match.region, match.district, match.costFilter, sort, fitsMine, todaysGaps])
 
   const selectedOption = results.find((c) => c.id === selected) ?? null
-  const conditionSummary = [match.area, match.grade, match.time].filter(Boolean).join(' · ')
+  const conditionSummary = [match.region, match.district, match.grade, match.time].filter(Boolean).join(' · ')
 
   // Options without coordinates (visiting care) get no pin instead of a fake one at the city center.
   // Memoized so MapView doesn't redraw markers and pan back to the selection on every render.
@@ -98,7 +98,34 @@ export function Find() {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      {/* 지역 필터 */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <select
+          aria-label="시/도"
+          value={match.region}
+          onChange={(e) => match.setRegion(e.target.value)}
+          className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+        >
+          <option value="">시/도 전체</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+        <select
+          aria-label="구/군"
+          value={match.district}
+          onChange={(e) => match.setDistrict(e.target.value)}
+          disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
+          className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
+        >
+          <option value="">구/군 전체</option>
+          {(DISTRICTS[match.region] ?? []).map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {todaysGaps.length > 0 && (
             <>
@@ -108,12 +135,6 @@ export function Find() {
               <span className="mx-1 w-px self-stretch bg-line" />
             </>
           )}
-          {districts.map((d) => (
-            <Chip key={d} selected={match.area === d} onClick={() => match.setArea(d)}>
-              {d}
-            </Chip>
-          ))}
-          <span className="mx-1 w-px self-stretch bg-line" />
           {gradeBuckets.map((g) => (
             <Chip key={g} selected={match.grade === g} onClick={() => match.setGrade(g)}>
               {g}
@@ -123,6 +144,12 @@ export function Find() {
           {timeBuckets.map((t) => (
             <Chip key={t} selected={match.time === t} onClick={() => match.setTime(t)}>
               {t}
+            </Chip>
+          ))}
+          <span className="mx-1 w-px self-stretch bg-line" />
+          {(['all', 'free', 'paid'] as const).map((v) => (
+            <Chip key={v} selected={match.costFilter === v} onClick={() => match.setCostFilter(v)}>
+              {v === 'all' ? '전체' : v === 'free' ? '무료' : '유료'}
             </Chip>
           ))}
         </div>

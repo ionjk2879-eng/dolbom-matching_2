@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Child, RecurringSchedule, ScheduleException } from '../data/types'
-import { fetchChildren, createChild, deleteChild, type ApiChild } from '../api/children'
+import { fetchChildren, createChild, updateChild as apiUpdateChild, deleteChild, type ApiChild } from '../api/children'
 import {
   fetchSchedules,
   createSchedule,
@@ -62,6 +62,7 @@ type CareScheduleState = {
   // Actions resolve to false on failure (and set `error`) instead of throwing
   loadAll: () => Promise<boolean>
   addChild: (c: Omit<Child, 'id'>) => Promise<boolean>
+  updateChild: (id: string, c: Omit<Child, 'id'>) => Promise<boolean>
   removeChild: (id: string) => Promise<boolean>
   addSchedule: (s: Omit<RecurringSchedule, 'id'>) => Promise<boolean>
   updateSchedule: (id: string, s: Omit<RecurringSchedule, 'id'>) => Promise<boolean>
@@ -78,15 +79,12 @@ const useCareOptionTags = create<CareOptionTagState>()(
   persist(() => ({ careOptionIdBySchedule: {} }), { name: 'care-option-tags' }),
 )
 
-// title/memo도 백엔드 schedules 테이블에 컬럼이 없어서 같은 방식으로 로컬에만 저장한다.
 // ponytail: 백엔드에 title/memo 컬럼이 생기면 NewSchedule payload로 옮기고 이 저장소는 제거
 type ScheduleNote = { title?: string; memo?: string }
 type ScheduleNoteState = { noteBySchedule: Record<string, ScheduleNote> }
-
 const useScheduleNotes = create<ScheduleNoteState>()(
   persist(() => ({ noteBySchedule: {} }), { name: 'schedule-notes' }),
 )
-
 function saveNote(id: string, { title, memo }: ScheduleNote) {
   const next = { ...useScheduleNotes.getState().noteBySchedule }
   if (title || memo) next[id] = { title, memo }
@@ -94,6 +92,10 @@ function saveNote(id: string, { title, memo }: ScheduleNote) {
   useScheduleNotes.setState({ noteBySchedule: next })
 }
 
+type ParentTagState = { parentLabelBySchedule: Record<string, 'mom' | 'dad'> }
+const useParentTags = create<ParentTagState>()(
+  persist(() => ({ parentLabelBySchedule: {} }), { name: 'parent-tags' }),
+)
 const initialData = { children: [], schedules: [], exceptions: [], loaded: false, error: null }
 
 export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
@@ -119,9 +121,10 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
         const exceptionRows = await Promise.all(scheduleRows.map((r) => fetchExceptions(r.id)))
         const tags = useCareOptionTags.getState().careOptionIdBySchedule
         const notes = useScheduleNotes.getState().noteBySchedule
+        const parentTags = useParentTags.getState().parentLabelBySchedule
         set({
           children: childRows.map(toChild),
-          schedules: scheduleRows.map((r) => ({ ...toRecurring(r), careOptionId: tags[r.id], ...notes[r.id] })),
+          schedules: scheduleRows.map((r) => ({ ...toRecurring(r), careOptionId: tags[r.id], ...notes[r.id], parentLabel: parentTags[r.id] })),
           exceptions: exceptionRows.flat().map(toException),
           loaded: true,
         })
@@ -131,6 +134,12 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
       attempt(async () => {
         const row = await createChild({ name: c.name, grade: c.grade, commute_minutes: c.commuteMinutes })
         set((s) => ({ children: [...s.children, toChild(row)] }))
+      }),
+
+    updateChild: (id, c) =>
+      attempt(async () => {
+        const row = await apiUpdateChild(id, { name: c.name, grade: c.grade, commute_minutes: c.commuteMinutes })
+        set((s) => ({ children: s.children.map((x) => (x.id === id ? toChild(row) : x)) }))
       }),
 
     removeChild: (id) =>
@@ -157,8 +166,12 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
           useCareOptionTags.setState({ careOptionIdBySchedule: { ...tags, [row.id]: sch.careOptionId } })
         }
         saveNote(row.id, sch)
+        if (sch.parentLabel) {
+          const parentTags = useParentTags.getState().parentLabelBySchedule
+          useParentTags.setState({ parentLabelBySchedule: { ...parentTags, [row.id]: sch.parentLabel } })
+        }
         set((s) => ({
-          schedules: [...s.schedules, { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo }],
+          schedules: [...s.schedules, { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel }],
         }))
       }),
 
@@ -175,7 +188,7 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
         saveNote(id, sch)
         set((s) => ({
           schedules: s.schedules.map((x) =>
-            x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo } : x,
+            x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel } : x,
           ),
         }))
       }),
@@ -190,6 +203,12 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
           useCareOptionTags.setState({ careOptionIdBySchedule: next })
         }
         saveNote(id, {})
+        const parentTags = useParentTags.getState().parentLabelBySchedule
+        if (id in parentTags) {
+          const next = { ...parentTags }
+          delete next[id]
+          useParentTags.setState({ parentLabelBySchedule: next })
+        }
         set((s) => ({
           schedules: s.schedules.filter((x) => x.id !== id),
           exceptions: s.exceptions.filter((x) => x.scheduleId !== id),

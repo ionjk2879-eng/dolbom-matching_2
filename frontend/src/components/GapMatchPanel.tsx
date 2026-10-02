@@ -187,6 +187,9 @@ export function GapMatchPanel({
                   </span>
                 </p>
                 <p className="mt-1 text-xs text-ink-3">
+                  {option.address}
+                </p>
+                <p className="mt-0.5 text-xs text-ink-3">
                   시간당 {option.cost_per_hour === 0 ? '무료' : `${option.cost_per_hour.toLocaleString()}원`}
                   {distance != null && ` · ${formatDistance(distance)}`}
                 </p>

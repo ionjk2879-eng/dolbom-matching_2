@@ -15,7 +15,7 @@ export function GapSetup() {
           <CareScheduleEditor />
         </Card>
         <Link to="/gaps" className="focus-ring text-center text-sm font-semibold text-green underline">
-          돌봄 공백 캘린더에서 확인하기
+          날짜별 공백 캘린더에서 확인하기
         </Link>
       </div>
     </div>

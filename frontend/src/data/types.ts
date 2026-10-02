@@ -50,6 +50,7 @@ export type RecurringSchedule = {
   careOptionId?: string // type: 'care'일 때, 어느 CareOption을 선택해서 생긴 일정인지
   title?: string // 사용자가 붙인 이름 (예: 피아노 학원). 없으면 유형 기본 이름을 씀
   memo?: string
+  parentLabel?: 'mom' | 'dad' // type: 'parent_work'일 때, 엄마/아빠 구분
 }
 
 export type ScheduleException = {

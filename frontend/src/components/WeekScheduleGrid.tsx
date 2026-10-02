@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WEEKDAY_LABELS } from '../data/date'
 import type { Child, RecurringSchedule } from '../data/types'
 import { blockLabel } from '../data/scheduleLabel'
@@ -7,7 +7,7 @@ const START_HOUR = 6
 const END_HOUR = 22
 const SLOT_MINUTES = 30
 const SLOTS_PER_DAY = ((END_HOUR - START_HOUR) * 60) / SLOT_MINUTES
-const ROW_HEIGHT = 20 // px
+const ROW_HEIGHT = 22
 
 function slotToTime(slot: number): string {
   const mins = START_HOUR * 60 + slot * SLOT_MINUTES
@@ -23,10 +23,10 @@ function timeToSlot(time: string): number {
 
 const childColors = ['bg-green text-white', 'bg-sand text-ink', 'bg-warn text-white']
 
-function blockColor(schedule: RecurringSchedule, kids: Child[]): string {
-  if (schedule.type === 'parent_work') return 'bg-ink text-white'
-  if (schedule.type === 'care') return 'bg-line-2 text-ink-2'
-  const idx = kids.findIndex((c) => c.id === schedule.childId)
+function blockColor(s: RecurringSchedule, kids: Child[]): string {
+  if (s.type === 'parent_work') return s.parentLabel === 'dad' ? 'bg-warn text-white' : 'bg-ink text-white'
+  if (s.type === 'care') return 'bg-line-2 text-ink-2'
+  const idx = kids.findIndex((c) => c.id === s.childId)
   return childColors[Math.max(idx, 0) % childColors.length]
 }
 
@@ -44,99 +44,219 @@ function layoutLanes(items: RecurringSchedule[]) {
 }
 
 type Cell = { day: number; slot: number }
+type Drag =
+  | { kind: 'create'; start: Cell; end: Cell; ctrl: boolean }
+  | { kind: 'move'; id: string; days: number[]; dur: number; offset: number; preview: number; origStart: number; moved: boolean; clickedDay: number }
+  | { kind: 'resize'; id: string; days: number[]; startSlot: number; endSlot: number }
 
-export type Target = { type: 'parent' } | { type: 'child'; childId: string }
+export type Target = { type: 'parent'; parentLabel: 'mom' | 'dad' } | { type: 'child'; childId: string }
 
 export function WeekScheduleGrid({
   schedules,
   kids,
   target,
   onCreate,
-  onSelect,
+  onEdit,
+  onDelete,
+  onPunch,
+  onMove,
 }: {
   schedules: RecurringSchedule[]
   kids: Child[]
   target: Target
   onCreate: (daysOfWeek: number[], startTime: string, endTime: string) => void
-  onSelect: (id: string) => void
+  onEdit: (id: string) => void
+  onDelete: (id: string) => void
+  onPunch: (id: string, startTime: string, endTime: string) => void
+  onMove: (id: string, daysOfWeek: number[], startTime: string, endTime: string) => void
 }) {
-  const [dragStart, setDragStart] = useState<Cell | null>(null)
-  const [dragEnd, setDragEnd] = useState<Cell | null>(null)
+  const [drag, setDrag] = useState<Drag | null>(null)
+  const [sel, setSel] = useState<{ id: string; day: number; slot: number } | null>(null)
+  const [multiSel, setMultiSel] = useState<Set<string>>(new Set())
+  const multiSelRef = useRef<Set<string>>(new Set())
+  const schedulesRef = useRef(schedules)
+  const [hover, setHover] = useState<Cell | null>(null)
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number; slot: number } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const colRefs = useRef<(HTMLDivElement | null)[]>([])
 
   useEffect(() => {
-    if (!dragStart) return
-    const finish = () => {
-      if (dragStart && dragEnd) {
-        const dayLo = Math.min(dragStart.day, dragEnd.day)
-        const dayHi = Math.max(dragStart.day, dragEnd.day)
-        const slotLo = Math.min(dragStart.slot, dragEnd.slot)
-        const slotHi = Math.max(dragStart.slot, dragEnd.slot)
-        const daysOfWeek = Array.from({ length: dayHi - dayLo + 1 }, (_, i) => dayLo + i)
-        onCreate(daysOfWeek, slotToTime(slotLo), slotToTime(slotHi + 1))
+    if (!menu) return
+    const close = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenu(null) }
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [menu])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setDrag(null); setSel(null); setMultiSel(new Set()) }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (multiSel.size > 0) {
+          multiSel.forEach((id) => onDelete(id))
+          setMultiSel(new Set())
+        } else if (sel) {
+          onPunch(sel.id, slotToTime(sel.slot), slotToTime(sel.slot + 1))
+          setSel(null)
+        }
       }
-      setDragStart(null)
-      setDragEnd(null)
     }
-    window.addEventListener('mouseup', finish)
-    return () => window.removeEventListener('mouseup', finish)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sel, onPunch, multiSel, onDelete])
+
+  useEffect(() => {
+    if (!drag) return
+    const commit = () => {
+      if (drag.kind === 'create') {
+        const dayLo = Math.min(drag.start.day, drag.end.day)
+        const dayHi = Math.max(drag.start.day, drag.end.day)
+        const slotLo = Math.min(drag.start.slot, drag.end.slot)
+        const slotHi = Math.max(drag.start.slot, drag.end.slot)
+        const days = Array.from({ length: dayHi - dayLo + 1 }, (_, i) => dayLo + i)
+        // 단순 클릭: 블록 위면 슬롯 선택, 빈 공간이면 30분 블록 생성
+        if (slotLo === slotHi && dayLo === dayHi) {
+          const hit = schedules.find(
+            (s) => s.daysOfWeek.includes(drag.start.day) &&
+              timeToSlot(s.startTime) <= drag.start.slot &&
+              timeToSlot(s.endTime) > drag.start.slot
+          )
+          if (hit) {
+            if (drag.ctrl) {
+              setSel(null)
+              setMultiSel((prev) => {
+                const next = new Set(prev)
+                if (next.has(hit.id)) next.delete(hit.id)
+                else next.add(hit.id)
+                return next
+              })
+            } else if (sel?.id === hit.id) {
+              setSel(null)
+            } else {
+              setSel({ id: hit.id, day: drag.start.day, slot: drag.start.slot })
+              setMultiSel(new Set())
+            }
+          } else {
+            setSel(null)
+            setMultiSel(new Set())
+            if (sel === null && multiSel.size === 0) {
+              onCreate(days, slotToTime(slotLo), slotToTime(slotLo + 1))
+            }
+          }
+        } else {
+          onCreate(days, slotToTime(slotLo), slotToTime(slotHi + 1))
+        }
+      } else if (drag.kind === 'move') {
+        if (drag.moved) {
+          const newStart = Math.max(0, Math.min(SLOTS_PER_DAY - drag.dur, drag.preview))
+          const delta = newStart - drag.origStart
+          const bulk = multiSelRef.current
+          if (bulk.size > 1 && bulk.has(drag.id)) {
+            bulk.forEach((id) => {
+              const s = schedulesRef.current.find((x) => x.id === id)
+              if (!s) return
+              const sStart = timeToSlot(s.startTime)
+              const sDur = timeToSlot(s.endTime) - sStart
+              const ns = Math.max(0, Math.min(SLOTS_PER_DAY - sDur, sStart + delta))
+              onMove(id, s.daysOfWeek, slotToTime(ns), slotToTime(ns + sDur))
+            })
+          } else {
+            onMove(drag.id, drag.days, slotToTime(newStart), slotToTime(newStart + drag.dur))
+          }
+        } else {
+          setSel({ id: drag.id, day: drag.clickedDay, slot: drag.origStart })
+        }
+      } else if (drag.kind === 'resize') {
+        const end = Math.max(drag.startSlot + 1, drag.endSlot)
+        const endTime = slotToTime(end)
+        const bulk = multiSelRef.current
+        if (bulk.size > 1 && bulk.has(drag.id)) {
+          bulk.forEach((id) => {
+            const s = schedulesRef.current.find((x) => x.id === id)
+            if (s) onMove(id, s.daysOfWeek, s.startTime, endTime)
+          })
+        } else {
+          onMove(drag.id, drag.days, slotToTime(drag.startSlot), endTime)
+        }
+      }
+      setDrag(null)
+    }
+    window.addEventListener('mouseup', commit)
+    return () => window.removeEventListener('mouseup', commit)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dragStart, dragEnd])
+  }, [drag])
 
-  const isTarget = (s: RecurringSchedule) =>
-    target.type === 'parent' ? s.type === 'parent_work' : s.type === 'child_school' && s.childId === target.childId
+  useEffect(() => { multiSelRef.current = multiSel }, [multiSel])
+  useEffect(() => { schedulesRef.current = schedules }, [schedules])
 
-  const inSelection = (day: number, slot: number) => {
-    if (!dragStart || !dragEnd) return false
-    const dayLo = Math.min(dragStart.day, dragEnd.day)
-    const dayHi = Math.max(dragStart.day, dragEnd.day)
-    const slotLo = Math.min(dragStart.slot, dragEnd.slot)
-    const slotHi = Math.max(dragStart.slot, dragEnd.slot)
-    return day >= dayLo && day <= dayHi && slot >= slotLo && slot <= slotHi
+  const slotAt = (col: number, clientY: number) => {
+    const rect = colRefs.current[col]?.getBoundingClientRect()
+    if (!rect) return 0
+    return Math.max(0, Math.min(SLOTS_PER_DAY - 1, Math.floor((clientY - rect.top) / ROW_HEIGHT)))
   }
 
   return (
     <div className="select-none overflow-x-auto">
       <div className="mb-2 flex flex-wrap gap-3 text-xs text-ink-3">
-        <span className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded bg-ink" /> 부모 근무
-        </span>
+        <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink" /> 엄마 근무</span>
+        <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-warn" /> 아빠 근무</span>
         {kids.map((c, i) => (
           <span key={c.id} className="flex items-center gap-1">
             <span className={`h-3 w-3 rounded ${childColors[i % childColors.length].split(' ')[0]}`} /> {c.name} 학교
           </span>
         ))}
-        <span className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded bg-line-2" /> 돌봄(선택)
-        </span>
+        <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-line-2" /> 돌봄(선택)</span>
       </div>
 
       <div className="flex min-w-[640px]">
         <div className="w-14 shrink-0">
           <div style={{ height: ROW_HEIGHT }} />
-          {Array.from({ length: SLOTS_PER_DAY / 2 }, (_, i) => (
-            <div key={i} style={{ height: ROW_HEIGHT * 2 }} className="text-right text-[10px] text-ink-3">
-              {String(START_HOUR + i).padStart(2, '0')}:00
-            </div>
-          ))}
+          <div className="relative" style={{ height: ROW_HEIGHT * SLOTS_PER_DAY }}>
+            {Array.from({ length: SLOTS_PER_DAY / 2 + 1 }, (_, i) => (
+              START_HOUR + i <= END_HOUR && (
+                <div
+                  key={i}
+                  className="absolute right-1.5 -translate-y-1/2 text-[10px] leading-none text-ink-3"
+                  style={{ top: i * 2 * ROW_HEIGHT }}
+                >
+                  {String(START_HOUR + i).padStart(2, '0')}:00
+                </div>
+              )
+            ))}
+          </div>
         </div>
 
         {WEEKDAY_LABELS.map((label, day) => (
           <div key={day} className="flex-1 border-l border-line">
-            <div style={{ height: ROW_HEIGHT }} className="text-center text-xs font-semibold text-ink-2">
-              {label}
-            </div>
-            <div className="relative" style={{ height: ROW_HEIGHT * SLOTS_PER_DAY }}>
+            <div style={{ height: ROW_HEIGHT }} className="text-center text-xs font-semibold text-ink-2">{label}</div>
+            <div
+              ref={(el) => { colRefs.current[day] = el }}
+              className="relative border-t border-line"
+              style={{ height: ROW_HEIGHT * SLOTS_PER_DAY }}
+              onMouseDown={(e) => {
+                if (e.button !== 0) return
+                setMenu(null)
+                const slot = slotAt(day, e.clientY)
+                setDrag({ kind: 'create', start: { day, slot }, end: { day, slot }, ctrl: e.ctrlKey || e.metaKey })
+              }}
+              onMouseMove={(e) => {
+                const slot = slotAt(day, e.clientY)
+                if (!drag) { setHover({ day, slot }); return }
+                if (drag.kind === 'create') {
+                  setDrag({ ...drag, end: { day, slot } })
+                } else if (drag.kind === 'move') {
+                  const p = slot - drag.offset
+                  setDrag({ ...drag, preview: p, moved: drag.moved || p !== drag.preview })
+                } else if (drag.kind === 'resize') {
+                  setDrag({ ...drag, endSlot: slot + 1 })
+                }
+              }}
+              onMouseLeave={() => { if (!drag) setHover(null) }}
+            >
+              {/* 배경 그리드 */}
               {Array.from({ length: SLOTS_PER_DAY }, (_, slot) => (
                 <div
                   key={slot}
-                  onMouseDown={() => {
-                    setDragStart({ day, slot })
-                    setDragEnd({ day, slot })
-                  }}
-                  onMouseEnter={() => dragStart && setDragEnd({ day, slot })}
-                  className={`border-b border-line-3 ${
-                    inSelection(day, slot) ? 'bg-green-soft' : slot % 2 === 0 ? 'bg-ivory-card' : 'bg-ivory'
-                  }`}
+                  className={`border-b ${slot % 2 === 0 ? 'border-line bg-ivory-card' : 'border-line-3 bg-ivory'}`}
                   style={{ height: ROW_HEIGHT }}
                 />
               ))}
@@ -144,45 +264,181 @@ export function WeekScheduleGrid({
               {(() => {
                 const dayBlocks = schedules.filter((s) => s.daysOfWeek.includes(day))
                 const { laneOf, lanes } = layoutLanes(dayBlocks)
-                return dayBlocks.map((s) => {
-                  const top = timeToSlot(s.startTime) * ROW_HEIGHT
-                  const height = (timeToSlot(s.endTime) - timeToSlot(s.startTime)) * ROW_HEIGHT
-                  const lane = laneOf.get(s.id) ?? 0
-                  // Other targets' blocks let drags start/pass underneath; during a drag none of them catch the mouse
-                  const clickable = !dragStart && (isTarget(s) || s.type === 'care')
-                  const dimmed = !isTarget(s) && s.type !== 'care'
+                return dayBlocks
+                  .sort((a, b) => (timeToSlot(b.endTime) - timeToSlot(b.startTime)) - (timeToSlot(a.endTime) - timeToSlot(a.startTime)))
+                  .map((s) => {
+                    const isMoving = drag?.kind === 'move' && drag.moved && (drag.id === s.id || (multiSel.size > 1 && multiSel.has(drag.id) && multiSel.has(s.id)))
+                    const isResizing = drag?.kind === 'resize' && drag.id === s.id
+                    const isBulkResizing = drag?.kind === 'resize' && multiSel.size > 1 && multiSel.has(drag.id) && multiSel.has(s.id)
+                    const startSlot = timeToSlot(s.startTime)
+                    const endSlot = (isResizing || isBulkResizing) ? Math.max(startSlot + 1, drag.endSlot) : timeToSlot(s.endTime)
+                    const selSlot = sel?.id === s.id && sel?.day === day ? sel.slot : null
+                    const isMultiSel = multiSel.has(s.id)
+                    const lane = laneOf.get(s.id) ?? 0
+                    return (
+                      <div
+                        key={s.id}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setSel({ id: s.id, day, slot: slotAt(day, e.clientY) })
+                          setMenu({ id: s.id, x: e.clientX, y: e.clientY, slot: slotAt(day, e.clientY) })
+                        }}
+                        className={`absolute overflow-hidden rounded text-[10px] font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
+                        style={{
+                          top: startSlot * ROW_HEIGHT,
+                          height: (endSlot - startSlot) * ROW_HEIGHT,
+                          left: `calc(${(lane / lanes) * 100}% + 2px)`,
+                          width: `calc(${100 / lanes}% - 4px)`,
+                        }}
+                      >
+                      {/* 선택된 30분 슬롯 하이라이트 */}
+                      {selSlot !== null && (
+                        <div
+                          className="pointer-events-none absolute inset-x-0 bg-yellow-300/50 ring-1 ring-inset ring-yellow-300"
+                          style={{ top: (selSlot - startSlot) * ROW_HEIGHT, height: ROW_HEIGHT }}
+                        />
+                      )}
+                      {/* 상단 grip — 이동 */}
+                      <div
+                        className="absolute inset-x-0 top-0 h-3 cursor-grab active:cursor-grabbing hover:bg-white/20"
+                        onMouseDown={(e) => {
+                          if (e.button !== 0) return
+                          e.stopPropagation()
+                          setDrag({
+                            kind: 'move',
+                            id: s.id,
+                            days: s.daysOfWeek,
+                            dur: timeToSlot(s.endTime) - startSlot,
+                            offset: 0,
+                            preview: startSlot,
+                            origStart: startSlot,
+                            moved: false,
+                            clickedDay: day,
+                          })
+                        }}
+                      />
+                      {/* 하단 handle — 크기 조절 */}
+                      <div
+                        className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize hover:bg-white/30"
+                        onMouseDown={(e) => {
+                          if (e.button !== 0) return
+                          e.stopPropagation()
+                          setDrag({ kind: 'resize', id: s.id, days: s.daysOfWeek, startSlot, endSlot: timeToSlot(s.endTime) })
+                        }}
+                      />
+                      <div className="pointer-events-none select-none px-1 pt-2.5 leading-tight">
+                        <div className="truncate font-semibold">{blockLabel(s, kids)}</div>
+                        {(endSlot - startSlot) >= 2 && (
+                          <div className="truncate opacity-75">{s.startTime}~{slotToTime(endSlot)}</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                  })
+              })()}
+
+              {/* 이동 고스트 */}
+              {drag?.kind === 'move' && drag.moved && (() => {
+                const delta = drag.preview - drag.origStart
+                const isBulk = multiSel.size > 1 && multiSel.has(drag.id)
+                const ghostIds = isBulk ? [...multiSel] : [drag.id]
+                return ghostIds.map((gid) => {
+                  const s = schedules.find((x) => x.id === gid)
+                  if (!s?.daysOfWeek.includes(day)) return null
+                  const sStart = timeToSlot(s.startTime)
+                  const sDur = timeToSlot(s.endTime) - sStart
+                  const p = Math.max(0, Math.min(SLOTS_PER_DAY - sDur, isBulk ? sStart + delta : drag.preview))
                   return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      title="클릭하면 수정/삭제할 수 있어요"
-                      tabIndex={clickable ? undefined : -1}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={() => onSelect(s.id)}
-                      className={`focus-ring absolute overflow-hidden rounded px-1 text-left text-[10px] font-semibold ${blockColor(s, kids)} ${
-                        clickable ? '' : 'pointer-events-none'
-                      } ${dimmed ? 'opacity-50' : ''}`}
-                      style={{
-                        top,
-                        height,
-                        left: `calc(${(lane / lanes) * 100}% + 2px)`,
-                        width: `calc(${100 / lanes}% - 4px)`,
-                      }}
+                    <div
+                      key={gid}
+                      className={`pointer-events-none absolute inset-x-0.5 z-20 rounded px-1 pt-3 text-[10px] font-semibold ring-2 ring-inset ring-white/60 ${blockColor(s, kids)}`}
+                      style={{ top: p * ROW_HEIGHT, height: sDur * ROW_HEIGHT }}
                     >
-                      {blockLabel(s, kids)} {s.startTime}~{s.endTime}
-                    </button>
+                      <span className="pointer-events-none select-none">
+                        {blockLabel(s, kids)} {slotToTime(p)}~{slotToTime(p + sDur)}
+                      </span>
+                    </div>
                   )
                 })
               })()}
+
+              {/* 드래그 생성 오버레이 */}
+              {drag?.kind === 'create' && (() => {
+                const dayLo = Math.min(drag.start.day, drag.end.day)
+                const dayHi = Math.max(drag.start.day, drag.end.day)
+                if (day < dayLo || day > dayHi) return null
+                const slotLo = Math.min(drag.start.slot, drag.end.slot)
+                const slotHi = Math.max(drag.start.slot, drag.end.slot)
+                if (slotLo === slotHi && dayLo === dayHi) return null
+                return (
+                  <div
+                    className="pointer-events-none absolute inset-x-0 z-10 rounded bg-green/20 outline outline-2 -outline-offset-1 outline-green/60"
+                    style={{ top: slotLo * ROW_HEIGHT, height: (slotHi - slotLo + 1) * ROW_HEIGHT }}
+                  />
+                )
+              })()}
+
+              {/* 호버 표시 */}
+              {!drag && hover?.day === day && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-10 bg-ink/5"
+                  style={{ top: hover.slot * ROW_HEIGHT, height: ROW_HEIGHT }}
+                />
+              )}
             </div>
           </div>
         ))}
       </div>
 
+      {multiSel.size > 1 && (
+        <p className="mt-2 text-xs text-blue-500">
+          {multiSel.size}개 선택됨 — 아무 블록 하단 바 드래그 → 종료 시간 일괄 조절 · Escape → 해제
+        </p>
+      )}
+
       <p className="mt-2 text-xs text-ink-3">
-        드래그하면 현재 대상({target.type === 'parent' ? '부모 근무' : '아이 학교'})으로 등록되고, 흐리게 보이는 다른
-        일정 위로도 드래그할 수 있어요. 진하게 보이는 블록을 클릭하면 시간을 수정하거나 삭제할 수 있어요.
+        클릭/드래그 → 등록 · Ctrl+클릭 → 다중선택 · 블록 클릭 → 슬롯 선택(Delete 삭제) · 블록 상단 드래그 → 이동 · 블록 하단 드래그 → 크기 조절 · 우클릭 → 수정/삭제
       </p>
+
+      {menu && (
+        <div
+          ref={menuRef}
+          className="fixed z-50 overflow-hidden rounded-lg border border-line bg-white shadow-lg"
+          style={{ top: menu.y, left: menu.x }}
+        >
+          <button
+            type="button"
+            className="block w-full px-4 py-2 text-left text-sm hover:bg-ivory"
+            onClick={() => { onEdit(menu.id); setMenu(null) }}
+          >
+            수정
+          </button>
+          <button
+            type="button"
+            className="block w-full px-4 py-2 text-left text-sm text-error hover:bg-ivory"
+            onClick={() => { onPunch(menu.id, slotToTime(menu.slot), slotToTime(menu.slot + 1)); setMenu(null); setSel(null) }}
+          >
+            이 시간만 삭제 ({slotToTime(menu.slot)}~{slotToTime(menu.slot + 1)})
+          </button>
+          {multiSel.size > 1 && multiSel.has(menu.id) && (
+            <button
+              type="button"
+              className="block w-full px-4 py-2 text-left text-sm text-error hover:bg-ivory font-semibold"
+              onClick={() => { multiSel.forEach((id) => onDelete(id)); setMultiSel(new Set()); setMenu(null) }}
+            >
+              선택 {multiSel.size}개 모두 삭제
+            </button>
+          )}
+          <button
+            type="button"
+            className="block w-full px-4 py-2 text-left text-sm text-error hover:bg-ivory opacity-60"
+            onClick={() => { onDelete(menu.id); setMenu(null) }}
+          >
+            전체 삭제
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -10,7 +10,7 @@ import { useMatchStore } from '../store/matchStore'
 import { useAuthStore } from '../store/authStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { fetchCareOptions, fetchCareOptionsForGap } from '../api/careOptions'
-import { matchesCareOption, gradeBuckets as grades, timeBuckets as times } from '../data/careMatch'
+import { matchesCareOption, gradeBuckets as grades, timeBuckets as times, REGIONS } from '../data/careMatch'
 import type { CareOption } from '../data/types'
 import { toISO } from '../data/date'
 import { computeGaps } from '../data/gaps'
@@ -44,16 +44,15 @@ export function Home() {
   const { children, schedules, exceptions } = useCareScheduleStore()
   const [today] = useState(() => toISO(new Date()))
   const [careOptions, setCareOptions] = useState<CareOption[]>([])
-  const primaryChild = children[0]
-  // Gap before chosen care is subtracted: GapMatchPanel subtracts its checked options itself,
-  // so checked options stay listed (and can be unchecked) even once they cover the gap
-  const todaysGap = primaryChild
-    ? computeGaps(primaryChild, today, schedules.filter((s) => s.type !== 'care'), exceptions)[0]
-    : undefined
+  const childGaps = children.map((child) => ({
+    child,
+    gap: computeGaps(child, today, schedules, exceptions)[0] as { start: string; end: string } | undefined,
+  }))
+  const firstWithGap = childGaps.find((cg) => cg.gap)
 
   useEffect(() => {
-    if (primaryChild && todaysGap) {
-      fetchCareOptionsForGap(primaryChild.grade, todaysGap)
+    if (firstWithGap) {
+      fetchCareOptionsForGap(firstWithGap.child.grade, firstWithGap.gap!)
         .then(setCareOptions)
         .catch(() => setCareOptions([]))
     } else {
@@ -62,7 +61,7 @@ export function Home() {
         .catch(() => setCareOptions([]))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [primaryChild?.id, primaryChild?.grade, todaysGap?.start, todaysGap?.end])
+  }, [children.map((c) => c.id).join(','), today])
 
   useEffect(() => {
     if (user) useCareScheduleStore.getState().loadAll()
@@ -70,15 +69,20 @@ export function Home() {
 
   // 등록된 아이/공백이 있으면, 아직 직접 고르지 않은 조건에 한해 기본값으로 채워준다
   useEffect(() => {
-    if (!primaryChild || !todaysGap) return
-    if (!match.grade) match.setGrade(gradeToBucket(primaryChild.grade))
-    if (!match.time) match.setTime(endTimeToBucket(todaysGap.end))
+    if (!firstWithGap) return
+    if (!match.grade) match.setGrade(gradeToBucket(firstWithGap.child.grade))
+    if (!match.time) match.setTime(endTimeToBucket(firstWithGap.gap!.end))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [primaryChild?.id, todaysGap?.end])
+  }, [firstWithGap?.child.id, firstWithGap?.gap?.end])
 
   const goMatch = () => navigate('/find')
 
-  const matchedCount = careOptions.filter((c) => matchesCareOption(c, match.grade, match.time, match.area)).length
+  const locationFilteredOptions = careOptions.filter((c) =>
+    matchesCareOption(c, '', '', match.region, match.district, match.costFilter)
+  )
+  const matchedCount = locationFilteredOptions.filter((c) =>
+    matchesCareOption(c, match.grade, match.time)
+  ).length
 
   return (
     <div>
@@ -144,16 +148,78 @@ export function Home() {
 
             <DemoNotice options={careOptions} className="mt-5" />
 
-            {user && primaryChild && !todaysGap && (
-              <Card className="mt-5">
-                <p className="text-sm text-ink-3">오늘은 {primaryChild.name}의 돌봄 공백이 없어요.</p>
-              </Card>
-            )}
-
-            {user && primaryChild && todaysGap ? (
-              <GapMatchPanel child={primaryChild} gap={todaysGap} options={careOptions} className="mt-5" />
+            {user && childGaps.length > 0 ? (
+              <div className="mt-5 flex flex-col gap-4">
+                <div className="flex flex-wrap gap-2">
+                  {(['all', 'free', 'paid'] as const).map((v) => (
+                    <Chip key={v} selected={match.costFilter === v} onClick={() => match.setCostFilter(v)}>
+                      {v === 'all' ? '전체' : v === 'free' ? '무료' : '유료'}
+                    </Chip>
+                  ))}
+                </div>
+                {childGaps.map(({ child, gap }) => {
+                  const selectedCare = schedules.filter(
+                    (s) => s.childId === child.id && s.type === 'care'
+                  )
+                  if (gap) {
+                    return <GapMatchPanel key={child.id} child={child} gap={gap} options={locationFilteredOptions} />
+                  }
+                  return (
+                    <Card key={child.id} className="flex flex-col gap-2">
+                      <p className="text-sm font-bold text-ink">{child.name}</p>
+                      <p className="text-xs text-ink-3">오늘은 돌봄 공백이 없어요.</p>
+                      {selectedCare.length > 0 && (
+                        <div className="mt-1 flex flex-col gap-1">
+                          <p className="text-xs font-semibold text-ink-2">선택한 돌봄</p>
+                          {selectedCare.map((s) => {
+                            const option = careOptions.find((o) => o.id === s.careOptionId)
+                            return (
+                              <div key={s.id} className="flex items-center justify-between rounded-lg bg-green-soft px-2 py-1 text-xs">
+                                <span className="font-semibold text-green">
+                                  {option?.name ?? '돌봄(선택)'} · {s.startTime}~{s.endTime}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => useCareScheduleStore.getState().removeSchedule(s.id)}
+                                  className="focus-ring ml-2 text-error"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </Card>
+                  )
+                })}
+              </div>
             ) : (
               <Card className="mt-5 flex flex-col justify-between gap-6">
+                <div>
+                  <p className="text-sm font-bold text-ink">지역</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <select
+                      aria-label="시/도"
+                      value={match.region}
+                      onChange={(e) => match.setRegion(e.target.value)}
+                      className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+                    >
+                      <option value="">시/도 전체</option>
+                      {REGIONS.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="구/군/동"
+                      value={match.district}
+                      onChange={(e) => match.setDistrict(e.target.value)}
+                      disabled={!match.region}
+                      className="focus-ring w-28 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
+                    />
+                  </div>
+                </div>
                 <div>
                   <p className="text-sm font-bold text-ink">아이 학년</p>
                   <div className="mt-2 flex flex-wrap gap-2">

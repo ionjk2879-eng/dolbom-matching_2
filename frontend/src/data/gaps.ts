@@ -47,6 +47,18 @@ export function subtract(busy: Interval[], covered: Interval[]): Interval[] {
   return result
 }
 
+function intersect(a: Interval[], b: Interval[]): Interval[] {
+  const result: Interval[] = []
+  for (const x of a) {
+    for (const y of b) {
+      const start = Math.max(x.start, y.start)
+      const end = Math.min(x.end, y.end)
+      if (start < end) result.push({ start, end })
+    }
+  }
+  return result
+}
+
 export type Gap = { start: string; end: string }
 
 // 돌봄 공백 = 부모가 근무 중(parent_work)인데 아이가 학교/돌봄(child_school, care)으로
@@ -58,10 +70,23 @@ export function computeGaps(
   schedules: RecurringSchedule[],
   exceptions: ScheduleException[],
 ): Gap[] {
-  const parentBusy = schedules
-    .filter((s) => s.type === 'parent_work' && s.childId === null)
-    .map((s) => resolveInterval(s, date, exceptions))
-    .filter((i): i is Interval => i !== null)
+  const resolve = (s: RecurringSchedule) => resolveInterval(s, date, exceptions)
+
+  const momWork = schedules
+    .filter((s) => s.type === 'parent_work' && s.parentLabel === 'mom' && s.childId === null)
+    .map(resolve).filter((i): i is Interval => i !== null)
+  const dadWork = schedules
+    .filter((s) => s.type === 'parent_work' && s.parentLabel === 'dad' && s.childId === null)
+    .map(resolve).filter((i): i is Interval => i !== null)
+  const untaggedWork = schedules
+    .filter((s) => s.type === 'parent_work' && !s.parentLabel && s.childId === null)
+    .map(resolve).filter((i): i is Interval => i !== null)
+
+  // 맞벌이(엄마+아빠 둘 다 등록): 동시에 근무하는 시간만 공백 후보
+  const parentBusy: Interval[] =
+    momWork.length > 0 && dadWork.length > 0
+      ? intersect(momWork, dadWork)
+      : [...momWork, ...dadWork, ...untaggedWork]
 
   const childCovered = schedules
     .filter((s) => s.childId === child.id && (s.type === 'child_school' || s.type === 'care'))

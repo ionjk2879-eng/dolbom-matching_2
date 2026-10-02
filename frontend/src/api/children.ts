@@ -28,6 +28,16 @@ export async function createChild(data: NewChild): Promise<ApiChild> {
   return res.json()
 }
 
+export async function updateChild(id: string, data: Partial<NewChild>): Promise<ApiChild> {
+  const res = await apiFetch(`/children/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error('아이 정보를 수정하지 못했어요')
+  return res.json()
+}
+
 export async function deleteChild(id: string): Promise<void> {
   const res = await apiFetch(`/children/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error('아이를 삭제하지 못했어요')

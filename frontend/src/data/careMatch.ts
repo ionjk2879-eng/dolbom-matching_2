@@ -49,6 +49,32 @@ export function coversCloseTime(closeTime: string, time: string): boolean {
   return true
 }
 
-export function matchesCareOption(c: CareOption, grade: string, time: string, area = ''): boolean {
-  return coversArea(c, area) && coversGrade(c, grade) && coversCloseTime(c.close_time, time)
+export function matchesLocation(c: CareOption, region: string, district: string): boolean {
+  if (region && !c.address.includes(region)) return false
+  if (district && !c.address.includes(district)) return false
+  return true
 }
+
+export function matchesCost(c: CareOption, costFilter: 'all' | 'free' | 'paid'): boolean {
+  if (costFilter === 'free') return c.cost_per_hour === 0
+  if (costFilter === 'paid') return c.cost_per_hour > 0
+  return true
+}
+
+export function matchesCareOption(
+  c: CareOption,
+  grade: string,
+  time: string,
+  region = '',
+  district = '',
+  costFilter: 'all' | 'free' | 'paid' = 'all',
+): boolean {
+  return coversGrade(c, grade) && coversCloseTime(c.close_time, time) && matchesLocation(c, region, district) && matchesCost(c, costFilter)
+}
+
+export const REGIONS = [
+  '서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시',
+  '대전광역시', '울산광역시', '세종특별자치시', '경기도', '강원특별자치도',
+  '충청북도', '충청남도', '전라북도', '전라남도', '경상북도', '경상남도',
+  '제주특별자치도',
+]

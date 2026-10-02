@@ -87,8 +87,10 @@ export async function fetchCareOptionsForGap(grade: number, gap: Gap): Promise<C
     const results = await Promise.all(times.map((t) => queryCareOptions(t, t, grade)))
     const byId = new Map<string, CareOption>()
     for (const o of results.flat()) byId.set(o.id, o)
-    return [...byId.values()].filter((o) => overlapWithGap(o, gap) !== null)
+    const matched = [...byId.values()].filter((o) => overlapWithGap(o, gap) !== null)
+    if (matched.length > 0) return matched
   } catch {
-    return demoOptions.filter((o) => overlapWithGap(o, gap) !== null)
+    // fall through to demo
   }
+  return demoOptions.filter((o) => overlapWithGap(o, gap) !== null)
 }
