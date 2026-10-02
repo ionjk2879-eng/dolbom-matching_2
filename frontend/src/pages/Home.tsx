@@ -78,7 +78,7 @@ export function Home() {
 
   const goMatch = () => navigate('/find')
 
-  const matchedCount = careOptions.filter((c) => matchesCareOption(c, match.grade, match.time)).length
+  const matchedCount = careOptions.filter((c) => matchesCareOption(c, match.grade, match.time, match.area)).length
 
   return (
     <div>
