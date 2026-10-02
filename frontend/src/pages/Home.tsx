@@ -4,6 +4,7 @@ import { Chip } from '../components/Chip'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { GapMatchPanel } from '../components/GapMatchPanel'
+import { DemoNotice } from '../components/DemoNotice'
 import { CareScheduleEditor } from '../components/CareScheduleEditor'
 import { useMatchStore } from '../store/matchStore'
 import { useAuthStore } from '../store/authStore'
@@ -140,6 +141,8 @@ export function Home() {
                 </Link>
               )}
             </div>
+
+            <DemoNotice options={careOptions} className="mt-5" />
 
             {user && primaryChild && !todaysGap && (
               <Card className="mt-5">

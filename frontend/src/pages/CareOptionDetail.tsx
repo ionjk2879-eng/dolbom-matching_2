@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
+import { DemoNotice } from '../components/DemoNotice'
 import { MapView, type MapPin } from '../components/MapView'
 import { fetchCareOptions } from '../api/careOptions'
 import { careTypeLabels } from '../data/careMatch'
@@ -64,6 +65,7 @@ export function CareOptionDetail() {
         title={option.name}
         desc={`${careTypeLabels[option.type]} · ${option.open_time}~${option.close_time} · ${option.cost_per_hour === 0 ? '무료' : `시간당 ${option.cost_per_hour.toLocaleString()}원`}`}
         breadcrumb={[{ label: '돌봄 찾기', to: '/find' }, { label: option.name }]} />
+      <DemoNotice options={[option]} className="mx-auto mt-6 max-w-6xl" />
       <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 md:grid-cols-[360px_1fr]">
         <Card className="flex flex-col gap-4">
           <dl className="flex flex-col gap-3">

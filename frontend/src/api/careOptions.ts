@@ -51,6 +51,8 @@ const demoOptions: CareOption[] = [
   },
 ]
 
+export const isDemoOption = (o: CareOption) => o.id.startsWith('demo-')
+
 async function queryCareOptions(start: string, end: string, grade: number): Promise<CareOption[]> {
   const res = await apiFetch(`/care-options?start=${start}&end=${end}&grade=${grade}`)
   if (!res.ok) throw new Error('돌봄 옵션을 불러오지 못했어요')

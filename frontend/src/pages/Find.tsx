@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Chip } from '../components/Chip'
+import { DemoNotice } from '../components/DemoNotice'
 import { MapView, type MapPin } from '../components/MapView'
 import { useMatchStore } from '../store/matchStore'
 import { fetchCareOptions } from '../api/careOptions'
@@ -96,6 +97,7 @@ export function Find() {
 
       {loading && <p className="mt-6 text-sm text-ink-3">불러오는 중...</p>}
       {error && <p className="mt-6 text-sm text-error">{error}</p>}
+      {!loading && <DemoNotice options={options} className="mt-5" />}
 
       {!loading && !error && (
         <div className="mt-5 flex flex-col gap-4 lg:flex-row">
