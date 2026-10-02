@@ -62,11 +62,16 @@ export function Find() {
   const selectedOption = results.find((c) => c.id === selected) ?? null
   const conditionSummary = [match.area, match.grade, match.time].filter(Boolean).join(' · ')
 
-  // Options without coordinates (visiting care) get no pin instead of a fake one at the city center
-  const pins: MapPin[] = results.flatMap((c) =>
-    c.latitude != null && c.longitude != null
-      ? [{ id: c.id, lat: c.latitude, lng: c.longitude, name: c.name, costPerHour: c.cost_per_hour }]
-      : [],
+  // Options without coordinates (visiting care) get no pin instead of a fake one at the city center.
+  // Memoized so MapView doesn't redraw markers and pan back to the selection on every render.
+  const pins = useMemo<MapPin[]>(
+    () =>
+      results.flatMap((c) =>
+        c.latitude != null && c.longitude != null
+          ? [{ id: c.id, lat: c.latitude, lng: c.longitude, name: c.name, costPerHour: c.cost_per_hour }]
+          : [],
+      ),
+    [results],
   )
 
   return (

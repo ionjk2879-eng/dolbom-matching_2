@@ -21,6 +21,8 @@ export function GapMatchPanel({
   const [sortBy, setSortBy] = useState<'coverage' | 'distance'>('coverage')
   const [here, setHere] = useState<LatLng | null>(null)
   const [locationError, setLocationError] = useState('')
+  // Options whose add/remove request is in flight; blocks a second click from saving a duplicate
+  const [pending, setPending] = useState<string[]>([])
 
   const sortByDistance = () => {
     setSortBy('distance')
@@ -59,10 +61,17 @@ export function GapMatchPanel({
   const gapLength = toMinutes(gap.end) - gapStart
   const toPercent = (t: string) => ((toMinutes(t) - gapStart) / gapLength) * 100
 
-  const toggle = (option: CareOption, overlap: Gap) => {
+  const toggle = async (option: CareOption, overlap: Gap) => {
+    if (pending.includes(option.id)) return
+    setPending((p) => [...p, option.id])
+    await saveToggle(option, overlap)
+    setPending((p) => p.filter((id) => id !== option.id))
+  }
+
+  const saveToggle = async (option: CareOption, overlap: Gap) => {
     const existing = checkedFor(option.id)
     if (existing) {
-      removeSchedule(existing.id)
+      await removeSchedule(existing.id)
       return
     }
     const schoolDays =
@@ -73,7 +82,7 @@ export function GapMatchPanel({
     // Runs on click, not during render
     // eslint-disable-next-line react/purity
     const daysOfWeek = days.length > 0 ? days : [new Date().getDay()]
-    addSchedule({
+    await addSchedule({
       type: 'care',
       childId: child.id,
       careOptionId: option.id,
@@ -163,6 +172,7 @@ export function GapMatchPanel({
               <input
                 type="checkbox"
                 checked={checked}
+                disabled={pending.includes(option.id)}
                 onChange={() => toggle(option, overlap)}
                 className="mt-1 h-4 w-4 accent-green"
               />

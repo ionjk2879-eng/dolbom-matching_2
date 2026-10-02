@@ -78,8 +78,12 @@ export function MapView({
     }
   }, [ready])
 
+  // Latest pins for the pan effect below, which must not re-run when only the pins change
+  const pinsRef = useRef(pins)
+
   // 핀 & 선택 상태 동기화
   useEffect(() => {
+    pinsRef.current = pins
     if (!mapRef.current) return
 
     markersRef.current.forEach((m) => m.setMap(null))
@@ -111,12 +115,15 @@ export function MapView({
       naver.maps.Event.addListener(marker, 'click', () => onSelect(pin.id))
       markersRef.current.set(pin.id, marker)
     })
-
-    if (selected) {
-      const pin = pins.find((p) => p.id === selected)
-      if (pin) mapRef.current.panTo(new naver.maps.LatLng(pin.lat, pin.lng))
-    }
   }, [pins, selected, onSelect, ready])
+
+  // Move the map only when the selection changes, so re-sorting or filtering
+  // doesn't yank the map away from wherever the user dragged it
+  useEffect(() => {
+    if (!mapRef.current || !selected) return
+    const pin = pinsRef.current.find((p) => p.id === selected)
+    if (pin) mapRef.current.panTo(new naver.maps.LatLng(pin.lat, pin.lng))
+  }, [selected, ready])
 
   if (mapError) {
     return (
