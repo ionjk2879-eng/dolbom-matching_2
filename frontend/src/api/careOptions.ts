@@ -17,6 +17,7 @@ const demoOptions: CareOption[] = [
     close_time: '17:00',
     cost_per_hour: 0,
     phone: null,
+    url: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -32,6 +33,7 @@ const demoOptions: CareOption[] = [
     close_time: '19:00',
     cost_per_hour: 3000,
     phone: '042-000-0000',
+    url: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -47,6 +49,7 @@ const demoOptions: CareOption[] = [
     close_time: '22:00',
     cost_per_hour: 11080,
     phone: '1577-2514',
+    url: null,
     created_at: new Date().toISOString(),
   },
 ]

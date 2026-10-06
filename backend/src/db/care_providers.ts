@@ -13,6 +13,7 @@ export type CareProvider = {
   close_time: string
   cost_per_hour: number
   phone: string | null
+  url: string | null
   created_at: string
 }
 
