@@ -89,7 +89,7 @@ export function Find() {
             <button
               type="button"
               onClick={match.reset}
-              className="focus-ring text-xs text-ink-3 hover:text-error"
+              className="focus-ring text-xs text-ink-2 hover:text-error"
             >
               초기화
             </button>
@@ -192,7 +192,7 @@ export function Find() {
         {selectedOption && (
           <div className="absolute bottom-3 right-3 w-60 rounded-2xl border border-line bg-ivory-card p-3 shadow-[0_24px_40px_-28px_rgba(60,50,30,.45)]">
             <p className="text-sm font-bold leading-tight text-ink">{selectedOption.name}</p>
-            <p className="mt-0.5 text-xs text-ink-3">{selectedOption.address}</p>
+            <p className="mt-0.5 text-xs text-ink-2">{selectedOption.address}</p>
             <div className="mt-2.5 flex gap-1.5">
               {selectedOption.phone && (
                 <a
@@ -223,18 +223,28 @@ export function Find() {
 
         {/* 결과 목록 (스크롤) */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
+          {loading && <p className="text-sm text-ink-2">불러오는 중...</p>}
           {error && <p className="text-sm text-error">{error}</p>}
           {!loading && <DemoNotice options={options} />}
 
           {!loading && !error && (
             <div className="mt-2 flex flex-col gap-2">
-              <p className="text-xs text-ink-3">
+              <p className="text-xs text-ink-2">
                 <span className="font-bold text-ink">{results.length}</span>곳
               </p>
               {results.length === 0 && (
                 <div className="rounded-2xl border border-line bg-ivory-card p-8 text-center">
                   <p className="text-sm font-bold text-ink">조건에 맞는 돌봄 옵션이 없어요</p>
+                  <p className="mt-1 text-xs text-ink-2">지역, 학년, 시간 조건을 바꿔 보세요</p>
+                  {conditionSummary && (
+                    <button
+                      type="button"
+                      onClick={match.reset}
+                      className="focus-ring mt-4 rounded-full border border-green px-4 py-1.5 text-xs font-bold text-green hover:bg-green-soft"
+                    >
+                      조건 초기화
+                    </button>
+                  )}
                 </div>
               )}
               {results.map((c) => (
@@ -248,14 +258,20 @@ export function Find() {
                       : 'border-line bg-ivory-card hover:border-green/40'
                   }`}
                 >
-                  <p className="text-sm font-bold text-ink">{c.name}</p>
-                  <p className="mt-1 text-xs text-ink-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-bold text-ink">{c.name}</p>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${
+                        c.cost_per_hour === 0 ? 'bg-green-soft text-green' : 'bg-ivory-deep text-ink-2'
+                      }`}
+                    >
+                      {c.cost_per_hour === 0 ? '무료' : `시간당 ${c.cost_per_hour.toLocaleString()}원`}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-ink-2">
                     {careTypeLabels[c.type]} · {c.address}
                   </p>
-                  <p className="mt-1 text-xs text-ink-2">
-                    {c.open_time}~{c.close_time} · 시간당{' '}
-                    {c.cost_per_hour === 0 ? '무료' : `${c.cost_per_hour.toLocaleString()}원`}
-                  </p>
+                  <p className="mt-1 text-xs text-ink-2">운영 {c.open_time}~{c.close_time}</p>
                 </button>
               ))}
             </div>

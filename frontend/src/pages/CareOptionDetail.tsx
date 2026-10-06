@@ -38,7 +38,7 @@ export function CareOptionDetail() {
     [option],
   )
 
-  if (loading) return <p className="mx-auto max-w-6xl px-4 py-20 text-sm text-ink-3">불러오는 중...</p>
+  if (loading) return <p className="mx-auto max-w-6xl px-4 py-20 text-sm text-ink-2">불러오는 중...</p>
 
   if (!option) {
     return (
@@ -51,12 +51,15 @@ export function CareOptionDetail() {
     )
   }
 
-  const rows: [string, string][] = [
-    ['유형', careTypeLabels[option.type]],
-    ['주소', option.address],
+  // 핵심 정보는 타일로 먼저 보여주고, 나머지는 아래 목록에 둔다
+  const facts: [string, string][] = [
     ['운영 시간', `${option.open_time}~${option.close_time}`],
     ['비용', option.cost_per_hour === 0 ? '무료' : `시간당 ${option.cost_per_hour.toLocaleString()}원`],
     ['대상 학년', gradeLabel(option)],
+  ]
+  const rows: [string, string][] = [
+    ['유형', careTypeLabels[option.type]],
+    ['주소', option.address],
     ['전화', option.phone ?? '정보 없음'],
   ]
 
@@ -64,15 +67,23 @@ export function CareOptionDetail() {
     <div>
       <PageHero
         title={option.name}
-        desc={`${careTypeLabels[option.type]} · ${option.open_time}~${option.close_time} · ${option.cost_per_hour === 0 ? '무료' : `시간당 ${option.cost_per_hour.toLocaleString()}원`}`}
+        desc={careTypeLabels[option.type]}
         breadcrumb={[{ label: '돌봄 찾기', to: '/find' }, { label: option.name }]} />
       <DemoNotice options={[option]} className="mx-auto mt-6 max-w-6xl" />
       <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 md:grid-cols-[360px_1fr]">
-        <Card className="flex flex-col gap-4">
+        <Card className="flex flex-col gap-5">
+          <div className="grid grid-cols-3 gap-2">
+            {facts.map(([label, value]) => (
+              <div key={label} className="rounded-xl bg-ivory-deep px-3 py-2.5">
+                <p className="text-xs text-ink-2">{label}</p>
+                <p className="mt-0.5 text-sm font-bold text-ink">{value}</p>
+              </div>
+            ))}
+          </div>
           <dl className="flex flex-col gap-3">
             {rows.map(([label, value]) => (
               <div key={label} className="flex gap-4 text-sm">
-                <dt className="w-20 shrink-0 font-semibold text-ink-3">{label}</dt>
+                <dt className="w-20 shrink-0 font-semibold text-ink-2">{label}</dt>
                 <dd className="text-ink">{value}</dd>
               </div>
             ))}
@@ -80,7 +91,7 @@ export function CareOptionDetail() {
           {option.phone && (
             <a
               href={`tel:${option.phone}`}
-              className="focus-ring rounded-xl bg-green px-4 py-2.5 text-center text-sm font-semibold text-white hover:opacity-90"
+              className="focus-ring min-h-11 rounded-xl bg-green px-4 py-2.5 text-center text-sm font-semibold text-white hover:opacity-90"
             >
               전화 문의
             </a>
@@ -90,7 +101,7 @@ export function CareOptionDetail() {
         {pins.length > 0 ? (
           <MapView pins={pins} selected={option.id} onSelect={noop} />
         ) : (
-          <Card className="flex items-center justify-center text-sm text-ink-3">방문형 돌봄이라 위치 정보가 없어요</Card>
+          <Card className="flex items-center justify-center text-sm text-ink-2">방문형 돌봄이라 위치 정보가 없어요</Card>
         )}
       </div>
     </div>
