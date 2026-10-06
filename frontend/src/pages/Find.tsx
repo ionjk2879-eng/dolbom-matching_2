@@ -187,7 +187,7 @@ export function Find() {
       </div>
 
       {/* ── 지도: 모바일=200px 고정 / 데스크탑=왼쪽 전체 높이 ── */}
-      <div className="relative h-[200px] shrink-0 lg:h-auto lg:flex-1">
+      <div className="relative h-[200px] shrink-0 overflow-hidden lg:h-auto lg:flex-1">
         <MapView pins={pins} selected={selected} onSelect={setSelected} />
         {selectedOption && (
           <div className="absolute bottom-3 right-3 w-60 rounded-2xl border border-line bg-ivory-card p-3 shadow-[0_24px_40px_-28px_rgba(60,50,30,.45)]">
