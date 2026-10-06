@@ -72,11 +72,11 @@ export function Find() {
   )
 
   return (
-    /* 헤더(61px) 아래 남은 화면: 모바일=세로, 데스크탑=가로 */
-    <div className="flex h-[calc(100dvh-61px)] flex-col overflow-hidden lg:flex-row">
+    /* MapLayout이 main에 flex-1 min-h-0을 줬으므로 h-full이 곧 남은 뷰포트 */
+    <div className="flex h-full flex-col overflow-hidden lg:flex-row">
 
-      {/* ── 지도 ── 모바일: 280px 고정 / 데스크탑: 왼쪽 전체 */}
-      <div className="relative h-[280px] shrink-0 lg:h-auto lg:flex-1">
+      {/* ── 지도 ── 모바일: 200px 고정 / 데스크탑: 왼쪽 전체 */}
+      <div className="relative h-[200px] shrink-0 lg:h-auto lg:flex-1">
         <MapView pins={pins} selected={selected} onSelect={setSelected} />
         {selectedOption && (
           <div className="absolute bottom-3 right-3 w-64 rounded-2xl border border-line bg-ivory-card p-3 shadow-[0_24px_40px_-28px_rgba(60,50,30,.45)]">
@@ -131,7 +131,11 @@ export function Find() {
               <button
                 type="button"
                 onClick={() => setFilterOpen((v) => !v)}
-                className="focus-ring flex items-center gap-1 rounded-lg border border-line-2 px-2.5 py-1.5 text-xs font-semibold text-ink-2 hover:bg-ivory-deep"
+                className={`focus-ring flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                  filterOpen
+                    ? 'bg-green text-white'
+                    : 'border border-green text-green hover:bg-green-soft'
+                }`}
               >
                 필터 {filterOpen ? '▲' : '▼'}
               </button>

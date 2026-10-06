@@ -31,13 +31,28 @@ function Layout() {
   )
 }
 
+// 지도 페이지 전용 레이아웃: footer 없이 main이 남은 높이 전체를 차지
+function MapLayout() {
+  return (
+    <div className="flex h-screen flex-col bg-ivory">
+      <Header />
+      <StoreErrorBanner />
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route element={<MapLayout />}>
+        <Route path="/find" element={<Find />} />
+      </Route>
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/find" element={<Find />} />
         <Route path="/find/:id" element={<CareOptionDetail />} />
         <Route path="/centers" element={<Centers />} />
         <Route path="/consult" element={<Consult />} />
