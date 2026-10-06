@@ -52,16 +52,16 @@ export function MyPage() {
         <Card className="flex flex-col gap-2">
           <p className="text-sm font-bold text-ink">내 정보</p>
           <p className="text-lg font-extrabold text-ink">{user?.name ?? user?.email ?? '사용자'}</p>
-          <p className="text-xs text-ink-3">
+          <p className="text-xs text-ink-2">
             {user?.email && `${user.email} · `}
             {user ? `${providerLabels[user.provider] ?? '소셜'} 계정으로 로그인` : ''}
           </p>
         </Card>
 
         <Section title="오늘의 돌봄 공백" to="/gaps">
-          {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
+          {loading && <p className="text-sm text-ink-2">불러오는 중...</p>}
           {!loading && children.length === 0 && (
-            <p className="text-sm text-ink-3">
+            <p className="text-sm text-ink-2">
               등록된 아이/일정이 없어요.{' '}
               <Link to="/gaps/setup" className="font-semibold text-green underline">
                 등록하기
@@ -74,7 +74,7 @@ export function MyPage() {
               <div key={child.id} className="rounded-xl border border-line p-3">
                 <p className="text-sm font-bold text-ink">{child.name}</p>
                 {gaps.length === 0 ? (
-                  <p className="mt-1 text-xs text-ink-3">오늘은 돌봄 공백이 없어요</p>
+                  <p className="mt-1 text-xs text-ink-2">오늘은 돌봄 공백이 없어요</p>
                 ) : (
                   gaps.map((g, i) => (
                     <span key={i} className="mt-1 inline-block rounded-lg bg-warn-bg px-2 py-1 text-xs font-bold text-warn">
@@ -88,8 +88,8 @@ export function MyPage() {
         </Section>
 
         <Section title="등록된 일정" to="/calendar">
-          {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
-          {!loading && recentSchedules.length === 0 && <p className="text-sm text-ink-3">등록된 일정이 없어요</p>}
+          {loading && <p className="text-sm text-ink-2">불러오는 중...</p>}
+          {!loading && recentSchedules.length === 0 && <p className="text-sm text-ink-2">등록된 일정이 없어요</p>}
           {recentSchedules.map((s) => (
             <Link
               key={s.id}
@@ -97,7 +97,7 @@ export function MyPage() {
               className="focus-ring rounded-xl border border-line p-3 hover:border-green/40"
             >
               <p className="text-sm font-bold text-ink">{s.title || typeLabels[s.type]}</p>
-              <p className="mt-1 text-xs text-ink-3">
+              <p className="mt-1 text-xs text-ink-2">
                 {s.daysOfWeek.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
                 {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}
               </p>

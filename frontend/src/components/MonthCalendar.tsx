@@ -49,7 +49,7 @@ export function MonthCalendar({
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-ink-3">
+      <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-ink-2">
         {WEEKDAY_LABELS.map((w, i) => (
           <div key={w} className={`py-1 ${i === 0 ? 'text-error' : ''}`}>
             {w}

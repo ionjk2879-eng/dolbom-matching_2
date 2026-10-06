@@ -61,9 +61,9 @@ export function GapCalendar() {
 
         <Card className="flex flex-col gap-4">
           <p className="text-sm font-bold text-ink">{formatDayLabel(selected)}</p>
-          {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
+          {loading && <p className="text-sm text-ink-2">불러오는 중...</p>}
           {!loading && children.length === 0 && (
-            <p className="text-sm text-ink-3">
+            <p className="text-sm text-ink-2">
               등록된 아이/일정이 없어요.{' '}
               <Link to="/gaps/setup" className="focus-ring font-semibold text-green underline">
                 반복 일정을 먼저 등록해주세요
@@ -74,7 +74,7 @@ export function GapCalendar() {
             <div key={child.id} className="rounded-xl border border-line p-3">
               <p className="text-sm font-bold text-ink">{child.name}</p>
               {gaps.length === 0 ? (
-                <p className="mt-1 text-xs text-ink-3">이 날은 돌봄 공백이 없어요</p>
+                <p className="mt-1 text-xs text-ink-2">이 날은 돌봄 공백이 없어요</p>
               ) : (
                 <div className="mt-2 flex flex-col gap-2">
                   {gaps.map((g, i) => (
@@ -95,7 +95,7 @@ export function GapCalendar() {
               <div className="mt-2 flex flex-col gap-2">
                 {selectedDaySchedules.map(({ schedule, cancel }) => (
                   <div key={schedule.id} className="flex items-center justify-between gap-2 text-xs">
-                    <span className={cancel ? 'text-ink-3 line-through' : 'text-ink-2'}>
+                    <span className={cancel ? 'text-ink-2 line-through' : 'text-ink-2'}>
                       {blockLabel(schedule, children)} {schedule.startTime}~{schedule.endTime}
                     </span>
                     <div className="flex shrink-0 gap-3">

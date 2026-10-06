@@ -355,7 +355,7 @@ export function CareScheduleEditor() {
         </div>
 
         {children.length === 0 && (
-          <p className="text-xs text-ink-3">
+          <p className="text-xs text-ink-2">
             지금은 "부모 근무"만 등록할 수 있어요. 아이 학교 일정을 넣으려면 위에서 아이를 먼저 등록해주세요.
           </p>
         )}
