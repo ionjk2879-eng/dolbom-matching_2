@@ -61,5 +61,6 @@ CREATE TABLE IF NOT EXISTS care_providers (
   close_time    TIME               NOT NULL,
   cost_per_hour INTEGER            DEFAULT 0,
   phone         VARCHAR(20),
+  url           TEXT,
   created_at    TIMESTAMPTZ        DEFAULT NOW()
 );

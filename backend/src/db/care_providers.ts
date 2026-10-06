@@ -16,6 +16,9 @@ export type CareProvider = {
   created_at: string
 }
 
+export const findCareProviderById = (sql: Db, id: string) =>
+  sql<CareProvider[]>`SELECT * FROM care_providers WHERE id = ${id}`
+
 export const findCareProviders = (
   sql: Db,
   startTime: string,

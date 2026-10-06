@@ -2,14 +2,12 @@ import { Hono } from 'hono'
 import { createDb } from '../db/index'
 import { getActiveSchedulesForDate } from '../db/schedules'
 import { getChildrenByUser } from '../db/children'
-import { findCareProviders } from '../db/care_providers'
+import { findCareProviders, findCareProviderById } from '../db/care_providers'
 import { requireAuth } from '../middleware/auth'
 import type { Env } from '../types'
 import type { AuthVariables } from '../middleware/auth'
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>()
-
-app.use('*', requireAuth)
 
 // HH:MM[:SS] → minutes
 function toMin(time: string): number {
@@ -39,8 +37,8 @@ function subtractCare(
   return result
 }
 
-// GET /gaps?date=YYYY-MM-DD
-app.get('/gaps', async (c) => {
+// GET /gaps?date=YYYY-MM-DD  (인증 필요)
+app.get('/gaps', requireAuth, async (c) => {
   const date = c.req.query('date')
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date))
     return c.json({ error: 'date query param required (YYYY-MM-DD)' }, 400)
@@ -54,6 +52,9 @@ app.get('/gaps', async (c) => {
   ])
   await sql.end()
 
+  // ponytail: parentLabel(엄마/아빠 구분)이 DB에 없고 localStorage에만 있어서
+  // 맞벌이 교집합 계산 불가 — 프론트 computeGaps()와 동작 다름.
+  // 해결: schedules 테이블에 parent_label 컬럼 추가 필요.
   const workSchedules = schedules.filter(s => s.type === 'parent_work')
   const careSchedules = schedules.filter(s => s.type === 'care')
 
@@ -88,7 +89,17 @@ app.get('/gaps', async (c) => {
   return c.json(result)
 })
 
-// GET /care-options?start=HH:MM&end=HH:MM&grade=N
+// GET /care-options/:id  (공개 API)
+app.get('/care-options/:id', async (c) => {
+  const id = c.req.param('id')
+  const sql = createDb(c.env.DATABASE_URL)
+  const [provider] = await findCareProviderById(sql, id)
+  await sql.end()
+  if (!provider) return c.json({ error: 'Not found' }, 404)
+  return c.json(provider)
+})
+
+// GET /care-options?start=HH:MM&end=HH:MM&grade=N  (공개 API — 인증 불필요)
 app.get('/care-options', async (c) => {
   const { start, end, grade } = c.req.query()
   if (!start || !end || !grade)

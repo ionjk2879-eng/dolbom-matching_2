@@ -53,6 +53,14 @@ const demoOptions: CareOption[] = [
 
 export const isDemoOption = (o: CareOption) => o.id.startsWith('demo-')
 
+export async function fetchCareOption(id: string): Promise<CareOption | null> {
+  const res = await apiFetch(`/care-options/${id}`)
+  if (res.status === 404) return null
+  if (!res.ok) return null
+  const o: CareOption = await res.json()
+  return { ...o, open_time: o.open_time.slice(0, 5), close_time: o.close_time.slice(0, 5) }
+}
+
 async function queryCareOptions(start: string, end: string, grade: number): Promise<CareOption[]> {
   const res = await apiFetch(`/care-options?start=${start}&end=${end}&grade=${grade}`)
   if (!res.ok) throw new Error('돌봄 옵션을 불러오지 못했어요')

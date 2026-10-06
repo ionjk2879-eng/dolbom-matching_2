@@ -4,7 +4,8 @@ import { PageHero } from '../components/PageHero'
 import { Chip } from '../components/Chip'
 import { DemoNotice } from '../components/DemoNotice'
 import { fetchCareOptions } from '../api/careOptions'
-import { careTypeLabels, coversArea, districts } from '../data/careMatch'
+import { careTypeLabels, matchesLocation, REGIONS } from '../data/careMatch'
+import { DISTRICTS } from '../data/districts'
 import type { CareOption, CareProviderType } from '../data/types'
 
 // Facilities you visit in person; visiting care and babysitters have no center to find
@@ -20,7 +21,8 @@ export function Centers() {
   const [options, setOptions] = useState<CareOption[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [area, setArea] = useState('')
+  const [region, setRegion] = useState('')
+  const [district, setDistrict] = useState('')
   const [type, setType] = useState<CareProviderType | ''>('')
 
   useEffect(() => {
@@ -38,11 +40,11 @@ export function Centers() {
       .filter(
         (c) =>
           (!type || c.type === type) &&
-          coversArea(c, area) &&
+          matchesLocation(c, region, district) &&
           (!q || c.name.includes(q) || c.address.includes(q)),
       )
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [centers, query, area, type])
+  }, [centers, query, region, district, type])
 
   return (
     <div>
@@ -57,7 +59,7 @@ export function Centers() {
           className="focus-ring w-full rounded-xl border border-line-2 bg-ivory-card px-4 py-3 text-sm"
         />
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <Chip selected={type === ''} onClick={() => setType('')}>
             전체 유형
           </Chip>
@@ -67,14 +69,25 @@ export function Centers() {
             </Chip>
           ))}
           <span className="mx-1 w-px self-stretch bg-line" />
-          <Chip selected={area === ''} onClick={() => setArea('')}>
-            전체 지역
-          </Chip>
-          {districts.map((d) => (
-            <Chip key={d} selected={area === d} onClick={() => setArea(area === d ? '' : d)}>
-              {d}
-            </Chip>
-          ))}
+          <select
+            aria-label="시/도"
+            value={region}
+            onChange={(e) => { setRegion(e.target.value); setDistrict('') }}
+            className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+          >
+            <option value="">시/도 전체</option>
+            {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select
+            aria-label="구/군"
+            value={district}
+            onChange={(e) => setDistrict(e.target.value)}
+            disabled={!region || (DISTRICTS[region]?.length ?? 0) === 0}
+            className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
+          >
+            <option value="">구/군 전체</option>
+            {(DISTRICTS[region] ?? []).map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
         </div>
 
         {!loading && <DemoNotice options={options} className="mt-5" />}

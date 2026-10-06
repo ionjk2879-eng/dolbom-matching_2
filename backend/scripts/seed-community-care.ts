@@ -1,5 +1,5 @@
 /**
- * 전국지역아동센터표준데이터 JSON → care_providers 삽입 (대전광역시 필터)
+ * 전국지역아동센터표준데이터 JSON → care_providers 삽입 (전국)
  *
  * 실행 방법:
  *   JSON_PATH=<파일경로> npx tsx scripts/seed-community-care.ts
@@ -48,12 +48,12 @@ async function main() {
   const raw = readFileSync(JSON_PATH!, 'utf-8')
   const json = JSON.parse(raw) as { records: RawRecord[] }
 
-  const daejeon = json.records.filter(r => r.시도명 === '대전광역시')
-  console.log(`대전광역시 필터 결과: ${daejeon.length}건`)
+  const records = json.records
+  console.log(`전체 레코드: ${records.length}건`)
 
   await sql`DELETE FROM care_providers WHERE type = 'community_care'`
 
-  const rows = daejeon.map(r => ({
+  const rows = records.map(r => ({
     name: r.센터명,
     type: 'community_care' as const,
     address: r.소재지도로명주소 || r.소재지지번주소,

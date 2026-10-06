@@ -86,6 +86,7 @@ frontend/src/
 │   ├── gaps.ts            # computeGaps 로컬 계산 함수 (교집합 기반 맞벌이 지원)
 │   ├── careMatch.ts       # 필터링 함수 + REGIONS 상수
 │   ├── districts.ts       # 시/도 → 구/군 목록 (전국 17개 시/도)
+│   ├── scheduleLabel.ts   # blockLabel() — 일정 블록 표시 이름 결정 (parentLabel 반영)
 │   └── types.ts           # RecurringSchedule, Child, CareOption 등
 ├── pages/
 │   ├── Home.tsx           # 메인 (일정 등록 + 맞춤 매칭)
@@ -107,12 +108,15 @@ frontend/src/
   startTime: string        // 'HH:mm'
   endTime: string          // 'HH:mm'
   careOptionId?: string    // type=care 일 때 연결된 돌봄 기관 ID
+  title?: string           // 사용자 지정 이름 (localStorage 태그)
+  memo?: string            // 메모 (localStorage 태그)
   parentLabel?: 'mom' | 'dad'  // parent_work 일 때 엄마/아빠 구분 (localStorage 태그)
 }
 ```
 
-**주의**: `parentLabel`은 DB에 저장되지 않고 `useParentTags` (localStorage persist) 에 별도 보관.  
-업데이트/삭제 시 반드시 parentLabel을 함께 유지해야 탭 필터가 깨지지 않음 (이 버그 한 번 발생했음).
+**주의**: `careOptionId`, `title`, `memo`, `parentLabel` 모두 DB에 없는 필드로 각각 localStorage persist 스토어에 보관.  
+`useParentTags` (`parent-tags` 키), `useScheduleNotes` (`schedule-notes` 키), `useCareOptionTags` (`care-option-tags` 키).  
+업데이트/삭제 시 반드시 이 필드들을 함께 유지해야 탭 필터·이름 표시가 깨지지 않음 (parentLabel 버그 한 번 발생했음).
 
 ### 공백 계산 로직 (`data/gaps.ts`)
 - 한 부모: `gap = parent_work - child_covered`
@@ -203,5 +207,5 @@ npx wrangler dev   # 포트 8787
 - `backend/` 에서 `npm install` 필요 (처음 클론 시)
 - care_providers 테이블 데이터 없음 → /care-options 항상 demo 3개 반환
 - 포트 충돌 시: `Get-Process -Name "node" | Stop-Process -Force` 후 재실행
-- localStorage 키: `match` (matchStore), `parent-tags` (useParentTags), `care-option-tags` (useCareOptionTags)
+- localStorage 키: `match` (matchStore), `parent-tags` (useParentTags), `care-option-tags` (useCareOptionTags), `schedule-notes` (useScheduleNotes)
 - 재로그인 필요 상황: JWT_SECRET 변경 시 기존 토큰 무효 → 브라우저에서 재로그인

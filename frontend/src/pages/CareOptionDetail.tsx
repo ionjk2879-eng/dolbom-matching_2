@@ -4,7 +4,7 @@ import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
 import { DemoNotice } from '../components/DemoNotice'
 import { MapView, type MapPin } from '../components/MapView'
-import { fetchCareOptions } from '../api/careOptions'
+import { fetchCareOption } from '../api/careOptions'
 import { careTypeLabels } from '../data/careMatch'
 import type { CareOption } from '../data/types'
 
@@ -22,8 +22,9 @@ export function CareOptionDetail() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchCareOptions()
-      .then((data) => setOption(data.find((c) => c.id === id) ?? null))
+    if (!id) { setLoading(false); return }
+    fetchCareOption(id)
+      .then(setOption)
       .catch(() => setOption(null))
       .finally(() => setLoading(false))
   }, [id])
