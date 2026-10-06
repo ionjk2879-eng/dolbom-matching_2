@@ -91,7 +91,7 @@ export function Centers() {
         </div>
 
         {!loading && <DemoNotice options={options} className="mt-5" />}
-        {loading && <p className="mt-6 text-sm text-ink-3">불러오는 중...</p>}
+        {loading && <p className="mt-6 text-sm text-ink-2">불러오는 중...</p>}
 
         {!loading && (
           <>
@@ -101,7 +101,7 @@ export function Centers() {
             {results.length === 0 ? (
               <div className="mt-3 rounded-2xl border border-line bg-ivory-card p-8 text-center">
                 <p className="text-sm font-bold text-ink">조건에 맞는 센터가 없어요</p>
-                <p className="mt-1 text-xs text-ink-3">검색어를 바꾸거나 지역·유형 조건을 풀어 보세요</p>
+                <p className="mt-1 text-xs text-ink-2">검색어를 바꾸거나 지역·유형 조건을 풀어 보세요</p>
               </div>
             ) : (
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -111,20 +111,20 @@ export function Centers() {
                       {careTypeLabels[c.type]}
                     </span>
                     <p className="mt-2 text-base font-bold text-ink">{c.name}</p>
-                    <p className="mt-1 text-xs text-ink-3">{c.address}</p>
+                    <p className="mt-1 text-xs text-ink-2">{c.address}</p>
                     <dl className="mt-3 flex flex-col gap-1 text-xs text-ink-2">
                       <div className="flex gap-2">
-                        <dt className="w-14 shrink-0 text-ink-3">운영</dt>
+                        <dt className="w-14 shrink-0 text-ink-2">운영</dt>
                         <dd>
                           {c.open_time}~{c.close_time}
                         </dd>
                       </div>
                       <div className="flex gap-2">
-                        <dt className="w-14 shrink-0 text-ink-3">대상</dt>
+                        <dt className="w-14 shrink-0 text-ink-2">대상</dt>
                         <dd>{gradeLabel(c)}</dd>
                       </div>
                       <div className="flex gap-2">
-                        <dt className="w-14 shrink-0 text-ink-3">비용</dt>
+                        <dt className="w-14 shrink-0 text-ink-2">비용</dt>
                         <dd>{c.cost_per_hour === 0 ? '무료' : `시간당 ${c.cost_per_hour.toLocaleString()}원`}</dd>
                       </div>
                     </dl>

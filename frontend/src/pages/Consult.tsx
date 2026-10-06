@@ -35,7 +35,7 @@ export function Consult() {
               </span>
               <div>
                 <p className="text-sm font-bold text-ink">{step.title}</p>
-                <p className="mt-0.5 text-xs text-ink-3">{step.desc}</p>
+                <p className="mt-0.5 text-xs text-ink-2">{step.desc}</p>
               </div>
             </li>
           ))}

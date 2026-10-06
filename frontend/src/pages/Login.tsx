@@ -19,7 +19,7 @@ export function Login() {
   return (
     <div className="mx-auto flex max-w-5xl flex-col-reverse gap-10 px-4 py-14 md:flex-row-reverse md:items-center">
       <div className="flex-1">
-        <p className="mb-6 text-sm text-ink-3">카카오·네이버 계정으로 바로 시작해요. 최초 로그인 시 자동으로 가입돼요.</p>
+        <p className="mb-6 text-sm text-ink-2">카카오·네이버 계정으로 바로 시작해요. 최초 로그인 시 자동으로 가입돼요.</p>
 
         {errorParam && (
           <p className="mb-4 rounded-xl border border-error/30 bg-warn-bg px-4 py-3 text-sm text-warn">

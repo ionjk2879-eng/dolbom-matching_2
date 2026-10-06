@@ -19,7 +19,7 @@ export function PageHero({
     <div className="bg-ivory-deep">
       <div className="mx-auto max-w-6xl px-4 py-10">
         {breadcrumb && (
-          <nav className="mb-3 flex gap-1 text-xs text-ink-3">
+          <nav className="mb-3 flex gap-1 text-xs text-ink-2">
             {breadcrumb.map((b, i) => (
               <span key={b.label} className="flex items-center gap-1">
                 {i > 0 && <span>/</span>}

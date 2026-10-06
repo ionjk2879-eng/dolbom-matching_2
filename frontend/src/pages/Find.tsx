@@ -105,7 +105,7 @@ export function Find() {
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             {conditionSummary && (
-              <button type="button" onClick={match.reset} className="focus-ring text-xs text-ink-3 hover:text-error">
+              <button type="button" onClick={match.reset} className="focus-ring text-xs text-ink-2 hover:text-error">
                 초기화
               </button>
             )}
@@ -188,7 +188,7 @@ export function Find() {
         {selectedOption && (
           <div className="absolute bottom-3 right-3 w-64 rounded-2xl border border-line bg-ivory-card p-3 shadow-[0_24px_40px_-28px_rgba(60,50,30,.45)]">
             <p className="text-sm font-bold leading-tight text-ink">{selectedOption.name}</p>
-            <p className="mt-0.5 text-xs text-ink-3">{selectedOption.address}</p>
+            <p className="mt-0.5 text-xs text-ink-2">{selectedOption.address}</p>
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {selectedOption.phone && (
                 <a
@@ -218,13 +218,13 @@ export function Find() {
 
       {/* ── 결과 목록 ── */}
       <div className="mt-4">
-        {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
+        {loading && <p className="text-sm text-ink-2">불러오는 중...</p>}
         {error && <p className="text-sm text-error">{error}</p>}
         {!loading && <DemoNotice options={options} />}
 
         {!loading && !error && (
           <>
-            <p className="mt-3 text-xs text-ink-3">
+            <p className="mt-3 text-xs text-ink-2">
               <span className="font-bold text-ink">{results.length}</span>곳
             </p>
             {results.length === 0 && (
@@ -251,7 +251,7 @@ export function Find() {
                       <span className="shrink-0 rounded-full bg-green-soft px-2 py-0.5 text-xs font-bold text-green">무료</span>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-ink-3">
+                  <p className="mt-1 text-xs text-ink-2">
                     {careTypeLabels[c.type]} · {c.address}
                   </p>
                   <p className="mt-1 text-xs text-ink-2">

@@ -129,7 +129,7 @@ export function GapMatchPanel({
           />
         ))}
       </div>
-      <div className="mt-1 flex justify-between text-[10px] text-ink-3">
+      <div className="mt-1 flex justify-between text-[10px] text-ink-2">
         <span>{gap.start}</span>
         <span>{gap.end}</span>
       </div>
@@ -138,7 +138,7 @@ export function GapMatchPanel({
         {remaining.length === 0 ? (
           <span className="text-green">공백이 모두 커버됐어요</span>
         ) : (
-          <span className="text-ink-3">
+          <span className="text-ink-2">
             아직 안 채워진 시간: {remaining.map((r) => `${r.start}~${r.end}`).join(', ')}
           </span>
         )}
@@ -164,13 +164,13 @@ export function GapMatchPanel({
               {label}
             </button>
           ))}
-          {sortBy === 'distance' && !here && !locationError && <span className="ml-1 text-ink-3">위치 확인 중...</span>}
+          {sortBy === 'distance' && !here && !locationError && <span className="ml-1 text-ink-2">위치 확인 중...</span>}
           {locationError && <span className="ml-1 text-error">{locationError}</span>}
         </div>
       )}
 
       {candidates.length === 0 && (
-        <p className="mt-3 text-sm text-ink-3">이 공백에 맞는 돌봄 옵션을 찾지 못했어요</p>
+        <p className="mt-3 text-sm text-ink-2">이 공백에 맞는 돌봄 옵션을 찾지 못했어요</p>
       )}
 
       <div className="mt-3 flex flex-col gap-2">
@@ -192,7 +192,7 @@ export function GapMatchPanel({
               />
               <div>
                 <p className="text-sm font-bold text-ink">
-                  {option.name} <span className="font-normal text-ink-3">· {careTypeLabels[option.type]}</span>
+                  {option.name} <span className="font-normal text-ink-2">· {careTypeLabels[option.type]}</span>
                 </p>
                 <p className="mt-1 text-xs text-ink-2">
                   운영 {option.open_time}~{option.close_time} · 공백 커버{' '}
@@ -200,10 +200,10 @@ export function GapMatchPanel({
                     {overlap.start}~{overlap.end}
                   </span>
                 </p>
-                <p className="mt-1 text-xs text-ink-3">
+                <p className="mt-1 text-xs text-ink-2">
                   {option.address}
                 </p>
-                <p className="mt-0.5 text-xs text-ink-3">
+                <p className="mt-0.5 text-xs text-ink-2">
                   시간당 {option.cost_per_hour === 0 ? '무료' : `${option.cost_per_hour.toLocaleString()}원`}
                   {distance != null && ` · ${formatDistance(distance)}`}
                 </p>

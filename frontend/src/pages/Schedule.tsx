@@ -30,7 +30,7 @@ export function Schedule() {
     <div>
       <PageHero title="내 일정" desc="반복 주간 패턴으로 등록된 일정을 요일별로 확인하세요" />
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 pt-6">
-        <p className="text-xs text-ink-3">
+        <p className="text-xs text-ink-2">
           가족 공유 {shareWithFamily ? '켜짐' : '꺼짐'} · 업체 공유 {shareWithCenters ? '켜짐' : '꺼짐'}
         </p>
         <Link
@@ -62,12 +62,12 @@ export function Schedule() {
               일정 등록
             </Link>
           </div>
-          {loading && <p className="text-sm text-ink-3">불러오는 중...</p>}
-          {!loading && dayItems.length === 0 && <p className="text-sm text-ink-3">등록된 일정이 없어요</p>}
+          {loading && <p className="text-sm text-ink-2">불러오는 중...</p>}
+          {!loading && dayItems.length === 0 && <p className="text-sm text-ink-2">등록된 일정이 없어요</p>}
           {dayItems.map((s) => (
             <div key={s.id} className="rounded-xl border border-line p-3">
               <p className="text-sm font-bold text-ink">{s.title || typeLabels[s.type]}</p>
-              <p className="mt-1 text-xs text-ink-3">
+              <p className="mt-1 text-xs text-ink-2">
                 {s.title && `${typeLabels[s.type]} · `}
                 {s.startTime}~{s.endTime}
                 {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}

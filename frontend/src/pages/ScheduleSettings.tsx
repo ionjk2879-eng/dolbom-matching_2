@@ -17,7 +17,7 @@ function ShareToggle({
     <div className="flex items-center justify-between gap-4 py-4">
       <div>
         <p className="text-sm font-bold text-ink">{title}</p>
-        <p className="mt-1 text-xs text-ink-3">{desc}</p>
+        <p className="mt-1 text-xs text-ink-2">{desc}</p>
       </div>
       <button
         type="button"
@@ -56,7 +56,7 @@ export function ScheduleSettings() {
             onChange={setShareWithCenters}
           />
         </Card>
-        <p className="mt-3 text-xs text-ink-3">
+        <p className="mt-3 text-xs text-ink-2">
           설정은 이 브라우저에만 저장돼요. 실제로 가족·업체에 공유하는 기능은 준비 중이에요.
         </p>
       </div>

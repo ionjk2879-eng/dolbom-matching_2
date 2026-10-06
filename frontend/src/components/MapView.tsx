@@ -130,7 +130,7 @@ export function MapView({
       <div className="flex h-full w-full items-center justify-center rounded-2xl border border-line-3 bg-ivory-deep p-6 text-center">
         <div>
           <p className="text-sm font-semibold text-error">지도를 불러오지 못했어요</p>
-          <p className="mt-1 text-xs text-ink-3 break-all">{mapError}</p>
+          <p className="mt-1 text-xs text-ink-2 break-all">{mapError}</p>
         </div>
       </div>
     )
@@ -142,7 +142,7 @@ export function MapView({
       className="h-full w-full overflow-hidden rounded-2xl border border-line-3"
     >
       {!ready && (
-        <div className="flex h-full items-center justify-center text-sm text-ink-3">
+        <div className="flex h-full items-center justify-center text-sm text-ink-2">
           지도 로딩 중...
         </div>
       )}

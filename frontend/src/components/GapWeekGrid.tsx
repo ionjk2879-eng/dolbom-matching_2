@@ -32,7 +32,7 @@ export function GapWeekGrid({
 
   if (children.length === 0 || !hasParentWork || !hasChildSchool) {
     return (
-      <p className="text-sm text-ink-3">
+      <p className="text-sm text-ink-2">
         부모 근무 + 아이 학교 일정을 모두 등록하면 주간 돌봄 공백 패턴이 여기에 표시돼요.
       </p>
     )
@@ -66,7 +66,7 @@ export function GapWeekGrid({
   return (
     <div className="select-none">
       {/* 범례 */}
-      <div className="mb-2 flex flex-wrap gap-3 text-xs text-ink-3">
+      <div className="mb-2 flex flex-wrap gap-3 text-xs text-ink-2">
         <span className="flex items-center gap-1">
           <span className="h-3 w-3 rounded bg-ink/20" /> 부모 근무
         </span>
@@ -91,7 +91,7 @@ export function GapWeekGrid({
               START_HOUR + i <= END_HOUR && (
                 <div
                   key={i}
-                  className="absolute right-1.5 -translate-y-1/2 text-[10px] leading-none text-ink-3"
+                  className="absolute right-1.5 -translate-y-1/2 text-[10px] leading-none text-ink-2"
                   style={{ top: i * 2 * ROW_HEIGHT }}
                 >
                   {String(START_HOUR + i).padStart(2, '0')}:00

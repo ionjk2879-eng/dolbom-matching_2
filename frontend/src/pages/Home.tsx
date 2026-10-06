@@ -50,9 +50,12 @@ export function Home() {
   }))
   const firstWithGap = childGaps.find((cg) => cg.gaps.length > 0)
 
+  // 아이마다 자기 학년·공백 기준으로 옵션을 찾고, 여러 아이의 결과를 합친다 (중복 제거)
+  const gapsKey = childGaps.map(({ child, gaps }) => `${child.id}:${child.grade}:${gaps.map((g) => `${g.start}-${g.end}`).join(',')}`).join('|')
   useEffect(() => {
-    if (firstWithGap) {
-      Promise.all(firstWithGap.gaps.map((g) => fetchCareOptionsForGap(firstWithGap.child.grade, g)))
+    const requests = childGaps.flatMap(({ child, gaps }) => gaps.map((g) => fetchCareOptionsForGap(child.grade, g)))
+    if (requests.length > 0) {
+      Promise.all(requests)
         .then((lists) => setCareOptions([...new Map(lists.flat().map((o) => [o.id, o])).values()]))
         .catch(() => setCareOptions([]))
     } else {
@@ -61,7 +64,7 @@ export function Home() {
         .catch(() => setCareOptions([]))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [children.map((c) => c.id).join(','), today])
+  }, [gapsKey, today])
 
   useEffect(() => {
     if (user) useCareScheduleStore.getState().loadAll()

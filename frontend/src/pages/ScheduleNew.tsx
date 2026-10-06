@@ -77,7 +77,7 @@ export function ScheduleNew() {
         <Card>
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
             <label className="text-sm font-semibold text-ink">
-              일정 이름 <span className="font-normal text-ink-3">(선택)</span>
+              일정 이름 <span className="font-normal text-ink-2">(선택)</span>
               <input
                 type="text"
                 value={title}
@@ -155,7 +155,7 @@ export function ScheduleNew() {
             </div>
 
             <label className="text-sm font-semibold text-ink">
-              메모 <span className="font-normal text-ink-3">(선택)</span>
+              메모 <span className="font-normal text-ink-2">(선택)</span>
               <textarea
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
@@ -165,7 +165,7 @@ export function ScheduleNew() {
                 className="focus-ring mt-1.5 w-full resize-none rounded-xl border border-line-2 bg-ivory-card px-4 py-2.5 text-sm font-normal"
               />
             </label>
-            <p className="-mt-2 text-xs text-ink-3">이름과 메모는 아직 이 브라우저에만 저장돼요.</p>
+            <p className="-mt-2 text-xs text-ink-2">이름과 메모는 아직 이 브라우저에만 저장돼요.</p>
 
             {error && <p className="text-sm text-error">{error}</p>}
 

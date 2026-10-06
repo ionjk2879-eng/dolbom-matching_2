@@ -196,7 +196,7 @@ export function WeekScheduleGrid({
 
   return (
     <div className="select-none overflow-x-auto">
-      <div className="mb-2 flex flex-wrap gap-3 text-xs text-ink-3">
+      <div className="mb-2 flex flex-wrap gap-3 text-xs text-ink-2">
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink" /> 엄마 근무</span>
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-warn" /> 아빠 근무</span>
         {kids.map((c, i) => (
@@ -215,7 +215,7 @@ export function WeekScheduleGrid({
               START_HOUR + i <= END_HOUR && (
                 <div
                   key={i}
-                  className="absolute right-1.5 -translate-y-1/2 text-[10px] leading-none text-ink-3"
+                  className="absolute right-1.5 -translate-y-1/2 text-[10px] leading-none text-ink-2"
                   style={{ top: i * 2 * ROW_HEIGHT }}
                 >
                   {String(START_HOUR + i).padStart(2, '0')}:00
@@ -397,7 +397,7 @@ export function WeekScheduleGrid({
         </p>
       )}
 
-      <p className="mt-2 text-xs text-ink-3">
+      <p className="mt-2 text-xs text-ink-2">
         클릭/드래그 → 등록 · Ctrl+클릭 → 다중선택 · 블록 클릭 → 슬롯 선택(Delete 삭제) · 블록 상단 드래그 → 이동 · 블록 하단 드래그 → 크기 조절 · 우클릭 → 수정/삭제
       </p>
 
