@@ -1,10 +1,10 @@
 # 인수인계 문서
 
-> 마지막 업데이트: 2026-10-02
+> 마지막 업데이트: 2026-10-06
 
 ## 현재 브랜치
 - 작업 브랜치: `main`
-- 상태: 기능 구현 진행 중, main에 자동 배포
+- 상태: 기능 구현 진행 중, main push 시 프론트 자동 배포
 
 ---
 
@@ -36,24 +36,26 @@
 | GET/POST/PATCH/DELETE | `/schedules` | 반복 주간 일정 CRUD |
 | POST | `/schedules/:id/exceptions` | 특정 날짜 예외 처리 |
 | GET | `/gaps?date=YYYY-MM-DD` | 날짜별 돌봄 공백 자동 계산 |
-| GET | `/care-options?start=&end=&grade=` | 공백에 맞는 돌봄 기관 탐색 |
+| GET | `/care-options` | 전체 돌봄 기관 (파라미터 없으면 전체 반환) |
+| GET | `/care-options?start=HH:MM&end=HH:MM&grade=N` | 공백 시간·학년 필터링 |
+| GET | `/care-options/:id` | 개별 돌봄 기관 상세 |
 
 ### 백엔드 파일 구조
 ```
 backend/src/
 ├── db/
-│   ├── index.ts          # postgres.js 연결 (neon 드라이버 → postgres.js 교체됨)
+│   ├── index.ts          # postgres.js 연결
 │   ├── users.ts          # upsertUser, findUserById
 │   ├── children.ts       # children CRUD
 │   ├── schedules.ts      # schedules CRUD + getActiveSchedulesForDate
-│   └── care_providers.ts # findCareProviders
+│   └── care_providers.ts # findCareProviders, findAllCareProviders, findCareProviderById
 ├── middleware/
 │   └── auth.ts           # requireAuth (JWT Bearer 검증)
 ├── routes/
 │   ├── auth.ts           # OAuth + ID/PW + /me + /logout
 │   ├── children.ts       # /children
 │   ├── schedules.ts      # /schedules
-│   └── gaps.ts           # /gaps + /care-options
+│   └── gaps.ts           # /gaps + /care-options (인증 불필요)
 ├── index.ts              # 앱 진입점, 라우트 등록
 └── types.ts              # Env, User 타입
 ```
@@ -63,7 +65,7 @@ backend/src/
 - `children` — 아이 정보 (user_id FK, grade 1-6, commute_minutes)
 - `schedules` — 반복 주간 패턴 (type: child_school/parent_work/care, days_of_week int[])
 - `schedule_exceptions` — 특정 날짜 예외
-- `care_providers` — 돌봄 기관 정보 (현재 실데이터 없음 → demo 3개 fallback)
+- `care_providers` — 돌봄 기관 정보 (**실데이터 2,237건 적재 완료**)
 
 ---
 
@@ -73,24 +75,26 @@ backend/src/
 ```
 frontend/src/
 ├── api/
-│   ├── careOptions.ts     # /care-options 연결, demo fallback 포함
-│   ├── children.ts        # /children CRUD (PATCH 포함)
+│   ├── careOptions.ts     # fetchCareOptions() → /care-options (no params, 전체 반환)
+│   │                      # fetchCareOptionsForGap() → /care-options?start=&end=&grade=
+│   ├── children.ts        # /children CRUD
 │   ├── schedules.ts       # /schedules CRUD
 │   └── client.ts          # apiFetch 베이스 클라이언트
 ├── components/
-│   ├── CareScheduleEditor.tsx  # 아이 등록 + 부모/아이 일정 캘린더 + 거주지 입력 (공용)
+│   ├── CareScheduleEditor.tsx  # 아이 등록 + 부모/아이 일정 캘린더 + 거주지 입력
 │   ├── WeekScheduleGrid.tsx    # 드래그 인터랙티브 주간 캘린더
 │   ├── GapWeekGrid.tsx         # 공백 패턴 읽기 전용 주간 뷰
-│   └── GapMatchPanel.tsx       # 공백 기반 돌봄 옵션 선택 패널
+│   ├── GapMatchPanel.tsx       # 공백 기반 돌봄 옵션 체크박스 패널
+│   └── MapView.tsx             # 네이버 지도 (핀 클릭 → 팝업, h-full 기반 크기 제어)
 ├── data/
-│   ├── gaps.ts            # computeGaps 로컬 계산 함수 (교집합 기반 맞벌이 지원)
+│   ├── gaps.ts            # computeGaps 로컬 계산 (교집합 기반 맞벌이 지원)
 │   ├── careMatch.ts       # 필터링 함수 + REGIONS 상수
 │   ├── districts.ts       # 시/도 → 구/군 목록 (전국 17개 시/도)
-│   ├── scheduleLabel.ts   # blockLabel() — 일정 블록 표시 이름 결정 (parentLabel 반영)
+│   ├── scheduleLabel.ts   # blockLabel() — 일정 블록 표시 이름 (parentLabel 반영)
 │   └── types.ts           # RecurringSchedule, Child, CareOption 등
 ├── pages/
 │   ├── Home.tsx           # 메인 (일정 등록 + 맞춤 매칭)
-│   └── Find.tsx           # 돌봄 찾기 (지도 + 필터)
+│   └── Find.tsx           # 돌봄 찾기 (sticky 필터 + 360px 지도 + 카드 목록)
 └── store/
     ├── careScheduleStore.ts  # 아이/일정 상태 (API 연동, useParentTags 포함)
     └── matchStore.ts         # 매칭 필터 상태 (grade/time/region/district/costFilter)
@@ -106,53 +110,64 @@ frontend/src/
   type: 'child_school' | 'parent_work' | 'care'
   daysOfWeek: number[]
   startTime: string        // 'HH:mm'
-  endTime: string          // 'HH:mm'
-  careOptionId?: string    // type=care 일 때 연결된 돌봄 기관 ID
-  title?: string           // 사용자 지정 이름 (localStorage 태그)
-  memo?: string            // 메모 (localStorage 태그)
-  parentLabel?: 'mom' | 'dad'  // parent_work 일 때 엄마/아빠 구분 (localStorage 태그)
+  endTime: string
+  careOptionId?: string    // type=care 일 때 연결된 돌봄 기관 ID (localStorage만)
+  title?: string           // 사용자 지정 이름 (localStorage)
+  memo?: string            // 메모 (localStorage)
+  parentLabel?: 'mom' | 'dad'  // parent_work 일 때 엄마/아빠 구분 (localStorage)
 }
 ```
 
-**주의**: `careOptionId`, `title`, `memo`, `parentLabel` 모두 DB에 없는 필드로 각각 localStorage persist 스토어에 보관.  
-`useParentTags` (`parent-tags` 키), `useScheduleNotes` (`schedule-notes` 키), `useCareOptionTags` (`care-option-tags` 키).  
-업데이트/삭제 시 반드시 이 필드들을 함께 유지해야 탭 필터·이름 표시가 깨지지 않음 (parentLabel 버그 한 번 발생했음).
+**주의**: `careOptionId`, `title`, `memo`, `parentLabel` 모두 DB에 없는 필드.  
+각각 localStorage persist 스토어에 보관:
+- `useParentTags` (`parent-tags` 키)
+- `useScheduleNotes` (`schedule-notes` 키)  
+- `useCareOptionTags` (`care-option-tags` 키)
+
+업데이트/삭제 시 반드시 이 필드들을 함께 유지해야 함 (parentLabel 버그 전례 있음).
 
 ### 공백 계산 로직 (`data/gaps.ts`)
 - 한 부모: `gap = parent_work - child_covered`
 - 맞벌이 (엄마+아빠 둘 다 등록): `gap = intersect(mom_work, dad_work) - child_covered`
-- `child_covered` = 학교 + 돌봄(care) 일정 + 통학 버퍼
+- `child_covered` = 학교(+통학버퍼) + **care 타입 일정은 Home.tsx에서 제외** (아래 주의사항 참고)
+
+### Find.tsx UX (2026-10-06 기준)
+- **일반 스크롤**: 지도는 고정되지 않고 스크롤과 함께 이동
+- **sticky 필터 바**: 최상단에 항상 고정 (필터 ▼ 버튼으로 확장/축소)
+- **카드 클릭**: 지도로 smooth scroll + 핀 선택
+  - sticky 필터 바 높이를 `filterBarRef.offsetHeight`로 보정 (`window.scrollTo` 사용)
+- **지도 팝업 "목록에서 찾기 ↓"**: 선택된 카드로 smooth scroll
+- **지도 높이**: 360px (`h-[360px]`)
+- **MapView**: `min-h` 제거, `h-full`로 부모 높이 따름
 
 ---
 
-## 기능 현황 (2026-10-02 기준)
+## 기능 현황 (2026-10-06 기준)
 
 ### 완료된 기능
 
 | 기능 | 위치 | 설명 |
 |------|------|------|
 | 아이 등록/수정/삭제 | CareScheduleEditor | 이름·학년·통학시간, 인라인 수정 폼 |
-| 엄마/아빠 근무 분리 | CareScheduleEditor | 각 탭 독립 저장, 서로 다른 색상 (검정/주황) |
+| 엄마/아빠 근무 분리 | CareScheduleEditor | 각 탭 독립 저장, 서로 다른 색상 |
 | 아이 학교 일정 | CareScheduleEditor | 아이별 탭, care 타입도 함께 표시 |
-| 공백 패턴 뷰 | CareScheduleEditor > 공백 패턴 탭 | 주간 공백 시각화, 스크롤 없이 전체 표시 |
-| 거주지 입력 | CareScheduleEditor | 시/도 + 구/군 드롭다운, matchStore에 저장 |
-| 맞춤 매칭 | Home.tsx | 모든 아이의 공백 각각 표시, 돌봄 조합 체크 |
-| 위치 기반 필터링 | Home + Find | 시/도 + 구/군 선택, 전국 17개 시/도 데이터 |
+| 공백 패턴 뷰 | CareScheduleEditor > 공백 패턴 탭 | 주간 공백 시각화 |
+| 거주지 입력 | CareScheduleEditor | 시/도 + 구/군, matchStore에 저장 |
+| 맞춤 매칭 (체크박스) | Home.tsx + GapMatchPanel | 공백별 돌봄 옵션 선택, progress bar |
+| 돌봄 찾기 (지도) | Find.tsx + MapView | 네이버 지도 핀, 양방향 카드↔지도 이동 |
+| 위치 기반 필터링 | Home + Find | 시/도 + 구/군, 전국 17개 시/도 |
 | 유료/무료 필터 | Home + Find | 전체/무료/유료 칩 필터 |
-| 돌봄 옵션 주소 표시 | GapMatchPanel | 실제 주소 노출 |
-| 드래그 캘린더 | WeekScheduleGrid | 생성·이동·리사이즈·펀치·다중선택 |
-| 블록 리사이즈 버그 수정 | WeekScheduleGrid | parentLabel 유실로 블록 사라지는 현상 수정 |
+| 실 데이터 연동 | Find.tsx | care_providers 2,237건 표시 |
 
 ### 미완료 / 추가 필요
 
 | 항목 | 설명 |
 |------|------|
-| care_providers 실데이터 | DB에 실제 돌봄 기관 데이터 삽입 필요. 현재 demo 3개만 표시 |
-| 네이버 지도 API | Find 페이지 지도 표시 (Client ID 발급 필요) |
-| schedule_exceptions 조회/삭제 | 현재 POST만 구현, GET/DELETE 없음 |
-| 운영 DB 스키마 적용 | 운영 PostgreSQL에 schema.sql 미적용 상태 |
-| 맞벌이 공백 UX 설명 | 교집합 계산으로 바뀌었는데 사용자에게 안내 텍스트 없음 |
-| 동 레벨 필터 | 현재 구/군까지만 드롭다운, 동 레벨은 미구현 |
+| 네이버 지도 핀 좌표 | care_providers에 lat/lng 없는 항목이 많음 → 지도 핀 부족 |
+| schedule_exceptions GET/DELETE | 현재 POST만 구현 |
+| 운영 DB 스키마 동기화 | 운영 PostgreSQL에 최신 schema.sql 반영 확인 필요 |
+| 맞벌이 공백 UX 설명 | 교집합 계산 방식 사용자 안내 없음 |
+| 동 레벨 필터 | 현재 구/군까지만, 동 레벨 미구현 |
 
 ---
 
@@ -199,13 +214,24 @@ npx wrangler dev   # 포트 8787
 ---
 
 ## 배포
-- Frontend: Cloudflare Pages → `dolbom-matching-2.pages.dev`
-- Backend: Cloudflare Workers → `dolbom-matching-backend.dolbommatchj.workers.dev`
-- **main 브랜치 push 시 자동 배포**
+- **Frontend**: Cloudflare Pages → `dolbom-matching-2.pages.dev`
+  - **main 브랜치 push 시 자동 배포**
+- **Backend**: Cloudflare Workers → `dolbom-matching-backend.dolbommatchj.workers.dev`
+  - **자동 배포 안 됨** — 백엔드 변경 후 반드시 수동 배포 필요:
+    ```bash
+    cd backend
+    npx wrangler deploy
+    ```
+
+---
 
 ## 알려진 주의사항
-- `backend/` 에서 `npm install` 필요 (처음 클론 시)
-- care_providers 테이블 데이터 없음 → /care-options 항상 demo 3개 반환
+
+- **백엔드 수동 배포**: Workers는 git push로 자동 배포되지 않음. 프론트만 자동.
+- **GapMatchPanel에서 care 제외**: `Home.tsx`의 `computeGaps` 호출 시 `type === 'care'` 제외.  
+  체크 시 갭이 재계산→패널 remount→체크 상태 소실되는 버그 방지용.  
+  패널 안의 progress bar가 체크 커버리지를 별도 처리함.
+- `care_providers` 좌표(lat/lng) 없는 기관 많음 → 지도 핀 적게 표시됨
+- localStorage 키: `match` (matchStore), `parent-tags`, `care-option-tags`, `schedule-notes`
+- 재로그인 필요 상황: JWT_SECRET 변경 시 기존 토큰 무효
 - 포트 충돌 시: `Get-Process -Name "node" | Stop-Process -Force` 후 재실행
-- localStorage 키: `match` (matchStore), `parent-tags` (useParentTags), `care-option-tags` (useCareOptionTags), `schedule-notes` (useScheduleNotes)
-- 재로그인 필요 상황: JWT_SECRET 변경 시 기존 토큰 무효 → 브라우저에서 재로그인
