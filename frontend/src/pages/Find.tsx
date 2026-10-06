@@ -29,6 +29,7 @@ export function Find() {
   const [fitMine, setFitMine] = useState(false)
 
   const mapRef = useRef<HTMLDivElement>(null)
+  const filterBarRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef(new Map<string, HTMLElement>())
 
   useEffect(() => {
@@ -74,10 +75,12 @@ export function Find() {
     [results],
   )
 
-  // 카드 클릭 → 지도로 smooth scroll + 핀 선택
+  // 카드 클릭 → 지도로 smooth scroll + 핀 선택 (sticky 필터 바 높이 보정)
   const handleCardClick = (id: string) => {
     setSelected(id)
-    mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (!mapRef.current) return
+    const top = mapRef.current.getBoundingClientRect().top + window.scrollY - (filterBarRef.current?.offsetHeight ?? 0)
+    window.scrollTo({ top, behavior: 'smooth' })
   }
 
   // 지도 팝업 "목록에서 찾기 ↓" → 선택된 카드로 smooth scroll
@@ -90,7 +93,7 @@ export function Find() {
     <div className="mx-auto max-w-6xl px-4 pb-16 pt-4">
 
       {/* ── 필터 바 (sticky, 스크롤해도 항상 표시) ── */}
-      <div className="sticky top-0 z-20 -mx-4 border-b border-line bg-ivory-card px-4 py-2.5">
+      <div ref={filterBarRef} className="sticky top-0 z-20 -mx-4 border-b border-line bg-ivory-card px-4 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <span className="font-bold text-ink">돌봄 찾기</span>
