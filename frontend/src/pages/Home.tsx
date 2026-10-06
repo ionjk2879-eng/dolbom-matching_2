@@ -44,9 +44,11 @@ export function Home() {
   const { children, schedules, exceptions } = useCareScheduleStore()
   const [today] = useState(() => toISO(new Date()))
   const [careOptions, setCareOptions] = useState<CareOption[]>([])
+  // care 스케줄 제외: 체크 시 gaps가 재계산되어 패널이 remount되는 것을 방지
+  const schedulesForGaps = schedules.filter((s) => s.type !== 'care')
   const childGaps = children.map((child) => ({
     child,
-    gaps: computeGaps(child, today, schedules, exceptions),
+    gaps: computeGaps(child, today, schedulesForGaps, exceptions),
   }))
   const firstWithGap = childGaps.find((cg) => cg.gaps.length > 0)
 
