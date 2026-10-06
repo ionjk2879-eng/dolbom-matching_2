@@ -185,6 +185,14 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
           end_time: sch.endTime,
         }
         const row = await apiUpdateSchedule(id, payload)
+        const tags = { ...useCareOptionTags.getState().careOptionIdBySchedule }
+        if (sch.careOptionId) tags[id] = sch.careOptionId
+        else delete tags[id]
+        useCareOptionTags.setState({ careOptionIdBySchedule: tags })
+        const parentTags = { ...useParentTags.getState().parentLabelBySchedule }
+        if (sch.parentLabel) parentTags[id] = sch.parentLabel
+        else delete parentTags[id]
+        useParentTags.setState({ parentLabelBySchedule: parentTags })
         saveNote(id, sch)
         set((s) => ({
           schedules: s.schedules.map((x) =>

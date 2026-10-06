@@ -46,14 +46,14 @@ export function Home() {
   const [careOptions, setCareOptions] = useState<CareOption[]>([])
   const childGaps = children.map((child) => ({
     child,
-    gap: computeGaps(child, today, schedules, exceptions)[0] as { start: string; end: string } | undefined,
+    gaps: computeGaps(child, today, schedules, exceptions),
   }))
-  const firstWithGap = childGaps.find((cg) => cg.gap)
+  const firstWithGap = childGaps.find((cg) => cg.gaps.length > 0)
 
   useEffect(() => {
     if (firstWithGap) {
-      fetchCareOptionsForGap(firstWithGap.child.grade, firstWithGap.gap!)
-        .then(setCareOptions)
+      Promise.all(firstWithGap.gaps.map((g) => fetchCareOptionsForGap(firstWithGap.child.grade, g)))
+        .then((lists) => setCareOptions([...new Map(lists.flat().map((o) => [o.id, o])).values()]))
         .catch(() => setCareOptions([]))
     } else {
       fetchCareOptions()
@@ -71,9 +71,9 @@ export function Home() {
   useEffect(() => {
     if (!firstWithGap) return
     if (!match.grade) match.setGrade(gradeToBucket(firstWithGap.child.grade))
-    if (!match.time) match.setTime(endTimeToBucket(firstWithGap.gap!.end))
+    if (!match.time) match.setTime(endTimeToBucket(firstWithGap.gaps[0].end))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firstWithGap?.child.id, firstWithGap?.gap?.end])
+  }, [firstWithGap?.child.id, firstWithGap?.gaps[0]?.end])
 
   const goMatch = () => navigate('/find')
 
@@ -157,12 +157,19 @@ export function Home() {
                     </Chip>
                   ))}
                 </div>
-                {childGaps.map(({ child, gap }) => {
+                {childGaps.map(({ child, gaps }) => {
                   const selectedCare = schedules.filter(
                     (s) => s.childId === child.id && s.type === 'care'
                   )
-                  if (gap) {
-                    return <GapMatchPanel key={child.id} child={child} gap={gap} options={locationFilteredOptions} />
+                  if (gaps.length > 0) {
+                    return gaps.map((gap) => (
+                      <GapMatchPanel
+                        key={`${child.id}-${gap.start}`}
+                        child={child}
+                        gap={gap}
+                        options={locationFilteredOptions}
+                      />
+                    ))
                   }
                   return (
                     <Card key={child.id} className="flex flex-col gap-2">

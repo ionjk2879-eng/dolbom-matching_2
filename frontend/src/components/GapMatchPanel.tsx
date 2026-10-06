@@ -50,8 +50,15 @@ export function GapMatchPanel({
       return dur(b.overlap) - dur(a.overlap)
     })
 
+  // Only a pick whose time falls inside this gap counts as checked here (one option can serve several gaps)
   const checkedFor = (optionId: string) =>
-    schedules.find((s) => s.childId === child.id && s.careOptionId === optionId)
+    schedules.find(
+      (s) =>
+        s.childId === child.id &&
+        s.careOptionId === optionId &&
+        toMinutes(s.startTime) < toMinutes(gap.end) &&
+        toMinutes(s.endTime) > toMinutes(gap.start),
+    )
 
   const checkedOverlaps = candidates
     .filter((c) => checkedFor(c.option.id))
@@ -76,7 +83,14 @@ export function GapMatchPanel({
     }
     const schoolDays =
       schedules.find((s) => s.childId === child.id && s.type === 'child_school')?.daysOfWeek ?? []
-    const workDays = schedules.find((s) => s.childId === null && s.type === 'parent_work')?.daysOfWeek ?? []
+    // 맞벌이(엄마·아빠 둘 다 등록): 둘 다 근무하는 요일만. 한쪽만 있으면 근무 요일 전체 (computeGaps와 같은 기준)
+    const parentWork = schedules.filter((s) => s.childId === null && s.type === 'parent_work')
+    const daysOf = (label: 'mom' | 'dad') => parentWork.filter((s) => s.parentLabel === label).flatMap((s) => s.daysOfWeek)
+    const [momDays, dadDays] = [daysOf('mom'), daysOf('dad')]
+    const workDays =
+      momDays.length && dadDays.length
+        ? momDays.filter((d) => dadDays.includes(d))
+        : [...new Set(parentWork.flatMap((s) => s.daysOfWeek))]
     // Without a school schedule the gap spans every work day; never save a schedule with no days
     const days = schoolDays.length > 0 ? schoolDays.filter((d) => workDays.includes(d)) : workDays
     // Runs on click, not during render
