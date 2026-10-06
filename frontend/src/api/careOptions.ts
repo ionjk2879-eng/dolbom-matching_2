@@ -72,11 +72,13 @@ async function queryCareOptions(start: string, end: string, grade: number): Prom
   return rows.map((o) => ({ ...o, open_time: o.open_time.slice(0, 5), close_time: o.close_time.slice(0, 5) }))
 }
 
-// 일반 둘러보기(공백 미확정 상태)용 — 실제 API는 start/end/grade가 필수라 이 호출은
-// 항상 실패하고 데모 옵션으로 대체된다. 진짜 매칭은 fetchCareOptionsForGap을 쓴다.
+// 일반 둘러보기(공백 미확정 상태)용 — 파라미터 없이 전체 조회
 export async function fetchCareOptions(): Promise<CareOption[]> {
   try {
-    return await queryCareOptions('00:00', '23:59', 1)
+    const res = await apiFetch('/care-options')
+    if (!res.ok) throw new Error()
+    const rows: CareOption[] = await res.json()
+    return rows.map((o) => ({ ...o, open_time: o.open_time.slice(0, 5), close_time: o.close_time.slice(0, 5) }))
   } catch {
     return demoOptions
   }

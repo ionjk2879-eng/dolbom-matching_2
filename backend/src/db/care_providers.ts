@@ -20,6 +20,9 @@ export type CareProvider = {
 export const findCareProviderById = (sql: Db, id: string) =>
   sql<CareProvider[]>`SELECT * FROM care_providers WHERE id = ${id}`
 
+export const findAllCareProviders = (sql: Db) =>
+  sql<CareProvider[]>`SELECT * FROM care_providers ORDER BY cost_per_hour`
+
 export const findCareProviders = (
   sql: Db,
   startTime: string,

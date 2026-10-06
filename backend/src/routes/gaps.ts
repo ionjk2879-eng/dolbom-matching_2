@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { createDb } from '../db/index'
 import { getActiveSchedulesForDate } from '../db/schedules'
 import { getChildrenByUser } from '../db/children'
-import { findCareProviders, findCareProviderById } from '../db/care_providers'
+import { findCareProviders, findCareProviderById, findAllCareProviders } from '../db/care_providers'
 import { requireAuth } from '../middleware/auth'
 import type { Env } from '../types'
 import type { AuthVariables } from '../middleware/auth'
@@ -100,19 +100,25 @@ app.get('/care-options/:id', async (c) => {
 })
 
 // GET /care-options?start=HH:MM&end=HH:MM&grade=N  (공개 API — 인증 불필요)
+// start/end/grade 없으면 전체 반환 (탐색 모드), 있으면 시간·학년 필터 (공백 매칭)
 app.get('/care-options', async (c) => {
   const { start, end, grade } = c.req.query()
-  if (!start || !end || !grade)
-    return c.json({ error: 'start, end, grade query params required' }, 400)
+  const sql = createDb(c.env.DATABASE_URL)
+
+  if (!start || !end || !grade) {
+    const providers = await findAllCareProviders(sql)
+    await sql.end()
+    return c.json(providers)
+  }
 
   const gradeNum = Number(grade)
-  if (!Number.isInteger(gradeNum) || gradeNum < 1 || gradeNum > 6)
+  if (!Number.isInteger(gradeNum) || gradeNum < 1 || gradeNum > 6) {
+    await sql.end()
     return c.json({ error: 'grade must be an integer between 1 and 6' }, 400)
+  }
 
-  const sql = createDb(c.env.DATABASE_URL)
   const providers = await findCareProviders(sql, start, end, gradeNum)
   await sql.end()
-
   return c.json(providers)
 })
 
