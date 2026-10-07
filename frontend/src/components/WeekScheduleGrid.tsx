@@ -21,6 +21,12 @@ function timeToSlot(time: string): number {
   return (h * 60 + m - START_HOUR * 60) / SLOT_MINUTES
 }
 
+// Blocks reaching outside 06–22 are drawn clipped and can't be dragged: a drag would clamp
+// their real times into the window. Edit those through the time form instead.
+function fitsWindow(s: { startTime: string; endTime: string }): boolean {
+  return timeToSlot(s.startTime) >= 0 && timeToSlot(s.endTime) <= SLOTS_PER_DAY
+}
+
 const childColors = ['bg-green text-white', 'bg-sand text-ink', 'bg-warn text-white']
 
 function blockColor(s: RecurringSchedule, kids: Child[]): string {
@@ -156,7 +162,7 @@ export function WeekScheduleGrid({
           if (bulk.size > 1 && bulk.has(drag.id)) {
             bulk.forEach((id) => {
               const s = schedulesRef.current.find((x) => x.id === id)
-              if (!s) return
+              if (!s || !fitsWindow(s)) return
               const sStart = timeToSlot(s.startTime)
               const sDur = timeToSlot(s.endTime) - sStart
               const ns = Math.max(0, Math.min(SLOTS_PER_DAY - sDur, sStart + delta))
@@ -175,7 +181,7 @@ export function WeekScheduleGrid({
         if (bulk.size > 1 && bulk.has(drag.id)) {
           bulk.forEach((id) => {
             const s = schedulesRef.current.find((x) => x.id === id)
-            if (s) onMove(id, s.daysOfWeek, s.startTime, endTime)
+            if (s && fitsWindow(s)) onMove(id, s.daysOfWeek, s.startTime, endTime)
           })
         } else {
           onMove(drag.id, drag.days, slotToTime(drag.startSlot), endTime)
@@ -275,6 +281,9 @@ export function WeekScheduleGrid({
                     const isBulkResizing = drag?.kind === 'resize' && multiSel.size > 1 && multiSel.has(drag.id) && multiSel.has(s.id)
                     const startSlot = timeToSlot(s.startTime)
                     const endSlot = (isResizing || isBulkResizing) ? Math.max(startSlot + 1, drag.endSlot) : timeToSlot(s.endTime)
+                    const fits = fitsWindow(s)
+                    const top = Math.max(0, startSlot)
+                    const bottom = Math.min(SLOTS_PER_DAY, endSlot)
                     const selSlot = sel?.id === s.id && sel?.day === day ? sel.slot : null
                     const isMultiSel = multiSel.has(s.id)
                     const lane = laneOf.get(s.id) ?? 0
@@ -289,8 +298,8 @@ export function WeekScheduleGrid({
                         }}
                         className={`absolute overflow-hidden rounded text-[10px] font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
                         style={{
-                          top: startSlot * ROW_HEIGHT,
-                          height: (endSlot - startSlot) * ROW_HEIGHT,
+                          top: top * ROW_HEIGHT,
+                          height: (bottom - top) * ROW_HEIGHT,
                           left: `calc(${(lane / lanes) * 100}% + 2px)`,
                           width: `calc(${100 / lanes}% - 4px)`,
                         }}
@@ -299,11 +308,11 @@ export function WeekScheduleGrid({
                       {selSlot !== null && (
                         <div
                           className="pointer-events-none absolute inset-x-0 bg-yellow-300/50 ring-1 ring-inset ring-yellow-300"
-                          style={{ top: (selSlot - startSlot) * ROW_HEIGHT, height: ROW_HEIGHT }}
+                          style={{ top: (selSlot - top) * ROW_HEIGHT, height: ROW_HEIGHT }}
                         />
                       )}
                       {/* 상단 grip — 이동 */}
-                      <div
+                      {fits && <div
                         className="absolute inset-x-0 top-0 h-3 cursor-grab active:cursor-grabbing hover:bg-white/20"
                         onMouseDown={(e) => {
                           if (e.button !== 0) return
@@ -320,20 +329,20 @@ export function WeekScheduleGrid({
                             clickedDay: day,
                           })
                         }}
-                      />
+                      />}
                       {/* 하단 handle — 크기 조절 */}
-                      <div
+                      {fits && <div
                         className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize hover:bg-white/30"
                         onMouseDown={(e) => {
                           if (e.button !== 0) return
                           e.stopPropagation()
                           setDrag({ kind: 'resize', id: s.id, days: s.daysOfWeek, startSlot, endSlot: timeToSlot(s.endTime) })
                         }}
-                      />
+                      />}
                       <div className="pointer-events-none select-none px-1 pt-2.5 leading-tight">
                         <div className="truncate font-semibold">{blockLabel(s, kids)}</div>
-                        {(endSlot - startSlot) >= 2 && (
-                          <div className="truncate opacity-75">{s.startTime}~{slotToTime(endSlot)}</div>
+                        {(bottom - top) >= 2 && (
+                          <div className="truncate opacity-75">{s.startTime}~{isResizing || isBulkResizing ? slotToTime(endSlot) : s.endTime}</div>
                         )}
                       </div>
                     </div>

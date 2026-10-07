@@ -10,9 +10,10 @@ const ROW_HEIGHT = 22
 // 예외 일정 없이 순수 반복 패턴만 보기 위한 기준 주 (2025-01-05 일 ~ 2025-01-11 토)
 const REF = ['2025-01-05','2025-01-06','2025-01-07','2025-01-08','2025-01-09','2025-01-10','2025-01-11']
 
+// Display only: clipped to the visible 06–22 window so early/late blocks don't spill out of the grid
 function timeToSlot(t: string) {
   const [h, m] = t.split(':').map(Number)
-  return (h * 60 + m - START_HOUR * 60) / 30
+  return Math.min(SLOTS_PER_DAY, Math.max(0, (h * 60 + m - START_HOUR * 60) / 30))
 }
 
 // 아이별 공백 색상 — warn(주황갈색) vs green(짙은 초록)으로 명확히 구분

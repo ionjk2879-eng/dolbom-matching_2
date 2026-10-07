@@ -14,7 +14,7 @@ import { matchesCareOption, gradeBuckets as grades, timeBuckets as times, REGION
 import { DISTRICTS } from '../data/districts'
 import type { CareOption } from '../data/types'
 import { toISO } from '../data/date'
-import { computeGaps } from '../data/gaps'
+import { computeGaps, toMinutes } from '../data/gaps'
 
 const steps = [
   { title: '반복 일정 등록', desc: '부모 근무·아이 학교 시간을 한 번만' },
@@ -31,10 +31,11 @@ function gradeToBucket(grade: number): string {
   return '초5~6'
 }
 
+// Compare full minutes: a gap ending 17:30 needs a place open past 17:00, so it falls in '~오후7시'
 function endTimeToBucket(end: string): string {
-  const h = Number(end.slice(0, 2))
-  if (h <= 17) return '~오후5시'
-  if (h <= 19) return '~오후7시'
+  const mins = toMinutes(end)
+  if (mins <= 17 * 60) return '~오후5시'
+  if (mins <= 19 * 60) return '~오후7시'
   return '오후7시 이후'
 }
 
