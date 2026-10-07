@@ -121,12 +121,17 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
     ...initialData,
     clearError: () => set({ error: null }),
 
-    loadAll: () =>
-      attempt(async () => {
-        if (get().loaded) return
+    loadAll: async () => {
+      if (get().loaded) return true
+      // If the user logs out or switches accounts mid-request, drop this response (data or error)
+      // so it can't refill the store that the auth subscription below just cleared
+      const userId = useAuthStore.getState().user?.id
+      const stale = () => useAuthStore.getState().user?.id !== userId
+      try {
         const [childRows, scheduleRows] = await Promise.all([fetchChildren(), fetchSchedules()])
         // ponytail: 예외 일정 GET이 일정별 라우트뿐이라 일정 수만큼 요청함 — 많아지면 백엔드에 일괄 조회 요청
         const exceptionRows = await Promise.all(scheduleRows.map((r) => fetchExceptions(r.id)))
+        if (stale()) return false
         const tags = useCareOptionTags.getState().careOptionIdBySchedule
         const notes = useScheduleNotes.getState().noteBySchedule
         const parentTags = useParentTags.getState().parentLabelBySchedule
@@ -136,7 +141,12 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
           exceptions: exceptionRows.flat().map(toException),
           loaded: true,
         })
-      }),
+        return true
+      } catch (err) {
+        if (!stale()) set({ error: (err as Error).message })
+        return false
+      }
+    },
 
     addChild: (c) =>
       attempt(async () => {
