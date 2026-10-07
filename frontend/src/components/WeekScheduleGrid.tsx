@@ -30,7 +30,11 @@ function fitsWindow(s: { startTime: string; endTime: string }): boolean {
 const childColors = ['bg-green text-white', 'bg-sand text-ink', 'bg-warn text-white']
 
 function blockColor(s: RecurringSchedule, kids: Child[]): string {
-  if (s.type === 'parent_work') return s.parentLabel === 'dad' ? 'bg-warn text-white' : 'bg-ink text-white'
+  if (s.type === 'parent_work') {
+    if (s.parentLabel === 'dad') return 'bg-warn text-white'
+    if (s.parentLabel === 'mom') return 'bg-ink text-white'
+    return 'bg-ink-2 text-white' // untagged
+  }
   if (s.type === 'care') return 'bg-line-2 text-ink-2'
   const idx = kids.findIndex((c) => c.id === s.childId)
   return childColors[Math.max(idx, 0) % childColors.length]
@@ -208,6 +212,9 @@ export function WeekScheduleGrid({
       <div className="mb-2 flex flex-wrap gap-3 text-xs text-ink-2">
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink" /> 엄마 근무</span>
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-warn" /> 아빠 근무</span>
+        {schedules.some((s) => s.type === 'parent_work' && !s.parentLabel) && (
+          <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink-2" /> 부모 근무(미지정 · 우클릭 → 수정에서 지정)</span>
+        )}
         {kids.map((c, i) => (
           <span key={c.id} className="flex items-center gap-1">
             <span className={`h-3 w-3 rounded ${childColors[i % childColors.length].split(' ')[0]}`} /> {c.name} 학교

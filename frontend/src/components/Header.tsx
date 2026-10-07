@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import logo from '../assets/logo.png'
 
@@ -6,6 +6,7 @@ export function Header() {
   const location = useLocation()
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
+  const navigate = useNavigate()
   const navItems = [
     { to: '/find', label: '돌봄 찾기' },
     { to: '/consult', label: '상담' },
@@ -44,7 +45,8 @@ export function Header() {
               <span className="hidden whitespace-nowrap text-sm font-semibold text-ink sm:inline">{user.name ?? user.email ?? '사용자'}님</span>
               <button
                 type="button"
-                onClick={logout}
+                // Leave the page first, or on a login-only page RequireAuth would bounce to /login
+                onClick={() => { navigate('/'); logout() }}
                 className="focus-ring whitespace-nowrap rounded-xl border border-line-2 px-4 py-2 text-sm font-semibold text-ink-2 hover:text-ink"
               >
                 로그아웃
