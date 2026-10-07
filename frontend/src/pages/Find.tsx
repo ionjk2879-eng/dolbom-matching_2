@@ -320,7 +320,7 @@ export function Find() {
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); navigate(`/find/${c.id}`) }}
-                      className="focus-ring rounded-xl border border-green px-3 py-1.5 text-xs font-semibold text-green hover:bg-green-soft"
+                      className="focus-ring rounded-xl bg-green px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
                     >
                       상세 보기
                     </button>
