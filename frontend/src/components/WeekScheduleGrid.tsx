@@ -216,7 +216,7 @@ export function WeekScheduleGrid({
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink" /> 엄마 근무</span>
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-warn" /> 아빠 근무</span>
         {schedules.some((s) => s.type === 'parent_work' && !s.parentLabel) && (
-          <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink-2" /> 부모 근무(미지정 · 우클릭 → 수정에서 지정)</span>
+          <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink-2" /> 부모 근무(미지정 · {isTouchDevice ? '탭' : '우클릭 → 수정'}해서 지정)</span>
         )}
         {kids.map((c, i) => (
           <span key={c.id} className="flex items-center gap-1">
