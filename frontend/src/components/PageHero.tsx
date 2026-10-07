@@ -34,6 +34,8 @@ export function PageHero({
 }) {
   return (
     <div className="bg-ivory-deep">
+      {/* React 19 moves <title> into <head>: every page with a hero gets its own tab title */}
+      <title>{`${title} | After School`}</title>
       <div className={`mx-auto max-w-6xl px-4 ${back ? 'pb-10 pt-4' : 'py-10'}`}>
         {back && <BackButton fallback={back} />}
         {breadcrumb && (

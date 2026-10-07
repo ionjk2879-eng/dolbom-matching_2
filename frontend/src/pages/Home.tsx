@@ -93,6 +93,7 @@ export function Home() {
 
   return (
     <div>
+      <title>After School</title>
       {/* 히어로 */}
       <section className="bg-ivory-deep">
         <div className="mx-auto max-w-6xl px-4 py-12 text-center md:py-16">
