@@ -56,8 +56,22 @@ const demoOptions: CareOption[] = [
 
 export const isDemoOption = (o: CareOption) => o.id.startsWith('demo-')
 
+// /care-options sometimes answers 503 and is fine on the next request, so retry once on a
+// network error or 5xx before the callers fall back to demo data. 4xx is a real answer: no retry
+const RETRY_DELAY_MS = 600
+async function fetchCareApi(path: string): Promise<Response> {
+  try {
+    const res = await apiFetch(path)
+    if (res.status < 500) return res
+  } catch {
+    // network error: retry below
+  }
+  await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
+  return apiFetch(path)
+}
+
 export async function fetchCareOption(id: string): Promise<CareOption | null> {
-  const res = await apiFetch(`/care-options/${id}`)
+  const res = await fetchCareApi(`/care-options/${id}`)
   if (res.status === 404) return null
   if (!res.ok) return null
   const o: CareOption = await res.json()
@@ -65,7 +79,7 @@ export async function fetchCareOption(id: string): Promise<CareOption | null> {
 }
 
 async function queryCareOptions(start: string, end: string, grade: number): Promise<CareOption[]> {
-  const res = await apiFetch(`/care-options?start=${start}&end=${end}&grade=${grade}`)
+  const res = await fetchCareApi(`/care-options?start=${start}&end=${end}&grade=${grade}`)
   if (!res.ok) throw new Error('돌봄 옵션을 불러오지 못했어요')
   const rows: CareOption[] = await res.json()
   // Postgres TIME comes back as 'HH:mm:ss'; the UI shows 'HH:mm'
@@ -75,7 +89,7 @@ async function queryCareOptions(start: string, end: string, grade: number): Prom
 // 일반 둘러보기(공백 미확정 상태)용 — 파라미터 없이 전체 조회
 export async function fetchCareOptions(): Promise<CareOption[]> {
   try {
-    const res = await apiFetch('/care-options')
+    const res = await fetchCareApi('/care-options')
     if (!res.ok) throw new Error()
     const rows: CareOption[] = await res.json()
     return rows.map((o) => ({ ...o, open_time: o.open_time.slice(0, 5), close_time: o.close_time.slice(0, 5) }))
