@@ -21,10 +21,10 @@ const GAP_COLORS = ['bg-warn text-white', 'bg-green text-white']
 const SCHOOL_BG = ['bg-green/20', 'bg-sand/40']
 
 export function GapWeekGrid({
-  children,
+  kids: children,
   schedules,
 }: {
-  children: Child[]
+  kids: Child[]
   schedules: RecurringSchedule[]
 }) {
   const hasParentWork = schedules.some((s) => s.type === 'parent_work')

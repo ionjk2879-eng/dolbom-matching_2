@@ -44,11 +44,11 @@ export function Home() {
   const { children, schedules, exceptions } = useCareScheduleStore()
   const [today] = useState(() => toISO(new Date()))
   const [careOptions, setCareOptions] = useState<CareOption[]>([])
-  // 매칭 패널은 선택한 돌봄(care)을 빼기 전의 원래 공백 기준 — 안 그러면 체크한 옵션이 공백에서 빠져 목록에서 사라짐
-  const nonCareSchedules = schedules.filter((s) => s.type !== 'care')
+  // care 스케줄 제외: 체크 시 gaps가 재계산되어 패널이 remount되는 것을 방지
+  const schedulesForGaps = schedules.filter((s) => s.type !== 'care')
   const childGaps = children.map((child) => ({
     child,
-    gaps: computeGaps(child, today, nonCareSchedules, exceptions),
+    gaps: computeGaps(child, today, schedulesForGaps, exceptions),
   }))
   const firstWithGap = childGaps.find((cg) => cg.gaps.length > 0)
 

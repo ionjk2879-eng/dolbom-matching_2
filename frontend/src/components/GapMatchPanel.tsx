@@ -87,9 +87,10 @@ export function GapMatchPanel({
     const parentWork = schedules.filter((s) => s.childId === null && s.type === 'parent_work')
     const daysOf = (label: 'mom' | 'dad') => parentWork.filter((s) => s.parentLabel === label).flatMap((s) => s.daysOfWeek)
     const [momDays, dadDays] = [daysOf('mom'), daysOf('dad')]
+    const untaggedDays = parentWork.filter((s) => !s.parentLabel).flatMap((s) => s.daysOfWeek)
     const workDays =
       momDays.length && dadDays.length
-        ? momDays.filter((d) => dadDays.includes(d))
+        ? [...new Set([...momDays.filter((d) => dadDays.includes(d)), ...untaggedDays])]
         : [...new Set(parentWork.flatMap((s) => s.daysOfWeek))]
     // Without a school schedule the gap spans every work day; never save a schedule with no days
     const days = schoolDays.length > 0 ? schoolDays.filter((d) => workDays.includes(d)) : workDays
