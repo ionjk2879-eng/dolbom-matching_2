@@ -269,8 +269,10 @@ export function Find() {
                 <div
                   key={c.id}
                   ref={(el) => { if (el) cardRefs.current.set(c.id, el); else cardRefs.current.delete(c.id) }}
-                  onMouseEnter={() => setSelected(c.id)}
-                  onClick={() => navigate(`/find/${c.id}`)}
+                  onClick={() => {
+                    setSelected(c.id)
+                    mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
                   className={`cursor-pointer rounded-2xl border p-4 transition ${
                     activeId === c.id
                       ? 'border-green bg-green-soft/40'
@@ -290,17 +292,24 @@ export function Find() {
                     운영 {c.open_time}~{c.close_time}
                     {c.cost_per_hour > 0 && ` · 시간당 ${c.cost_per_hour.toLocaleString()}원`}
                   </p>
-                  {c.phone && (
-                    <div className="mt-3">
+                  <div className="mt-3 flex gap-2">
+                    {c.phone && (
                       <a
                         href={`tel:${c.phone}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="focus-ring inline-block rounded-xl border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
+                        className="focus-ring rounded-xl border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
                       >
                         전화 문의
                       </a>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/find/${c.id}`) }}
+                      className="focus-ring rounded-xl border border-green px-3 py-1.5 text-xs font-semibold text-green hover:bg-green-soft"
+                    >
+                      상세 보기
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
