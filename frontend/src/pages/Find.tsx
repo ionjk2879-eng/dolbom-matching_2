@@ -108,6 +108,14 @@ export function Find() {
     cardRefs.current.get(activeId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
+  // Card click → map; stop below the sticky filter bar (its height changes when the panel is open)
+  const scrollToMap = () => {
+    const map = mapRef.current
+    if (!map) return
+    map.style.scrollMarginTop = `${(filterBarRef.current?.offsetHeight ?? 0) + 8}px`
+    map.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const hasActiveFilters = conditionSummary || typeFilter || query.trim()
 
   return (
@@ -286,7 +294,7 @@ export function Find() {
                   ref={(el) => { if (el) cardRefs.current.set(c.id, el); else cardRefs.current.delete(c.id) }}
                   onClick={() => {
                     setSelected(c.id)
-                    mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    scrollToMap()
                   }}
                   className={`cursor-pointer rounded-2xl border p-4 transition ${
                     activeId === c.id
