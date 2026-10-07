@@ -176,14 +176,52 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
   )
 }
 
+// 아이 추가 폼 + 등록된 아이 목록(수정/삭제). CareScheduleEditor와 MyPage에서 공용으로 쓴다.
+export function ChildManager() {
+  const { children, removeChild } = useCareScheduleStore()
+  const [editingChildId, setEditingChildId] = useState<string | null>(null)
+
+  const onRemove = (id: string, name: string) => {
+    if (window.confirm(`'${name}'을(를) 삭제할까요? 이 아이의 학교·돌봄 일정도 함께 삭제돼요.`)) removeChild(id)
+  }
+
+  return (
+    <>
+      <ChildForm />
+      {children.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {children.map((c) => (
+            <div key={c.id} className="flex flex-col gap-2">
+              {editingChildId === c.id ? (
+                <ChildEditForm key={c.id} id={c.id} onClose={() => setEditingChildId(null)} />
+              ) : (
+                <div className="flex items-center justify-between rounded-xl border border-line p-3 text-sm">
+                  <span>{c.name} · {c.grade}학년 · 통학 {c.commuteMinutes}분</span>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setEditingChildId(c.id)} className="focus-ring text-xs font-semibold text-ink-2">
+                      수정
+                    </button>
+                    <button type="button" onClick={() => onRemove(c.id, c.name)} className="focus-ring text-xs font-semibold text-error">
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 // 아이 등록 + 부모/아이 반복 일정 캘린더. GapSetup 페이지와 Home 메인페이지에서 공용으로 쓴다.
 export function CareScheduleEditor() {
-  const { children, schedules, removeChild, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
+  const { children, schedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
   const match = useMatchStore()
   const [view, setView] = useState<'schedule' | 'gap'>('schedule')
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingChildId, setEditingChildId] = useState<string | null>(null)
 
   const type = target.type === 'parent' ? 'parent_work' as const : 'child_school' as const
   const childId = target.type === 'child' ? target.childId : null
@@ -275,30 +313,7 @@ export function CareScheduleEditor() {
       <>
       <div className="flex flex-col gap-3">
         <p className="text-sm font-bold text-ink">아이 등록</p>
-        <ChildForm />
-        {children.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {children.map((c) => (
-              <div key={c.id} className="flex flex-col gap-2">
-                {editingChildId === c.id ? (
-                  <ChildEditForm key={c.id} id={c.id} onClose={() => setEditingChildId(null)} />
-                ) : (
-                  <div className="flex items-center justify-between rounded-xl border border-line p-3 text-sm">
-                    <span>{c.name} · {c.grade}학년 · 통학 {c.commuteMinutes}분</span>
-                    <div className="flex gap-3">
-                      <button type="button" onClick={() => setEditingChildId(c.id)} className="focus-ring text-xs font-semibold text-ink-2">
-                        수정
-                      </button>
-                      <button type="button" onClick={() => removeChild(c.id)} className="focus-ring text-xs font-semibold text-error">
-                        삭제
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <ChildManager />
       </div>
 
       <div className="flex flex-col gap-3">
