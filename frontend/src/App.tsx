@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Outlet, Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { apiFetch } from './api/client'
 import { Header } from './components/Header'
@@ -9,7 +9,6 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import { Home } from './pages/Home'
 import { Find } from './pages/Find'
 import { CareOptionDetail } from './pages/CareOptionDetail'
-import { Centers } from './pages/Centers'
 import { Consult } from './pages/Consult'
 import { Login } from './pages/Login'
 import { Schedule } from './pages/Schedule'
@@ -47,7 +46,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/find" element={<Find />} />
         <Route path="/find/:id" element={<CareOptionDetail />} />
-        <Route path="/centers" element={<Centers />} />
+        <Route path="/centers" element={<Navigate to="/find" replace />} />
         <Route path="/consult" element={<Consult />} />
         <Route path="/login" element={<Login />} />
         <Route element={<RequireAuth />}>

@@ -8,7 +8,6 @@ export function Header() {
   const logout = useAuthStore((s) => s.logout)
   const navItems = [
     { to: '/find', label: '돌봄 찾기' },
-    { to: '/centers', label: '센터 찾기' },
     { to: '/consult', label: '상담' },
   ]
   const isActive = (to: string) => location.pathname === to || location.pathname.startsWith(`${to}/`)

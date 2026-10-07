@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Chip } from '../components/Chip'
 import { DemoNotice } from '../components/DemoNotice'
 import { MapView, type MapPin } from '../components/MapView'
@@ -13,18 +13,23 @@ import { careTypeLabels, matchesCareOption, gradeBuckets, timeBuckets, REGIONS }
 import { DISTRICTS } from '../data/districts'
 import { computeGaps, overlapWithGap } from '../data/gaps'
 import { toISO } from '../data/date'
-import type { CareOption } from '../data/types'
+import type { CareOption, CareProviderType } from '../data/types'
 
 type SortKey = 'name' | 'cost'
 
+const allTypes: CareProviderType[] = ['school_care', 'community_care', 'child_care_service', 'academy', 'babysitter']
+
 export function Find() {
   const match = useMatchStore()
+  const navigate = useNavigate()
   const [options, setOptions] = useState<CareOption[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sort, setSort] = useState<SortKey>('name')
   const [selected, setSelected] = useState<string | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<CareProviderType | ''>('')
   const user = useAuthStore((s) => s.user)
   const { children, schedules, exceptions } = useCareScheduleStore()
   const [today] = useState(() => toISO(new Date()))
@@ -52,14 +57,17 @@ export function Find() {
   }, [])
 
   const results = useMemo(() => {
+    const q = query.trim()
     const filtered = options.filter((c) =>
       matchesCareOption(c, match.grade, match.time, match.region, match.district, match.costFilter) &&
-      (!fitsMine || todaysGaps.some((g) => overlapWithGap(c, g) !== null))
+      (!fitsMine || todaysGaps.some((g) => overlapWithGap(c, g) !== null)) &&
+      (!typeFilter || c.type === typeFilter) &&
+      (!q || c.name.includes(q) || c.address.includes(q))
     )
     return [...filtered].sort((a, b) =>
       sort === 'name' ? a.name.localeCompare(b.name) : a.cost_per_hour - b.cost_per_hour,
     )
-  }, [options, match.grade, match.time, match.region, match.district, match.costFilter, sort, fitsMine, todaysGaps])
+  }, [options, match.grade, match.time, match.region, match.district, match.costFilter, sort, fitsMine, todaysGaps, typeFilter, query])
 
   // Until the user picks one (or when the pick is filtered out), the map follows the top of the list
   const activeId = results.some((c) => c.id === selected) ? selected : (results[0]?.id ?? null)
@@ -77,14 +85,6 @@ export function Find() {
     [results],
   )
 
-  // 카드 클릭 → 지도로 smooth scroll + 핀 선택 (sticky 필터 바 높이 보정)
-  const handleCardClick = (id: string) => {
-    setSelected(id)
-    if (!mapRef.current) return
-    const top = mapRef.current.getBoundingClientRect().top + window.scrollY - (filterBarRef.current?.offsetHeight ?? 0)
-    window.scrollTo({ top, behavior: 'smooth' })
-  }
-
   // 지도 팝업 "목록에서 찾기 ↓" → 선택된 카드로 smooth scroll
   const scrollToCard = () => {
     if (!activeId) return
@@ -93,10 +93,12 @@ export function Find() {
     cardRefs.current.get(activeId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
+  const hasActiveFilters = conditionSummary || typeFilter || query.trim()
+
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 pt-4">
 
-      {/* ── 필터 바 (sticky, 스크롤해도 항상 표시) ── */}
+      {/* ── 필터 바 (sticky) ── */}
       <div ref={filterBarRef} className="sticky top-0 z-20 -mx-4 border-b border-line bg-ivory-card px-4 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -108,8 +110,12 @@ export function Find() {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            {conditionSummary && (
-              <button type="button" onClick={match.reset} className="focus-ring text-xs text-ink-2 hover:text-error">
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={() => { match.reset(); setTypeFilter(''); setQuery('') }}
+                className="focus-ring text-xs text-ink-2 hover:text-error"
+              >
                 초기화
               </button>
             )}
@@ -157,25 +163,43 @@ export function Find() {
         </div>
 
         {filterOpen && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-line pt-2">
-            {todaysGaps.length > 0 && (
-              <Chip selected={fitsMine} onClick={() => setFitMine((v) => !v)}>
-                내 일정에 맞는 센터
-              </Chip>
-            )}
-            {gradeBuckets.map((g) => (
-              <Chip key={g} selected={match.grade === g} onClick={() => match.setGrade(g)}>{g}</Chip>
-            ))}
-            <span className="h-4 w-px bg-line" />
-            {timeBuckets.map((t) => (
-              <Chip key={t} selected={match.time === t} onClick={() => match.setTime(t)}>{t}</Chip>
-            ))}
-            <span className="h-4 w-px bg-line" />
-            {(['all', 'free', 'paid'] as const).map((v) => (
-              <Chip key={v} selected={match.costFilter === v} onClick={() => match.setCostFilter(v)}>
-                {v === 'all' ? '전체' : v === 'free' ? '무료' : '유료'}
-              </Chip>
-            ))}
+          <div className="mt-2 flex flex-col gap-2 border-t border-line pt-2">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="센터 이름이나 주소로 검색"
+              aria-label="센터 검색"
+              className="focus-ring w-full rounded-lg border border-line-2 bg-ivory-card px-3 py-1.5 text-xs"
+            />
+            <div className="flex flex-wrap items-center gap-1.5">
+              {todaysGaps.length > 0 && (
+                <Chip selected={fitsMine} onClick={() => setFitMine((v) => !v)}>
+                  내 일정에 맞는 센터
+                </Chip>
+              )}
+              <Chip selected={typeFilter === ''} onClick={() => setTypeFilter('')}>전체 유형</Chip>
+              {allTypes.map((t) => (
+                <Chip key={t} selected={typeFilter === t} onClick={() => setTypeFilter(typeFilter === t ? '' : t)}>
+                  {careTypeLabels[t]}
+                </Chip>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {gradeBuckets.map((g) => (
+                <Chip key={g} selected={match.grade === g} onClick={() => match.setGrade(g)}>{g}</Chip>
+              ))}
+              <span className="h-4 w-px bg-line" />
+              {timeBuckets.map((t) => (
+                <Chip key={t} selected={match.time === t} onClick={() => match.setTime(t)}>{t}</Chip>
+              ))}
+              <span className="h-4 w-px bg-line" />
+              {(['all', 'free', 'paid'] as const).map((v) => (
+                <Chip key={v} selected={match.costFilter === v} onClick={() => match.setCostFilter(v)}>
+                  {v === 'all' ? '전체' : v === 'free' ? '무료' : '유료'}
+                </Chip>
+              ))}
+            </div>
           </div>
         )}
 
@@ -242,12 +266,12 @@ export function Find() {
             )}
             <div className="mt-2 flex flex-col gap-2">
               {paged.visible.map((c) => (
-                <button
+                <div
                   key={c.id}
-                  type="button"
                   ref={(el) => { if (el) cardRefs.current.set(c.id, el); else cardRefs.current.delete(c.id) }}
-                  onClick={() => handleCardClick(c.id)}
-                  className={`focus-ring w-full rounded-2xl border p-4 text-left transition ${
+                  onMouseEnter={() => setSelected(c.id)}
+                  onClick={() => navigate(`/find/${c.id}`)}
+                  className={`cursor-pointer rounded-2xl border p-4 transition ${
                     activeId === c.id
                       ? 'border-green bg-green-soft/40'
                       : 'border-line bg-ivory-card hover:border-green/40'
@@ -266,7 +290,18 @@ export function Find() {
                     운영 {c.open_time}~{c.close_time}
                     {c.cost_per_hour > 0 && ` · 시간당 ${c.cost_per_hour.toLocaleString()}원`}
                   </p>
-                </button>
+                  {c.phone && (
+                    <div className="mt-3">
+                      <a
+                        href={`tel:${c.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="focus-ring inline-block rounded-xl border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
+                      >
+                        전화 문의
+                      </a>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
             {paged.hasMore && (
