@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+# OAuth landing page, not content
+Disallow: /auth/

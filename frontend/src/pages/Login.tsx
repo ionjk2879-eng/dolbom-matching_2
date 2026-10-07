@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { LOGIN_REDIRECT_KEY, useAuthStore } from '../store/authStore'
-import loginHero from '../assets/login-hero.png'
+import loginHero from '../assets/login-hero.webp'
 
 const API_URL = import.meta.env.VITE_API_URL as string
 
@@ -56,6 +56,8 @@ export function Login() {
         <img
           src={loginHero}
           alt="아이와 선생님이 함께 공부하는 모습"
+          width={960}
+          height={640}
           className="mt-6 aspect-video w-full rounded-xl border border-line-3 object-cover"
         />
       </div>

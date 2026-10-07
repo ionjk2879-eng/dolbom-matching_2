@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import logo from '../assets/logo.png'
+import logo from '../assets/logo.webp'
 
 type Props = { children: ReactNode }
 type State = { error: Error | null }
@@ -22,7 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-ivory-card px-4 py-16 text-center">
           <a href="/" className="focus-ring tap-target inline-flex items-center">
-            <img src={logo} alt="After School" className="h-10 w-auto" />
+            <img src={logo} alt="After School" width={316} height={120} className="h-10 w-auto" />
           </a>
           <div className="mt-10 flex h-24 w-24 items-center justify-center rounded-full bg-sand">
             <p className="text-3xl font-extrabold tracking-[-0.03em] text-ink">앗!</p>

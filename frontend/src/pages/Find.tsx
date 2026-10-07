@@ -271,7 +271,8 @@ export function Find() {
       </div>
 
       {/* ── 결과 목록 ── */}
-      <div className="mt-4">
+      {/* Hold the list's space while loading so the footer doesn't sit up top and then jump down */}
+      <div className={`mt-4 ${loading ? 'min-h-screen' : ''}`}>
         {loading && <p className="text-sm text-ink-2">불러오는 중...</p>}
         {error && <p className="text-sm text-error">{error}</p>}
         {!loading && <DemoNotice options={options} />}
