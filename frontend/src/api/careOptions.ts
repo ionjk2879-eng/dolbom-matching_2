@@ -96,14 +96,14 @@ export async function fetchCareOptionsForGap(grade: number, gap: Gap): Promise<C
   const times: string[] = []
   for (let m = start; m < end; m += SAMPLE_STEP_MIN) times.push(toTime(m))
   times.push(gap.end)
+  let results: CareOption[][]
   try {
-    const results = await Promise.all(times.map((t) => queryCareOptions(t, t, grade)))
-    const byId = new Map<string, CareOption>()
-    for (const o of results.flat()) byId.set(o.id, o)
-    const matched = [...byId.values()].filter((o) => overlapWithGap(o, gap) !== null)
-    if (matched.length > 0) return matched
+    results = await Promise.all(times.map((t) => queryCareOptions(t, t, grade)))
   } catch {
-    // fall through to demo
+    // Demo only when the API is unreachable — an empty result means no real match
+    return demoOptions.filter((o) => overlapWithGap(o, gap) !== null)
   }
-  return demoOptions.filter((o) => overlapWithGap(o, gap) !== null)
+  const byId = new Map<string, CareOption>()
+  for (const o of results.flat()) byId.set(o.id, o)
+  return [...byId.values()].filter((o) => overlapWithGap(o, gap) !== null)
 }
