@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import type { RecurringSchedule } from '../data/types'
 import { Button } from './Button'
 import { WeekScheduleGrid, type Target } from './WeekScheduleGrid'
 import { GapWeekGrid } from './GapWeekGrid'
@@ -63,7 +64,7 @@ function ChildForm() {
           type="number"
           min={0}
           value={commuteMinutes}
-          onChange={(e) => setCommuteMinutes(Number(e.target.value))}
+          onChange={(e) => setCommuteMinutes(Math.max(0, Number(e.target.value)))}
           className="focus-ring mt-1 w-24 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
         />
       </div>
@@ -84,8 +85,9 @@ function ChildEditForm({ id, onClose }: { id: string; onClose: () => void }) {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!name) return setError('이름을 입력해주세요')
-    if (await updateChild(id, { name, grade, commuteMinutes })) onClose()
+    const trimmed = name.trim()
+    if (!trimmed) return setError('이름을 입력해주세요')
+    if (await updateChild(id, { name: trimmed, grade, commuteMinutes })) onClose()
   }
 
   return (
@@ -104,7 +106,7 @@ function ChildEditForm({ id, onClose }: { id: string; onClose: () => void }) {
       </div>
       <div>
         <label className="text-xs font-semibold text-ink-2">통학시간(분)</label>
-        <input type="number" min={0} value={commuteMinutes} onChange={(e) => setCommuteMinutes(Number(e.target.value))}
+        <input type="number" min={0} value={commuteMinutes} onChange={(e) => setCommuteMinutes(Math.max(0, Number(e.target.value)))}
           className="focus-ring mt-1 w-24 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm" />
       </div>
       <Button type="submit">저장</Button>
@@ -193,6 +195,9 @@ export function CareScheduleEditor() {
       : (s.type === 'child_school' || s.type === 'care') && s.childId === target.childId
   )
 
+  // A re-created block (split or restored) keeps everything but its id: name, memo, picked care option, parent tag
+  const keep = ({ id: _id, ...rest }: RecurringSchedule) => rest // eslint-disable-line @typescript-eslint/no-unused-vars
+
   const onCreate = async (daysOfWeek: number[], startTime: string, endTime: string) => {
     // 드래그 범위와 겹치는 블록 전체를 한 번씩만 제거
     const overlapIds = new Set(
@@ -213,7 +218,7 @@ export function CareScheduleEditor() {
     // 드래그 범위 밖 요일은 원래 시간 그대로 단일 요일 블록으로 복원
     overlapping.forEach((s) => {
       s.daysOfWeek.filter((d) => !daysOfWeek.includes(d)).forEach((d) =>
-        addSchedule({ type, childId, daysOfWeek: [d], startTime: s.startTime, endTime: s.endTime, parentLabel: s.parentLabel })
+        addSchedule({ ...keep(s), daysOfWeek: [d] })
       )
     })
 
@@ -222,7 +227,7 @@ export function CareScheduleEditor() {
       const dayOverlap = overlapping.filter((s) => s.daysOfWeek.includes(day))
       const mergedStart = [startTime, ...dayOverlap.map((s) => s.startTime)].sort()[0]
       const mergedEnd = [endTime, ...dayOverlap.map((s) => s.endTime)].sort().reverse()[0]
-      addSchedule({ type, childId, daysOfWeek: [day], startTime: mergedStart, endTime: mergedEnd, parentLabel })
+      addSchedule({ type, childId, daysOfWeek: [day], startTime: mergedStart, endTime: mergedEnd, parentLabel, title: dayOverlap[0]?.title, memo: dayOverlap[0]?.memo })
     })
   }
 
@@ -232,9 +237,9 @@ export function CareScheduleEditor() {
     const ok = await removeSchedule(id)
     if (!ok) return
     if (s.startTime < punchStart)
-      await addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: s.startTime, endTime: punchStart, parentLabel: s.parentLabel })
+      await addSchedule({ ...keep(s), endTime: punchStart })
     if (s.endTime > punchEnd)
-      await addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: punchEnd, endTime: s.endTime, parentLabel: s.parentLabel })
+      await addSchedule({ ...keep(s), startTime: punchEnd })
   }
 
   const onMove = (id: string, daysOfWeek: number[], startTime: string, endTime: string) => {
