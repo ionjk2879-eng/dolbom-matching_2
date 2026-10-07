@@ -36,10 +36,16 @@ export function GapCalendar() {
     .filter((s) => s.daysOfWeek.includes(selectedDow))
     .map((s) => ({ schedule: s, cancel: exceptions.find((e) => e.scheduleId === s.id && e.date === selected && e.isCancelled) }))
 
+  // Schedules whose cancel/undo request is in flight; blocks a second click from saving a duplicate
+  const [pending, setPending] = useState<string[]>([])
+
   // Failures show in StoreErrorBanner
-  const toggleCancel = (scheduleId: string, cancelId: string | undefined) => {
-    if (cancelId) removeException(cancelId)
-    else addException({ scheduleId, date: selected, startTime: null, endTime: null, isCancelled: true })
+  const toggleCancel = async (scheduleId: string, cancelId: string | undefined) => {
+    if (pending.includes(scheduleId)) return
+    setPending((p) => [...p, scheduleId])
+    if (cancelId) await removeException(cancelId)
+    else await addException({ scheduleId, date: selected, startTime: null, endTime: null, isCancelled: true })
+    setPending((p) => p.filter((id) => id !== scheduleId))
   }
 
   return (
@@ -102,6 +108,7 @@ export function GapCalendar() {
                       <button
                         type="button"
                         onClick={() => toggleCancel(schedule.id, cancel?.id)}
+                        disabled={pending.includes(schedule.id)}
                         className={`focus-ring font-semibold ${cancel ? 'text-green' : 'text-ink-2 hover:text-ink'}`}
                       >
                         {cancel ? '취소 되돌리기' : '이 날만 취소'}

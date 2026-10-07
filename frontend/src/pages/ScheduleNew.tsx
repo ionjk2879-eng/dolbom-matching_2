@@ -5,8 +5,8 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { Chip } from '../components/Chip'
 import { WEEKDAY_LABELS } from '../data/date'
-import type { ScheduleType } from '../data/types'
-import { useCareScheduleStore } from '../store/careScheduleStore'
+import type { RecurringSchedule, ScheduleType } from '../data/types'
+import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 
 const typeLabels: Record<ScheduleType, string> = {
   parent_work: '부모 근무',
@@ -14,11 +14,30 @@ const typeLabels: Record<ScheduleType, string> = {
   care: '돌봄(선택한 옵션)',
 }
 
+// Form state is seeded once from `editing`, so the form mounts only after the schedule has loaded
 export function ScheduleNew() {
-  const navigate = useNavigate()
   const { id } = useParams()
-  const { addSchedule, updateSchedule, children } = useCareScheduleStore()
+  const loading = useCareScheduleLoading()
   const editing = useCareScheduleStore((s) => s.schedules.find((x) => x.id === id))
+
+  if (id && !editing) {
+    if (loading) return <p className="mx-auto max-w-2xl px-4 py-20 text-center text-sm text-ink-2">불러오는 중...</p>
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center">
+        <p className="text-sm font-bold text-ink">일정을 찾을 수 없어요</p>
+        <Link to="/calendar" className="focus-ring mt-4 inline-block text-sm font-semibold text-green underline">
+          내 일정으로 돌아가기
+        </Link>
+      </div>
+    )
+  }
+
+  return <ScheduleForm key={id ?? 'new'} editing={editing} />
+}
+
+function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
+  const navigate = useNavigate()
+  const { addSchedule, updateSchedule, children } = useCareScheduleStore()
 
   const [type, setType] = useState<ScheduleType>(editing?.type ?? 'parent_work')
   const [childId, setChildId] = useState(editing?.childId ?? '')
@@ -29,17 +48,6 @@ export function ScheduleNew() {
   const [memo, setMemo] = useState(editing?.memo ?? '')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-
-  if (id && !editing) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-20 text-center">
-        <p className="text-sm font-bold text-ink">일정을 찾을 수 없어요</p>
-        <Link to="/calendar" className="focus-ring mt-4 inline-block text-sm font-semibold text-green underline">
-          내 일정으로 돌아가기
-        </Link>
-      </div>
-    )
-  }
 
   const pageTitle = editing ? '일정 수정' : '일정 등록'
   const needsChild = type !== 'parent_work'
@@ -59,6 +67,8 @@ export function ScheduleNew() {
       startTime,
       endTime,
       careOptionId: editing?.careOptionId,
+      // This form has no mom/dad picker; keep the existing tag so updateSchedule doesn't erase it
+      parentLabel: type === 'parent_work' ? editing?.parentLabel : undefined,
       title: title.trim() || undefined,
       memo: memo.trim() || undefined,
     }
