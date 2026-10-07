@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 declare const naver: any // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -13,6 +13,9 @@ export type MapPin = {
 const NAVER_CLIENT_ID = 'ujztcsarfi'
 const DEFAULT_CENTER = { lat: 36.351, lng: 127.385 }
 const DEFAULT_ZOOM = 14
+// Each marker is a DOM node; drawing all ~2,200 at once froze phones for seconds.
+// Only pins inside the visible map are drawn, and at most this many when zoomed far out
+const MAX_MARKERS = 200
 
 function loadNaverMapsScript(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -74,6 +77,8 @@ export function MapView({
   const [ready, setReady] = useState(typeof naver !== 'undefined')
   const [mapError, setMapError] = useState('')
   const [geoState, setGeoState] = useState<GeoState>('idle')
+  // Pins in view that weren't drawn because of MAX_MARKERS (shown as a "zoom in" hint)
+  const [hiddenCount, setHiddenCount] = useState(0)
 
   // 키/도메인 인증 실패는 예외가 아니라 이 전역 콜백으로만 알려준다
   useEffect(() => {
@@ -109,31 +114,60 @@ export function MapView({
     }
   }, [ready])
 
-  // Latest pins for the pan effect below, which must not re-run when only the pins change
+  // Latest pins/onSelect for the map's idle listener and the pan effect below
   const pinsRef = useRef(pins)
+  const onSelectRef = useRef(onSelect)
 
-  // 핀 생성 — pins/onSelect가 바뀔 때만 전체 재생성 (selected 변경 시에는 실행 안 함)
-  useEffect(() => {
-    pinsRef.current = pins
-    if (!mapRef.current) return
+  // Draw markers for the pins in view (capped), reusing ones already on the map
+  // Reads only refs, so one stable function serves the idle listener and the pins effect
+  const syncMarkers = useCallback(() => {
+    const map = mapRef.current
+    if (!map) return
+    const bounds = map.getBounds()
+    const sel = prevSelectedRef.current
+    const inView = pinsRef.current.filter((p) => bounds.hasLatLng(new naver.maps.LatLng(p.lat, p.lng)))
+    const shown = inView.slice(0, MAX_MARKERS)
+    // The selected pin is always drawn, even before the map has moved onto it
+    const selPin = pinsRef.current.find((p) => p.id === sel)
+    if (selPin && !shown.includes(selPin)) shown.push(selPin)
+    const keep = new Set(shown.map((p) => p.id))
 
-    markersRef.current.forEach((m) => m.setMap(null))
-    markersRef.current.clear()
-
-    const curSel = prevSelectedRef.current
-
-    pins.forEach((pin) => {
-      const isSel = pin.id === curSel
+    markersRef.current.forEach((m, id) => {
+      if (!keep.has(id)) { m.setMap(null); markersRef.current.delete(id) }
+    })
+    for (const pin of shown) {
+      if (markersRef.current.has(pin.id)) continue
+      const isSel = pin.id === sel
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(pin.lat, pin.lng),
-        map: mapRef.current,
+        map,
         zIndex: isSel ? 1000 : 0,
         icon: markerIcon(pin.name, isSel),
       })
-      naver.maps.Event.addListener(marker, 'click', () => onSelect(pin.id))
+      naver.maps.Event.addListener(marker, 'click', () => onSelectRef.current(pin.id))
       markersRef.current.set(pin.id, marker)
+    }
+    setHiddenCount(inView.length - markersRef.current.size)
+  }, [])
+
+  // Re-draw whenever the map settles after a pan/zoom
+  useEffect(() => {
+    if (!ready || !mapRef.current) return
+    const listener = naver.maps.Event.addListener(mapRef.current, 'idle', syncMarkers)
+    return () => naver.maps.Event.removeListener(listener)
+  }, [ready, syncMarkers])
+
+  // New result list (filter/sort): drop markers that left it, draw what's now in view
+  useEffect(() => {
+    pinsRef.current = pins
+    onSelectRef.current = onSelect
+    if (!mapRef.current) return
+    const ids = new Set(pins.map((p) => p.id))
+    markersRef.current.forEach((m, id) => {
+      if (!ids.has(id)) { m.setMap(null); markersRef.current.delete(id) }
     })
-  }, [pins, onSelect, ready])
+    syncMarkers()
+  }, [pins, onSelect, ready, syncMarkers])
 
   // 선택 상태 변경 — 이전/새 핀 아이콘 2개만 교체 (전체 재생성 없음)
   useEffect(() => {
@@ -151,15 +185,20 @@ export function MapView({
       const m = markersRef.current.get(selected)
       const p = pinsRef.current.find((x) => x.id === selected)
       if (m && p) { m.setIcon(markerIcon(p.name, true)); m.setZIndex(1000) }
+      else syncMarkers() // not drawn yet (off-screen): draw it now
     }
-  }, [selected, ready])
+  }, [selected, ready, syncMarkers])
 
   // Move the map only when the selection changes
   useEffect(() => {
     if (!mapRef.current || !selected) return
     const pin = pinsRef.current.find((p) => p.id === selected)
-    if (pin) mapRef.current.panTo(new naver.maps.LatLng(pin.lat, pin.lng))
-  }, [selected, ready])
+    if (!pin) return
+    mapRef.current.panTo(new naver.maps.LatLng(pin.lat, pin.lng))
+    // A long jump doesn't always fire 'idle', so redraw the pins around the new spot once it lands
+    const timer = setTimeout(syncMarkers, 800)
+    return () => clearTimeout(timer)
+  }, [selected, ready, syncMarkers])
 
   const moveToMyLocation = () => {
     if (!navigator.geolocation) { setGeoState('error'); return }
@@ -222,7 +261,7 @@ export function MapView({
           onClick={moveToMyLocation}
           disabled={geoState === 'loading'}
           title={geoState === 'error' ? '위치 권한을 허용해 주세요' : '현재 위치로 이동'}
-          className={`absolute bottom-3 left-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl border shadow-md transition ${
+          className={`tap-target absolute bottom-3 left-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl border shadow-md transition ${
             geoState === 'error'
               ? 'border-error bg-white text-error'
               : 'border-line bg-white text-ink-2 hover:text-ink'
@@ -240,6 +279,11 @@ export function MapView({
             </svg>
           )}
         </button>
+      )}
+      {hiddenCount > 0 && (
+        <p className="pointer-events-none absolute left-1/2 top-3 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-ivory-card/95 px-3 py-1.5 text-xs font-semibold text-ink-2 shadow-md">
+          지도를 확대하면 더 많은 센터가 보여요
+        </p>
       )}
     </div>
   )
