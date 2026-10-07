@@ -28,7 +28,7 @@ export function Schedule() {
 
   return (
     <div>
-      <PageHero title="내 일정" desc="반복 주간 패턴으로 등록된 일정을 요일별로 확인하세요" />
+      <PageHero title="내 일정" back="/mypage" desc="반복 주간 패턴으로 등록된 일정을 요일별로 확인하세요" />
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 pt-6">
         <p className="text-xs text-ink-2">
           가족 공유 {shareWithFamily ? '켜짐' : '꺼짐'} · 업체 공유 {shareWithCenters ? '켜짐' : '꺼짐'}

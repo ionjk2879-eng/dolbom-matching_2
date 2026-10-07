@@ -1,8 +1,23 @@
 import { Link } from 'react-router-dom'
+import { useGoBack } from '../hooks/useGoBack'
+
+function BackButton({ fallback }: { fallback: string }) {
+  const goBack = useGoBack(fallback)
+  return (
+    <button
+      type="button"
+      onClick={goBack}
+      className="focus-ring -ml-2 inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-ink-2 hover:text-ink"
+    >
+      <span aria-hidden="true">←</span> 뒤로
+    </button>
+  )
+}
 
 export function PageHero({
   title,
   desc,
+  back,
   breadcrumb,
   tabs,
   activeTab,
@@ -10,6 +25,8 @@ export function PageHero({
 }: {
   title: string
   desc?: string
+  // Sub-pages pass their parent path; shown as a "← 뒤로" button (used when there's no in-app history)
+  back?: string
   breadcrumb?: { label: string; to?: string }[]
   tabs?: { key: string; label: string }[]
   activeTab?: string
@@ -17,7 +34,8 @@ export function PageHero({
 }) {
   return (
     <div className="bg-ivory-deep">
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className={`mx-auto max-w-6xl px-4 ${back ? 'pb-10 pt-4' : 'py-10'}`}>
+        {back && <BackButton fallback={back} />}
         {breadcrumb && (
           <nav className="mb-3 flex gap-1 text-xs text-ink-2">
             {breadcrumb.map((b, i) => (

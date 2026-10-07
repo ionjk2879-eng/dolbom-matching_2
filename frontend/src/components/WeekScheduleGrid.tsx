@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { WEEKDAY_LABELS } from '../data/date'
 import type { Child, RecurringSchedule } from '../data/types'
 import { blockLabel } from '../data/scheduleLabel'
+// On touch the grid's drag/right-click/Ctrl don't work: a tap on a block opens its edit form,
+// and new blocks come from the editor's add form instead
+import { isTouchDevice } from '../data/device'
 
 const START_HOUR = 6
 const END_HOUR = 22
@@ -249,7 +252,8 @@ export function WeekScheduleGrid({
               className="relative border-t border-line"
               style={{ height: ROW_HEIGHT * SLOTS_PER_DAY }}
               onMouseDown={(e) => {
-                if (e.button !== 0) return
+                // A tap fires a synthetic mousedown; don't turn it into a stray 30-minute block
+                if (e.button !== 0 || isTouchDevice) return
                 setMenu(null)
                 const slot = slotAt(day, e.clientY)
                 setDrag({ kind: 'create', start: { day, slot }, end: { day, slot }, ctrl: e.ctrlKey || e.metaKey })
@@ -297,6 +301,7 @@ export function WeekScheduleGrid({
                     return (
                       <div
                         key={s.id}
+                        onClick={isTouchDevice ? () => onEdit(s.id) : undefined}
                         onContextMenu={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
@@ -319,7 +324,7 @@ export function WeekScheduleGrid({
                         />
                       )}
                       {/* 상단 grip — 이동 */}
-                      {fits && <div
+                      {fits && !isTouchDevice && <div
                         className="absolute inset-x-0 top-0 h-3 cursor-grab active:cursor-grabbing hover:bg-white/20"
                         onMouseDown={(e) => {
                           if (e.button !== 0) return
@@ -338,7 +343,7 @@ export function WeekScheduleGrid({
                         }}
                       />}
                       {/* 하단 handle — 크기 조절 */}
-                      {fits && <div
+                      {fits && !isTouchDevice && <div
                         className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize hover:bg-white/30"
                         onMouseDown={(e) => {
                           if (e.button !== 0) return
@@ -417,7 +422,9 @@ export function WeekScheduleGrid({
       )}
 
       <p className="mt-2 text-xs text-ink-2">
-        클릭/드래그 → 등록 · Ctrl+클릭 → 다중선택 · 블록 클릭 → 슬롯 선택(Delete 삭제) · 블록 상단 드래그 → 이동 · 블록 하단 드래그 → 크기 조절 · 우클릭 → 수정/삭제
+        {isTouchDevice
+          ? '블록을 탭하면 시간 수정·삭제 · 새 일정은 위 ‘일정 추가’로 등록'
+          : '클릭/드래그 → 등록 · Ctrl+클릭 → 다중선택 · 블록 클릭 → 슬롯 선택(Delete 삭제) · 블록 상단 드래그 → 이동 · 블록 하단 드래그 → 크기 조절 · 우클릭 → 수정/삭제'}
       </p>
 
       {menu && (

@@ -37,6 +37,21 @@ export function Find() {
 
   const mapRef = useRef<HTMLDivElement>(null)
   const filterBarRef = useRef<HTMLDivElement>(null)
+
+  // The open filter panel is sticky and can cover most of a phone screen, so fold it once the
+  // user starts scrolling the page (touch/wheel outside the bar, not layout shifts from filtering)
+  useEffect(() => {
+    if (!filterOpen) return
+    const close = (e: Event) => {
+      if (!filterBarRef.current?.contains(e.target as Node)) setFilterOpen(false)
+    }
+    window.addEventListener('touchmove', close, { passive: true })
+    window.addEventListener('wheel', close, { passive: true })
+    return () => {
+      window.removeEventListener('touchmove', close)
+      window.removeEventListener('wheel', close)
+    }
+  }, [filterOpen])
   const cardRefs = useRef(new Map<string, HTMLElement>())
 
   useEffect(() => {

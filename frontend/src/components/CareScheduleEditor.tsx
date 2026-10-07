@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { RecurringSchedule } from '../data/types'
 import { Button } from './Button'
 import { WeekScheduleGrid, type Target } from './WeekScheduleGrid'
+import { isTouchDevice } from '../data/device'
+import { WEEKDAY_LABELS } from '../data/date'
 import { GapWeekGrid } from './GapWeekGrid'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { blockLabel } from '../data/scheduleLabel'
@@ -123,6 +125,13 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
   const [endTime, setEndTime] = useState(schedule?.endTime ?? '')
   const [owner, setOwner] = useState<'mom' | 'dad' | ''>(schedule?.parentLabel ?? '')
   const [error, setError] = useState('')
+  const formRef = useRef<HTMLFormElement>(null)
+
+  // The form sits under a tall grid; bring it into view when a block is opened (matters most on phones)
+  useEffect(() => {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [])
+
   if (!schedule) return null
 
   const onSubmit = async (e: FormEvent) => {
@@ -139,7 +148,7 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border border-line p-3">
+    <form ref={formRef} onSubmit={onSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border border-line p-3">
       {schedule.type === 'parent_work' && (
         <div>
           <label htmlFor="edit-owner" className="text-xs font-semibold text-ink-2">
@@ -191,6 +200,66 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
         취소
       </button>
       {error && <p className="w-full text-xs text-error">{error}</p>}
+    </form>
+  )
+}
+
+// Touch replacement for drag-to-create: pick days and times, then the editor's onCreate
+// merges it like a drag would (and tags it with the selected 엄마/아빠/아이 tab)
+function ScheduleAddForm({ targetLabel, onCreate }: {
+  targetLabel: string
+  onCreate: (daysOfWeek: number[], startTime: string, endTime: string) => Promise<void>
+}) {
+  const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5])
+  const [startTime, setStartTime] = useState('09:00')
+  const [endTime, setEndTime] = useState('18:00')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const toggleDay = (d: number) => setDays((ds) => (ds.includes(d) ? ds.filter((x) => x !== d) : [...ds, d].sort()))
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (days.length === 0) return setError('요일을 하나 이상 골라주세요')
+    if (startTime >= endTime) return setError('끝나는 시간이 시작 시간보다 늦어야 해요')
+    setError('')
+    setSaving(true)
+    await onCreate(days, startTime, endTime)
+    setSaving(false)
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-xl border border-line p-3">
+      <p className="text-sm font-bold text-ink">일정 추가 <span className="font-normal text-ink-2">· {targetLabel}</span></p>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="요일">
+        {WEEKDAY_LABELS.map((label, d) => (
+          <button
+            key={d}
+            type="button"
+            aria-pressed={days.includes(d)}
+            onClick={() => toggleDay(d)}
+            className={`focus-ring h-11 w-11 rounded-full border text-sm font-semibold ${
+              days.includes(d) ? 'border-green bg-green-soft text-green' : 'border-line-2 text-ink-2'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-xs font-semibold text-ink-2">
+          시작
+          <input type="time" step={1800} value={startTime} onChange={(e) => setStartTime(e.target.value)}
+            className="focus-ring mt-1 block rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm" />
+        </label>
+        <label className="text-xs font-semibold text-ink-2">
+          끝
+          <input type="time" step={1800} value={endTime} onChange={(e) => setEndTime(e.target.value)}
+            className="focus-ring mt-1 block rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm" />
+        </label>
+        <Button type="submit" disabled={saving}>{saving ? '추가 중...' : '추가'}</Button>
+      </div>
+      {error && <p className="text-xs text-error">{error}</p>}
     </form>
   )
 }
@@ -400,6 +469,16 @@ export function CareScheduleEditor() {
           <p className="text-xs text-ink-2">
             지금은 "부모 근무"만 등록할 수 있어요. 아이 학교 일정을 넣으려면 위에서 아이를 먼저 등록해주세요.
           </p>
+        )}
+        {isTouchDevice && (
+          <ScheduleAddForm
+            targetLabel={
+              target.type === 'parent'
+                ? (target.parentLabel === 'mom' ? '엄마 근무' : '아빠 근무')
+                : `${children.find((c) => c.id === target.childId)?.name ?? '아이'} 학교`
+            }
+            onCreate={onCreate}
+          />
         )}
         <WeekScheduleGrid
           schedules={activeSchedules}

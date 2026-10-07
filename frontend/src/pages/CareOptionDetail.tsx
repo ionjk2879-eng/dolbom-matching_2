@@ -71,6 +71,7 @@ export function CareOptionDetail() {
       <PageHero
         title={option.name}
         desc={careTypeLabels[option.type]}
+        back="/find"
         breadcrumb={[{ label: '돌봄 찾기', to: '/find' }, { label: option.name }]} />
       <DemoNotice options={[option]} className="mx-auto mt-6 max-w-6xl" />
       <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 md:grid-cols-[360px_1fr]">

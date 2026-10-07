@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { useGoBack } from '../hooks/useGoBack'
 import { PageHero } from '../components/PageHero'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
@@ -36,7 +37,7 @@ export function ScheduleNew() {
 }
 
 function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
-  const navigate = useNavigate()
+  const goBack = useGoBack('/calendar')
   const { addSchedule, updateSchedule, children } = useCareScheduleStore()
 
   const [type, setType] = useState<ScheduleType>(editing?.type ?? 'parent_work')
@@ -77,12 +78,13 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
     setError('')
     const ok = editing ? await updateSchedule(editing.id, data) : await addSchedule(data)
     setSubmitting(false)
-    if (ok) navigate('/calendar')
+    // Return where the user came from, so the form doesn't stay in history behind the calendar
+    if (ok) goBack()
   }
 
   return (
     <div>
-      <PageHero title={pageTitle} breadcrumb={[{ label: '내 일정', to: '/calendar' }, { label: pageTitle }]} />
+      <PageHero title={pageTitle} back="/calendar" breadcrumb={[{ label: '내 일정', to: '/calendar' }, { label: pageTitle }]} />
       <div className="mx-auto max-w-2xl px-4 py-10">
         <Card>
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
@@ -180,7 +182,7 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
             {error && <p className="text-sm text-error">{error}</p>}
 
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => navigate('/calendar')} className="flex-1">
+              <Button type="button" variant="outline" onClick={goBack} className="flex-1">
                 취소
               </Button>
               <Button type="submit" disabled={submitting} className="flex-1">

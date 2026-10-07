@@ -50,7 +50,7 @@ export function GapCalendar() {
 
   return (
     <div>
-      <PageHero title="돌봄 공백 캘린더" desc="아이 학교/부모 근무 일정을 바탕으로 돌봄이 필요한 시간을 자동으로 계산해요" />
+      <PageHero title="돌봄 공백 캘린더" back="/" desc="아이 학교/부모 근무 일정을 바탕으로 돌봄이 필요한 시간을 자동으로 계산해요" />
       <div className="mx-auto max-w-6xl px-4 pt-6">
         <Link to="/" className="focus-ring text-sm font-semibold text-green underline">
           일정 등록 / 맞춤 매칭으로 돌아가기
