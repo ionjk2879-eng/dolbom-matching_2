@@ -89,6 +89,9 @@ export function WeekScheduleGrid({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Backspace while typing in a form field must edit the text, not delete the selected block
+      const t = e.target as HTMLElement
+      if (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return
       if (e.key === 'Escape') { setDrag(null); setSel(null); setMultiSel(new Set()) }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (multiSel.size > 0) {

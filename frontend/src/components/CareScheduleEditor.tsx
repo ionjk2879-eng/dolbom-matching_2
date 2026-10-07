@@ -193,7 +193,7 @@ export function CareScheduleEditor() {
       : (s.type === 'child_school' || s.type === 'care') && s.childId === target.childId
   )
 
-  const onCreate = (daysOfWeek: number[], startTime: string, endTime: string) => {
+  const onCreate = async (daysOfWeek: number[], startTime: string, endTime: string) => {
     // 드래그 범위와 겹치는 블록 전체를 한 번씩만 제거
     const overlapIds = new Set(
       schedules
@@ -206,7 +206,9 @@ export function CareScheduleEditor() {
         .map((s) => s.id)
     )
     const overlapping = schedules.filter((s) => overlapIds.has(s.id))
-    overlapping.forEach((s) => removeSchedule(s.id))
+    // Add the merged blocks only once every overlapping block is gone; otherwise they'd duplicate it
+    const removed = await Promise.all(overlapping.map((s) => removeSchedule(s.id)))
+    if (removed.includes(false)) return
 
     // 드래그 범위 밖 요일은 원래 시간 그대로 단일 요일 블록으로 복원
     overlapping.forEach((s) => {
