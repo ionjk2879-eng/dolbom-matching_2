@@ -25,7 +25,7 @@ function ShareToggle({
         aria-checked={checked}
         aria-label={title}
         onClick={() => onChange(!checked)}
-        className={`focus-ring relative h-7 w-12 shrink-0 rounded-full transition ${checked ? 'bg-green' : 'bg-line-3'}`}
+        className={`focus-ring relative h-7 w-12 shrink-0 rounded-full pointer-coarse:after:absolute pointer-coarse:after:-inset-2 pointer-coarse:after:content-[''] transition ${checked ? 'bg-green' : 'bg-line-3'}`}
       >
         <span
           className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${checked ? 'left-6' : 'left-1'}`}

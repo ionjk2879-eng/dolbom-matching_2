@@ -52,7 +52,7 @@ export function GapCalendar() {
     <div>
       <PageHero title="돌봄 공백 캘린더" back="/" desc="아이 학교/부모 근무 일정을 바탕으로 돌봄이 필요한 시간을 자동으로 계산해요" />
       <div className="mx-auto max-w-6xl px-4 pt-6">
-        <Link to="/" className="focus-ring text-sm font-semibold text-green underline">
+        <Link to="/" className="focus-ring tap-link text-sm font-semibold text-green underline">
           일정 등록 / 맞춤 매칭으로 돌아가기
         </Link>
       </div>
@@ -60,7 +60,7 @@ export function GapCalendar() {
         <Card>
           <MonthCalendar selected={selected} onSelect={setSelected} renderBadge={(iso, sel) =>
               hasGapOn(iso) && (
-                <span className={`text-[10px] font-bold ${sel ? 'text-white' : 'text-warn'}`}>공백</span>
+                <span className={`text-xs font-bold leading-none ${sel ? 'text-white' : 'text-warn'}`}>공백</span>
               )
             } />
         </Card>
@@ -71,7 +71,7 @@ export function GapCalendar() {
           {!loading && children.length === 0 && (
             <p className="text-sm text-ink-2">
               등록된 아이/일정이 없어요.{' '}
-              <Link to="/gaps/setup" className="focus-ring font-semibold text-green underline">
+              <Link to="/gaps/setup" className="focus-ring tap-link font-semibold text-green underline">
                 반복 일정을 먼저 등록해주세요
               </Link>
             </p>
@@ -109,7 +109,7 @@ export function GapCalendar() {
                         type="button"
                         onClick={() => toggleCancel(schedule.id, cancel?.id)}
                         disabled={pending.includes(schedule.id)}
-                        className={`focus-ring font-semibold ${cancel ? 'text-green' : 'text-ink-2 hover:text-ink'}`}
+                        className={`focus-ring tap-target font-semibold ${cancel ? 'text-green' : 'text-ink-2 hover:text-ink'}`}
                       >
                         {cancel ? '취소 되돌리기' : '이 날만 취소'}
                       </button>
@@ -120,7 +120,7 @@ export function GapCalendar() {
                             `'${blockLabel(schedule, children)}' 일정을 삭제할까요? 이 날만이 아니라 매주 반복되는 일정 전체가 삭제돼요.`,
                           ) && removeSchedule(schedule.id)
                         }
-                        className="focus-ring font-semibold text-error"
+                        className="focus-ring tap-target font-semibold text-error"
                       >
                         삭제
                       </button>

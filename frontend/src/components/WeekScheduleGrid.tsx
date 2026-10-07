@@ -234,7 +234,7 @@ export function WeekScheduleGrid({
               START_HOUR + i <= END_HOUR && (
                 <div
                   key={i}
-                  className="absolute right-1.5 -translate-y-1/2 text-[10px] leading-none text-ink-2"
+                  className="absolute right-1.5 -translate-y-1/2 text-xs leading-none text-ink-2"
                   style={{ top: i * 2 * ROW_HEIGHT }}
                 >
                   {String(START_HOUR + i).padStart(2, '0')}:00
@@ -308,7 +308,7 @@ export function WeekScheduleGrid({
                           setSel({ id: s.id, day, slot: slotAt(day, e.clientY) })
                           setMenu({ id: s.id, x: e.clientX, y: e.clientY, slot: slotAt(day, e.clientY) })
                         }}
-                        className={`absolute overflow-hidden rounded text-[10px] font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
+                        className={`absolute overflow-hidden rounded text-xs font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
                         style={{
                           top: top * ROW_HEIGHT,
                           height: (bottom - top) * ROW_HEIGHT,
@@ -351,10 +351,13 @@ export function WeekScheduleGrid({
                           setDrag({ kind: 'resize', id: s.id, days: s.daysOfWeek, startSlot, endSlot: timeToSlot(s.endTime) })
                         }}
                       />}
-                      <div className="pointer-events-none select-none px-1 pt-2.5 leading-tight">
+                      <div className="pointer-events-none select-none px-1 pt-2 leading-none">
                         <div className="truncate font-semibold">{blockLabel(s, kids)}</div>
                         {(bottom - top) >= 2 && (
-                          <div className="truncate opacity-75">{s.startTime}~{isResizing || isBulkResizing ? slotToTime(endSlot) : s.endTime}</div>
+                          // Narrow columns: blocks with room wrap the time after "~" instead of cutting it off
+                          <div className={`mt-0.5 opacity-75 ${(bottom - top) >= 3 ? '' : 'truncate'}`}>
+                            {s.startTime}~<wbr />{isResizing || isBulkResizing ? slotToTime(endSlot) : s.endTime}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -376,7 +379,7 @@ export function WeekScheduleGrid({
                   return (
                     <div
                       key={gid}
-                      className={`pointer-events-none absolute inset-x-0.5 z-20 rounded px-1 pt-3 text-[10px] font-semibold ring-2 ring-inset ring-white/60 ${blockColor(s, kids)}`}
+                      className={`pointer-events-none absolute inset-x-0.5 z-20 rounded px-1 pt-3 text-xs font-semibold ring-2 ring-inset ring-white/60 ${blockColor(s, kids)}`}
                       style={{ top: p * ROW_HEIGHT, height: sDur * ROW_HEIGHT }}
                     >
                       <span className="pointer-events-none select-none">

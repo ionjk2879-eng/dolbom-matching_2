@@ -26,7 +26,7 @@ export function ScheduleNew() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center">
         <p className="text-sm font-bold text-ink">일정을 찾을 수 없어요</p>
-        <Link to="/calendar" className="focus-ring mt-4 inline-block text-sm font-semibold text-green underline">
+        <Link to="/calendar" className="focus-ring tap-link mt-4 inline-block text-sm font-semibold text-green underline">
           내 일정으로 돌아가기
         </Link>
       </div>
@@ -108,7 +108,7 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
                     key={t}
                     type="button"
                     onClick={() => setType(t)}
-                    className={`focus-ring rounded-lg px-4 py-2 text-sm font-semibold ${type === t ? 'bg-ivory text-ink' : 'text-ink-2'}`}
+                    className={`focus-ring tap-target rounded-lg px-4 py-2 text-sm font-semibold ${type === t ? 'bg-ivory text-ink' : 'text-ink-2'}`}
                   >
                     {typeLabels[t]}
                   </button>

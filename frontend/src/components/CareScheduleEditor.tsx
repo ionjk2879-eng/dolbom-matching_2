@@ -112,7 +112,7 @@ function ChildEditForm({ id, onClose }: { id: string; onClose: () => void }) {
           className="focus-ring mt-1 w-24 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm" />
       </div>
       <Button type="submit">저장</Button>
-      <button type="button" onClick={onClose} className="focus-ring text-xs font-semibold text-ink-2">취소</button>
+      <button type="button" onClick={onClose} className="focus-ring tap-target text-xs font-semibold text-ink-2">취소</button>
       {error && <p className="w-full text-xs text-error">{error}</p>}
     </form>
   )
@@ -193,10 +193,10 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
         />
       </div>
       <Button type="submit">저장</Button>
-      <button type="button" onClick={onRemove} className="focus-ring text-xs font-semibold text-error">
+      <button type="button" onClick={onRemove} className="focus-ring tap-target text-xs font-semibold text-error">
         삭제
       </button>
-      <button type="button" onClick={onClose} className="focus-ring text-xs font-semibold text-ink-2">
+      <button type="button" onClick={onClose} className="focus-ring tap-target text-xs font-semibold text-ink-2">
         취소
       </button>
       {error && <p className="w-full text-xs text-error">{error}</p>}
@@ -286,10 +286,10 @@ export function ChildManager() {
                 <div className="flex items-center justify-between rounded-xl border border-line p-3 text-sm">
                   <span>{c.name} · {c.grade}학년 · 통학 {c.commuteMinutes}분</span>
                   <div className="flex gap-3">
-                    <button type="button" onClick={() => setEditingChildId(c.id)} className="focus-ring text-xs font-semibold text-ink-2">
+                    <button type="button" onClick={() => setEditingChildId(c.id)} className="focus-ring tap-target text-xs font-semibold text-ink-2">
                       수정
                     </button>
-                    <button type="button" onClick={() => onRemove(c.id, c.name)} className="focus-ring text-xs font-semibold text-error">
+                    <button type="button" onClick={() => onRemove(c.id, c.name)} className="focus-ring tap-target text-xs font-semibold text-error">
                       삭제
                     </button>
                   </div>
@@ -383,14 +383,14 @@ export function CareScheduleEditor() {
         <button
           type="button"
           onClick={() => setView('schedule')}
-          className={`focus-ring rounded-lg px-4 py-1.5 text-xs font-semibold ${view === 'schedule' ? 'bg-ivory text-ink shadow-sm' : 'text-ink-2'}`}
+          className={`focus-ring tap-target rounded-lg px-4 py-1.5 text-xs font-semibold ${view === 'schedule' ? 'bg-ivory text-ink shadow-sm' : 'text-ink-2'}`}
         >
           일정 등록
         </button>
         <button
           type="button"
           onClick={() => setView('gap')}
-          className={`focus-ring rounded-lg px-4 py-1.5 text-xs font-semibold ${view === 'gap' ? 'bg-ivory text-ink shadow-sm' : 'text-ink-2'}`}
+          className={`focus-ring tap-target rounded-lg px-4 py-1.5 text-xs font-semibold ${view === 'gap' ? 'bg-ivory text-ink shadow-sm' : 'text-ink-2'}`}
         >
           공백 패턴
         </button>
@@ -443,7 +443,7 @@ export function CareScheduleEditor() {
                 key={label}
                 type="button"
                 onClick={() => setTarget({ type: 'parent', parentLabel: label })}
-                className={`focus-ring rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
                   target.type === 'parent' && target.parentLabel === label ? 'bg-ivory text-ink' : 'text-ink-2'
                 }`}
               >
@@ -455,7 +455,7 @@ export function CareScheduleEditor() {
                 key={c.id}
                 type="button"
                 onClick={() => setTarget({ type: 'child', childId: c.id })}
-                className={`focus-ring rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
                   target.type === 'child' && target.childId === c.id ? 'bg-ivory text-ink' : 'text-ink-2'
                 }`}
               >

@@ -17,7 +17,7 @@ export function Header() {
     <header className="border-b border-line bg-ivory-card">
       {/* Phones: logo + account on the first row, menu on its own row below */}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-1 px-4 py-3">
-        <Link to="/" className="flex items-center">
+        <Link to="/" className="tap-target flex items-center">
           <img src={logo} alt="After School" className="h-9 w-auto" />
         </Link>
 
@@ -27,7 +27,7 @@ export function Header() {
               key={item.to}
               to={item.to}
               aria-current={isActive(item.to) ? 'page' : undefined}
-              className={`focus-ring inline-block whitespace-nowrap border-b-2 py-2 text-sm font-semibold transition ${
+              className={`focus-ring inline-block whitespace-nowrap border-b-2 py-2 text-sm pointer-coarse:-mx-2 pointer-coarse:px-2 pointer-coarse:py-3 font-semibold transition ${
                 isActive(item.to) ? 'border-green text-green' : 'border-transparent text-ink-2 hover:text-ink'
               }`}
             >
@@ -39,7 +39,7 @@ export function Header() {
         <div className="flex items-center gap-3">
           {user ? (
             <>
-              <Link to="/mypage" className="focus-ring whitespace-nowrap text-sm font-semibold text-ink-2 hover:text-ink">
+              <Link to="/mypage" className="focus-ring tap-link whitespace-nowrap text-sm font-semibold text-ink-2 hover:text-ink">
                 마이 페이지
               </Link>
               <span className="hidden whitespace-nowrap text-sm font-semibold text-ink sm:inline">{user.name ?? user.email ?? '사용자'}님</span>
@@ -47,7 +47,7 @@ export function Header() {
                 type="button"
                 // Leave the page first, or on a login-only page RequireAuth would bounce to /login
                 onClick={() => { navigate('/'); logout() }}
-                className="focus-ring whitespace-nowrap rounded-xl border border-line-2 px-4 py-2 text-sm font-semibold text-ink-2 hover:text-ink"
+                className="focus-ring tap-target whitespace-nowrap rounded-xl border border-line-2 px-4 py-2 text-sm font-semibold text-ink-2 hover:text-ink"
               >
                 로그아웃
               </button>
@@ -55,7 +55,7 @@ export function Header() {
           ) : (
             <Link
               to="/login"
-              className="focus-ring whitespace-nowrap rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              className="focus-ring tap-target whitespace-nowrap rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
             >
               로그인
             </Link>

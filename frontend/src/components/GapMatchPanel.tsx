@@ -136,7 +136,7 @@ export function GapMatchPanel({
           />
         ))}
       </div>
-      <div className="mt-1 flex justify-between text-[10px] text-ink-2">
+      <div className="mt-1 flex justify-between text-xs text-ink-2">
         <span>{gap.start}</span>
         <span>{gap.end}</span>
       </div>
@@ -164,7 +164,7 @@ export function GapMatchPanel({
               type="button"
               aria-pressed={sortBy === key}
               onClick={onClick}
-              className={`focus-ring rounded-full border px-3 py-1 transition ${
+              className={`focus-ring tap-target rounded-full border px-3 py-1 transition ${
                 sortBy === key ? 'border-green bg-green-soft text-green' : 'border-line-2 text-ink-2 hover:border-green/50'
               }`}
             >

@@ -35,7 +35,7 @@ export function Schedule() {
         </p>
         <Link
           to="/calendar/settings"
-          className="focus-ring rounded-full border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-green/50"
+          className="focus-ring tap-link rounded-full border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-green/50"
         >
           캘린더 설정
         </Link>
@@ -47,7 +47,7 @@ export function Schedule() {
           <MonthCalendar selected={selected} onSelect={setSelected} renderBadge={(iso, sel) => {
               const count = schedulesOn(iso).length
               return count > 0 && (
-                <span className={`text-[10px] font-bold ${sel ? 'text-white' : 'text-green'}`}>{count}건</span>
+                <span className={`text-xs font-bold leading-none ${sel ? 'text-white' : 'text-green'}`}>{count}건</span>
               )
             }} />
         </Card>
@@ -57,7 +57,7 @@ export function Schedule() {
             <p className="text-sm font-bold text-ink">{formatDayLabel(selected)}</p>
             <Link
               to="/calendar/new"
-              className="focus-ring rounded-xl bg-green px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+              className="focus-ring tap-link rounded-xl bg-green px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
             >
               일정 등록
             </Link>
@@ -74,7 +74,7 @@ export function Schedule() {
               </p>
               {s.memo && <p className="mt-1.5 whitespace-pre-line text-xs text-ink-2">{s.memo}</p>}
               <div className="mt-2 flex justify-end gap-3 text-xs font-semibold">
-                <Link to={`/calendar/${s.id}/edit`} className="focus-ring text-ink-2 hover:text-ink">
+                <Link to={`/calendar/${s.id}/edit`} className="focus-ring tap-link text-ink-2 hover:text-ink">
                   수정
                 </Link>
                 <button
@@ -82,7 +82,7 @@ export function Schedule() {
                   onClick={() =>
                     window.confirm(`'${s.title || typeLabel(s)}' 일정을 삭제할까요?`) && removeSchedule(s.id)
                   }
-                  className="focus-ring text-error hover:opacity-80"
+                  className="focus-ring tap-target text-error hover:opacity-80"
                 >
                   삭제
                 </button>

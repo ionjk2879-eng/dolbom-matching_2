@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
 
 const navButton =
-  'focus-ring flex h-8 w-8 items-center justify-center rounded-lg border border-line-2 text-ink-2 hover:bg-ivory-deep'
+  'focus-ring tap-target flex h-8 w-8 items-center justify-center rounded-lg border border-line-2 text-ink-2 hover:bg-ivory-deep'
 
 // 월간 달력. 날짜 칸 아래 표시는 renderBadge로 페이지마다 다르게 그린다.
 export function MonthCalendar({
@@ -38,7 +38,7 @@ export function MonthCalendar({
           {year}년 {month + 1}월
         </p>
         <div className="flex items-center gap-1.5">
-          <button type="button" onClick={goToday} className="focus-ring rounded-lg border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-ivory-deep">
+          <button type="button" onClick={goToday} className="focus-ring tap-target rounded-lg border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink-2 hover:bg-ivory-deep">
             오늘
           </button>
           <button type="button" aria-label="이전 달" onClick={() => setViewDate(new Date(year, month - 1, 1))} className={navButton}>
@@ -68,7 +68,7 @@ export function MonthCalendar({
               aria-pressed={isSelected}
               aria-current={iso === today ? 'date' : undefined}
               onClick={() => onSelect(iso)}
-              className={`focus-ring flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl text-sm transition ${
+              className={`focus-ring flex aspect-square min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl text-sm transition ${
                 isSelected
                   ? 'bg-green font-bold text-white'
                   : `${isSunday ? 'text-error' : 'text-ink'} hover:bg-ivory-deep ${iso === today ? 'ring-1 ring-green ring-inset font-bold' : ''}`

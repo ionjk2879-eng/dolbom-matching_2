@@ -45,7 +45,7 @@ export function Login() {
       </div>
 
       <div className="flex-1">
-        <Link to="/" className="focus-ring text-xl font-extrabold text-ink">
+        <Link to="/" className="focus-ring tap-link text-xl font-extrabold text-ink">
           After School
         </Link>
         <p className="mt-3 text-2xl font-extrabold tracking-[-0.03em] text-ink">

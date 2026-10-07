@@ -135,7 +135,7 @@ export function Home() {
                 <p className="text-sm text-ink-2">로그인하면 반복 일정을 등록하고 돌봄 공백을 계산할 수 있어요</p>
                 <Link
                   to="/login"
-                  className="focus-ring rounded-xl bg-green px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                  className="focus-ring tap-link rounded-xl bg-green px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
                 >
                   로그인하기
                 </Link>
@@ -148,7 +148,7 @@ export function Home() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-extrabold text-ink"><span className="mr-1.5 text-green">2</span>맞춤 매칭</h2>
               {user && children.length > 0 && (
-                <Link to="/gaps" className="focus-ring text-sm font-semibold text-green hover:underline">
+                <Link to="/gaps" className="focus-ring tap-link text-sm font-semibold text-green hover:underline">
                   공백 캘린더 전체 보기
                 </Link>
               )}
@@ -199,7 +199,7 @@ export function Home() {
                                 <button
                                   type="button"
                                   onClick={() => useCareScheduleStore.getState().removeSchedule(s.id)}
-                                  className="focus-ring ml-2 text-error"
+                                  className="focus-ring tap-target ml-2 text-error"
                                 >
                                   취소
                                 </button>

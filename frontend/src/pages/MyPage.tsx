@@ -21,7 +21,7 @@ function Section({ title, to, children }: { title: string; to: string; children:
     <Card className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-bold text-ink">{title}</p>
-        <Link to={to} className="focus-ring text-xs font-semibold text-green hover:underline">
+        <Link to={to} className="focus-ring tap-link text-xs font-semibold text-green hover:underline">
           전체 보기
         </Link>
       </div>
@@ -57,7 +57,7 @@ export function MyPage() {
             type="button"
             // Leave /mypage first, or RequireAuth would send us to /login with /mypage as the return path
             onClick={() => { navigate('/'); logout() }}
-            className="focus-ring mt-2 self-start rounded-xl border border-line-2 px-4 py-2 text-sm font-semibold text-ink-2 hover:text-ink"
+            className="focus-ring tap-target mt-2 self-start rounded-xl border border-line-2 px-4 py-2 text-sm font-semibold text-ink-2 hover:text-ink"
           >
             로그아웃
           </button>

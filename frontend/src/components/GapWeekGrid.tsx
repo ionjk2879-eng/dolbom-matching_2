@@ -92,7 +92,7 @@ export function GapWeekGrid({
               START_HOUR + i <= END_HOUR && (
                 <div
                   key={i}
-                  className="absolute right-1.5 -translate-y-1/2 text-[10px] leading-none text-ink-2"
+                  className="absolute right-1.5 -translate-y-1/2 text-xs leading-none text-ink-2"
                   style={{ top: i * 2 * ROW_HEIGHT }}
                 >
                   {String(START_HOUR + i).padStart(2, '0')}:00
@@ -146,7 +146,7 @@ export function GapWeekGrid({
                   return (
                     <div
                       key={`gap-${ci}-${gi}`}
-                      className={`pointer-events-none absolute overflow-hidden rounded text-[10px] font-semibold ${GAP_COLORS[ci % GAP_COLORS.length]}`}
+                      className={`pointer-events-none absolute overflow-hidden rounded text-xs font-semibold ${GAP_COLORS[ci % GAP_COLORS.length]}`}
                       style={{
                         top: start * ROW_HEIGHT,
                         height: (end - start) * ROW_HEIGHT,
@@ -156,7 +156,7 @@ export function GapWeekGrid({
                     >
                       <span className="block truncate px-1 pt-1">{child.name}</span>
                       {(end - start) >= 2 && (
-                        <span className="block truncate px-1 opacity-80">{gap.start}~{gap.end}</span>
+                        <span className={`block px-1 opacity-80 ${(end - start) >= 3 ? '' : 'truncate'}`}>{gap.start}~<wbr />{gap.end}</span>
                       )}
                     </div>
                   )

@@ -42,7 +42,7 @@ export function PageHero({
               <span key={b.label} className="flex items-center gap-1">
                 {i > 0 && <span>/</span>}
                 {b.to ? (
-                  <Link to={b.to} className="hover:text-ink-2">
+                  <Link to={b.to} className="tap-link hover:text-ink-2">
                     {b.label}
                   </Link>
                 ) : (
@@ -62,7 +62,7 @@ export function PageHero({
                 role="tab"
                 aria-selected={activeTab === t.key}
                 onClick={() => onTabChange?.(t.key)}
-                className={`focus-ring rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                className={`focus-ring tap-target rounded-lg px-4 py-2 text-sm font-semibold transition ${
                   activeTab === t.key ? 'bg-ivory text-ink' : 'text-ink-2 hover:text-ink'
                 }`}
               >

@@ -47,6 +47,23 @@ body {
   select,
   textarea {
     font-size: 16px !important;
+    min-height: 44px;
+  }
+}
+
+/* Finger-sized tap areas on touch devices only (44px, Apple/WCAG guidance); desktop keeps its compact look.
+   tap-target: buttons. tap-link: text links, which need a box to take a height. */
+@media (hover: none) and (pointer: coarse) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .tap-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 
