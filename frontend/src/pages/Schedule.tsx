@@ -16,14 +16,20 @@ const typeLabels: Record<ScheduleType, string> = {
 
 export function Schedule() {
   const { shareWithFamily, shareWithCenters } = useScheduleStore()
-  const { schedules, children, removeSchedule } = useCareScheduleStore()
+  const { schedules, exceptions, children, removeSchedule } = useCareScheduleStore()
   const loading = useCareScheduleLoading()
   const childName = (id: string | null) => children.find((c) => c.id === id)?.name
 
   const [selected, setSelected] = useState(() => toISO(new Date()))
 
   const weekdayOf = (iso: string) => new Date(`${iso}T00:00:00`).getDay()
-  const schedulesOn = (iso: string) => schedules.filter((s) => s.daysOfWeek.includes(weekdayOf(iso)))
+  // Skip schedules cancelled for that date ("이 날만 취소" on /gaps)
+  const schedulesOn = (iso: string) =>
+    schedules.filter(
+      (s) =>
+        s.daysOfWeek.includes(weekdayOf(iso)) &&
+        !exceptions.some((e) => e.scheduleId === s.id && e.date === iso && e.isCancelled),
+    )
   const dayItems = schedulesOn(selected).sort((a, b) => a.startTime.localeCompare(b.startTime))
 
   return (
