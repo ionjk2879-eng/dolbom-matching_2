@@ -18,16 +18,18 @@ function gradeLabel(c: CareOption) {
 // No single-item API yet, so look the option up in the list endpoint
 export function CareOptionDetail() {
   const { id } = useParams()
-  const [option, setOption] = useState<CareOption | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Result is tagged with the id it was fetched for, so loading is derived instead of set in the effect
+  const [result, setResult] = useState<{ id: string; option: CareOption | null } | null>(null)
 
   useEffect(() => {
-    if (!id) { setLoading(false); return }
+    if (!id) return
     fetchCareOption(id)
-      .then(setOption)
-      .catch(() => setOption(null))
-      .finally(() => setLoading(false))
+      .then((option) => setResult({ id, option }))
+      .catch(() => setResult({ id, option: null }))
   }, [id])
+
+  const loading = !!id && result?.id !== id
+  const option = result && result.id === id ? result.option : null
 
   // Stable reference so MapView doesn't redraw its markers on every render
   const pins = useMemo<MapPin[]>(
