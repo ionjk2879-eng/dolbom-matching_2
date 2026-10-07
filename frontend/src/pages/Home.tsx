@@ -11,6 +11,7 @@ import { useAuthStore } from '../store/authStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { fetchCareOptions, fetchCareOptionsForGap } from '../api/careOptions'
 import { matchesCareOption, gradeBuckets as grades, timeBuckets as times, REGIONS } from '../data/careMatch'
+import { DISTRICTS } from '../data/districts'
 import type { CareOption } from '../data/types'
 import { toISO } from '../data/date'
 import { computeGaps } from '../data/gaps'
@@ -222,14 +223,19 @@ export function Home() {
                         <option key={r} value={r}>{r}</option>
                       ))}
                     </select>
-                    <input
-                      type="text"
-                      placeholder="구/군/동"
+                    {/* Same 구/군 list as /find, so the choice carries over there */}
+                    <select
+                      aria-label="구/군"
                       value={match.district}
                       onChange={(e) => match.setDistrict(e.target.value)}
-                      disabled={!match.region}
-                      className="focus-ring min-h-11 w-28 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
-                    />
+                      disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
+                      className="focus-ring min-h-11 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-60"
+                    >
+                      <option value="">{match.region ? '구/군 전체' : '시/도 먼저 선택'}</option>
+                      {(DISTRICTS[match.region] ?? []).map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div>
@@ -253,7 +259,7 @@ export function Home() {
                   </div>
                 </div>
                 <Button onClick={goMatch} className="w-full">
-                  추천 돌봄 옵션 {matchedCount}곳 보기
+                  {match.region || match.grade || match.time ? '조건에 맞는 돌봄' : '전체 돌봄 옵션'} {matchedCount}곳 보기
                 </Button>
               </Card>
             )}

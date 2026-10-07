@@ -61,7 +61,8 @@ export function CareOptionDetail() {
   ]
   const rows: [string, string][] = [
     ['유형', careTypeLabels[option.type]],
-    ['주소', option.address],
+    // Non-breaking hyphen keeps lot numbers like 30-26 on one line
+    ['주소', option.address.replaceAll('-', '‑')],
     ['전화', option.phone ?? '정보 없음'],
   ]
 
@@ -82,11 +83,12 @@ export function CareOptionDetail() {
               </div>
             ))}
           </div>
+          <p className="-mt-2 text-xs text-ink-2">운영시간은 통상 시간이라 실제와 다를 수 있어요. 방문 전 전화로 확인해 주세요.</p>
           <dl className="flex flex-col gap-3">
             {rows.map(([label, value]) => (
               <div key={label} className="flex gap-4 text-sm">
                 <dt className="w-20 shrink-0 font-semibold text-ink-2">{label}</dt>
-                <dd className="text-ink">{value}</dd>
+                <dd className="break-keep text-ink">{value}</dd>
               </div>
             ))}
           </dl>
@@ -101,7 +103,10 @@ export function CareOptionDetail() {
         </Card>
 
         {pins.length > 0 ? (
-          <MapView pins={pins} selected={option.id} onSelect={noop} />
+          // One column on phones has no row height to stretch into, so give the map its own
+          <div className="h-[360px] md:h-auto">
+            <MapView pins={pins} selected={option.id} onSelect={noop} />
+          </div>
         ) : (
           <Card className="flex items-center justify-center text-sm text-ink-2">방문형 돌봄이라 위치 정보가 없어요</Card>
         )}

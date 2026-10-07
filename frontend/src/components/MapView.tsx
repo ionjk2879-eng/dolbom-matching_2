@@ -91,10 +91,12 @@ export function MapView({
 
     pins.forEach((pin) => {
       const isSel = pin.id === selected
-      const label = pin.costPerHour === 0 ? '무료' : `${pin.costPerHour.toLocaleString()}원`
+      // Name tells pins apart; it goes into raw HTML, so escape it
+      const label = pin.name.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`)
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(pin.lat, pin.lng),
         map: mapRef.current,
+        zIndex: isSel ? 1000 : 0, // keep the picked pin above crowded neighbours
         icon: {
           content: `<div style="
             background:${isSel ? '#3f6b4e' : '#fffdf7'};
@@ -105,6 +107,9 @@ export function MapView({
             font-size:12px;
             font-weight:700;
             white-space:nowrap;
+            max-width:140px;
+            overflow:hidden;
+            text-overflow:ellipsis;
             box-shadow:0 2px 8px rgba(0,0,0,.18);
             cursor:pointer;
             transform:translateY(-100%);

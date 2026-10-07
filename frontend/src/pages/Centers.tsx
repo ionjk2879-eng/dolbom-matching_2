@@ -6,6 +6,7 @@ import { DemoNotice } from '../components/DemoNotice'
 import { fetchCareOptions } from '../api/careOptions'
 import { careTypeLabels, matchesLocation, REGIONS } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
+import { usePaged } from '../hooks/usePaged'
 import type { CareOption, CareProviderType } from '../data/types'
 
 // Facilities you visit in person; visiting care and babysitters have no center to find
@@ -45,6 +46,7 @@ export function Centers() {
       )
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [centers, query, region, district, type])
+  const paged = usePaged(results)
 
   return (
     <div>
@@ -98,6 +100,7 @@ export function Centers() {
             <p className="mt-6 text-sm text-ink-2">
               센터 <span className="font-bold text-ink">{results.length}</span>곳
             </p>
+            <p className="mt-1 text-xs text-ink-2">표시된 운영시간은 통상 시간이라 실제와 다를 수 있어요. 방문 전 전화로 확인해 주세요.</p>
             {results.length === 0 ? (
               <div className="mt-3 rounded-2xl border border-line bg-ivory-card p-8 text-center">
                 <p className="text-sm font-bold text-ink">조건에 맞는 센터가 없어요</p>
@@ -105,7 +108,7 @@ export function Centers() {
               </div>
             ) : (
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {results.map((c) => (
+                {paged.visible.map((c) => (
                   <div key={c.id} className="flex flex-col rounded-2xl border border-line bg-ivory-card p-4">
                     <span className="self-start rounded-full bg-green-soft px-2.5 py-1 text-[11px] font-bold text-green">
                       {careTypeLabels[c.type]}
@@ -147,6 +150,15 @@ export function Centers() {
                   </div>
                 ))}
               </div>
+            )}
+            {paged.hasMore && (
+              <button
+                type="button"
+                onClick={paged.showMore}
+                className="focus-ring mt-4 min-h-11 w-full rounded-xl border border-line-2 bg-ivory-card text-sm font-semibold text-ink-2 hover:text-ink"
+              >
+                더 보기 ({paged.visible.length}/{results.length})
+              </button>
             )}
           </>
         )}
