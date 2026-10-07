@@ -32,6 +32,29 @@ function loadNaverMapsScript(): Promise<void> {
   })
 }
 
+function markerIcon(name: string, isSel: boolean) {
+  const label = name.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`)
+  return {
+    content: `<div style="
+      background:${isSel ? '#3f6b4e' : '#fffdf7'};
+      color:${isSel ? '#fff' : '#2b2722'};
+      border:1.5px solid ${isSel ? '#3f6b4e' : '#e0d7c2'};
+      border-radius:999px;
+      padding:4px 12px;
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+      max-width:140px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      box-shadow:0 2px 8px rgba(0,0,0,.18);
+      cursor:pointer;
+      transform:translateY(-100%);
+    ">${label}</div>`,
+    anchor: new naver.maps.Point(24, 0),
+  }
+}
+
 export function MapView({
   pins,
   selected,
@@ -44,6 +67,7 @@ export function MapView({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const markersRef = useRef<Map<string, any>>(new Map())
+  const prevSelectedRef = useRef<string | null>(null)
   const [ready, setReady] = useState(typeof naver !== 'undefined')
   const [mapError, setMapError] = useState('')
 
@@ -72,7 +96,6 @@ export function MapView({
         scaleControl: false,
       })
     } catch (e) {
-      // Surfaces a failure from the external SDK; there is no render-time value to derive instead
       // eslint-disable-next-line react/set-state-in-effect
       setMapError(`지도 초기화 실패: ${e}`)
     }
@@ -81,7 +104,7 @@ export function MapView({
   // Latest pins for the pan effect below, which must not re-run when only the pins change
   const pinsRef = useRef(pins)
 
-  // 핀 & 선택 상태 동기화
+  // 핀 생성 — pins/onSelect가 바뀔 때만 전체 재생성 (selected 변경 시에는 실행 안 함)
   useEffect(() => {
     pinsRef.current = pins
     if (!mapRef.current) return
@@ -89,41 +112,41 @@ export function MapView({
     markersRef.current.forEach((m) => m.setMap(null))
     markersRef.current.clear()
 
+    const curSel = prevSelectedRef.current
+
     pins.forEach((pin) => {
-      const isSel = pin.id === selected
-      // Name tells pins apart; it goes into raw HTML, so escape it
-      const label = pin.name.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`)
+      const isSel = pin.id === curSel
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(pin.lat, pin.lng),
         map: mapRef.current,
-        zIndex: isSel ? 1000 : 0, // keep the picked pin above crowded neighbours
-        icon: {
-          content: `<div style="
-            background:${isSel ? '#3f6b4e' : '#fffdf7'};
-            color:${isSel ? '#fff' : '#2b2722'};
-            border:1.5px solid ${isSel ? '#3f6b4e' : '#e0d7c2'};
-            border-radius:999px;
-            padding:4px 12px;
-            font-size:12px;
-            font-weight:700;
-            white-space:nowrap;
-            max-width:140px;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            box-shadow:0 2px 8px rgba(0,0,0,.18);
-            cursor:pointer;
-            transform:translateY(-100%);
-          ">${label}</div>`,
-          anchor: new naver.maps.Point(24, 0),
-        },
+        zIndex: isSel ? 1000 : 0,
+        icon: markerIcon(pin.name, isSel),
       })
       naver.maps.Event.addListener(marker, 'click', () => onSelect(pin.id))
       markersRef.current.set(pin.id, marker)
     })
-  }, [pins, selected, onSelect, ready])
+  }, [pins, onSelect, ready])
 
-  // Move the map only when the selection changes, so re-sorting or filtering
-  // doesn't yank the map away from wherever the user dragged it
+  // 선택 상태 변경 — 이전/새 핀 아이콘 2개만 교체 (전체 재생성 없음)
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    const prev = prevSelectedRef.current
+    prevSelectedRef.current = selected
+
+    if (prev) {
+      const m = markersRef.current.get(prev)
+      const p = pinsRef.current.find((x) => x.id === prev)
+      if (m && p) { m.setIcon(markerIcon(p.name, false)); m.setZIndex(0) }
+    }
+    if (selected) {
+      const m = markersRef.current.get(selected)
+      const p = pinsRef.current.find((x) => x.id === selected)
+      if (m && p) { m.setIcon(markerIcon(p.name, true)); m.setZIndex(1000) }
+    }
+  }, [selected, ready])
+
+  // Move the map only when the selection changes
   useEffect(() => {
     if (!mapRef.current || !selected) return
     const pin = pinsRef.current.find((p) => p.id === selected)
