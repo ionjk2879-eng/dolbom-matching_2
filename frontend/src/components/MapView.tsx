@@ -261,6 +261,7 @@ export function MapView({
           onClick={moveToMyLocation}
           disabled={geoState === 'loading'}
           title={geoState === 'error' ? '위치 권한을 허용해 주세요' : '현재 위치로 이동'}
+          aria-label={geoState === 'error' ? '위치 권한을 허용해 주세요' : '현재 위치로 이동'}
           className={`tap-target absolute bottom-3 left-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl border shadow-md transition ${
             geoState === 'error'
               ? 'border-error bg-white text-error'

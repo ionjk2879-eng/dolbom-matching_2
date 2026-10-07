@@ -47,6 +47,8 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
   const [endTime, setEndTime] = useState(editing?.endTime ?? '18:00')
   const [title, setTitle] = useState(editing?.title ?? '')
   const [memo, setMemo] = useState(editing?.memo ?? '')
+  // New work defaults to 엄마; an existing untagged schedule stays untagged until someone picks
+  const [owner, setOwner] = useState<'mom' | 'dad' | ''>(editing ? (editing.parentLabel ?? '') : 'mom')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -68,8 +70,7 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
       startTime,
       endTime,
       careOptionId: editing?.careOptionId,
-      // This form has no mom/dad picker; keep the existing tag so updateSchedule doesn't erase it
-      parentLabel: type === 'parent_work' ? editing?.parentLabel : undefined,
+      parentLabel: type === 'parent_work' ? owner || undefined : undefined,
       title: title.trim() || undefined,
       memo: memo.trim() || undefined,
     }
@@ -115,6 +116,21 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
                 ))}
               </div>
             </div>
+
+            {type === 'parent_work' && (
+              <label className="text-sm font-semibold text-ink">
+                누구 근무
+                <select
+                  value={owner}
+                  onChange={(e) => setOwner(e.target.value as 'mom' | 'dad' | '')}
+                  className="focus-ring mt-1.5 w-full rounded-xl border border-line-2 bg-ivory-card px-4 py-2.5 text-sm font-normal"
+                >
+                  {editing && !editing.parentLabel && <option value="">미지정</option>}
+                  <option value="mom">엄마</option>
+                  <option value="dad">아빠</option>
+                </select>
+              </label>
+            )}
 
             {needsChild && (
               <label className="text-sm font-semibold text-ink">

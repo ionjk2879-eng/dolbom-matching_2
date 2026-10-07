@@ -305,7 +305,10 @@ export function Find() {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-bold text-ink">{c.name}</p>
+                    {/* A real button so keyboard users can do what a card click does; the click bubbles to the card */}
+                    <button type="button" className="focus-ring rounded text-left text-sm font-bold text-ink">
+                      {c.name}
+                    </button>
                     {c.cost_per_hour === 0 && (
                       <span className="shrink-0 rounded-full bg-green-soft px-2 py-0.5 text-xs font-bold text-green">무료</span>
                     )}
