@@ -47,6 +47,17 @@ export function subtract(busy: Interval[], covered: Interval[]): Interval[] {
   return result
 }
 
+// Sorts and unions overlapping/touching intervals so the same time never yields two gaps
+function merge(intervals: Interval[]): Interval[] {
+  const result: Interval[] = []
+  for (const i of [...intervals].sort((a, b) => a.start - b.start)) {
+    const last = result[result.length - 1]
+    if (last && i.start <= last.end) last.end = Math.max(last.end, i.end)
+    else result.push({ ...i })
+  }
+  return result
+}
+
 function intersect(a: Interval[], b: Interval[]): Interval[] {
   const result: Interval[] = []
   for (const x of a) {
@@ -82,10 +93,11 @@ export function computeGaps(
     .filter((s) => s.type === 'parent_work' && !s.parentLabel && s.childId === null)
     .map(resolve).filter((i): i is Interval => i !== null)
 
-  // 맞벌이(엄마+아빠 둘 다 등록): 동시에 근무하는 시간만 공백 후보
+  // 맞벌이(엄마+아빠 둘 다 등록): 동시에 근무하는 시간만 공백 후보.
+  // 누구 것인지 모르는 근무(태그는 localStorage라 다른 기기/예전 일정은 태그 없음)는 놓치지 않게 항상 포함
   const parentBusy: Interval[] =
     momWork.length > 0 && dadWork.length > 0
-      ? intersect(momWork, dadWork)
+      ? [...intersect(momWork, dadWork), ...untaggedWork]
       : [...momWork, ...dadWork, ...untaggedWork]
 
   const childCovered = schedules
@@ -98,8 +110,7 @@ export function computeGaps(
     })
     .filter((i): i is Interval => i !== null)
 
-  return subtract(parentBusy, childCovered)
-    .sort((a, b) => a.start - b.start)
+  return subtract(merge(parentBusy), childCovered)
     .map((i) => ({ start: toTime(i.start), end: toTime(i.end) }))
 }
 
