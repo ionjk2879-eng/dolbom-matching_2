@@ -4,15 +4,9 @@ import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
 import { formatDayLabel, toISO } from '../data/date'
 import { MonthCalendar } from '../components/MonthCalendar'
-import type { ScheduleType } from '../data/types'
+import { typeLabel } from '../data/scheduleLabel'
 import { useScheduleStore } from '../store/scheduleStore'
 import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
-
-const typeLabels: Record<ScheduleType, string> = {
-  parent_work: '부모 근무',
-  child_school: '아이 학교',
-  care: '돌봄(선택한 옵션)',
-}
 
 export function Schedule() {
   const { shareWithFamily, shareWithCenters } = useScheduleStore()
@@ -72,9 +66,9 @@ export function Schedule() {
           {!loading && dayItems.length === 0 && <p className="text-sm text-ink-2">등록된 일정이 없어요</p>}
           {dayItems.map((s) => (
             <div key={s.id} className="rounded-xl border border-line p-3">
-              <p className="text-sm font-bold text-ink">{s.title || typeLabels[s.type]}</p>
+              <p className="text-sm font-bold text-ink">{s.title || typeLabel(s)}</p>
               <p className="mt-1 text-xs text-ink-2">
-                {s.title && `${typeLabels[s.type]} · `}
+                {s.title && `${typeLabel(s)} · `}
                 {s.startTime}~{s.endTime}
                 {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}
               </p>
@@ -86,7 +80,7 @@ export function Schedule() {
                 <button
                   type="button"
                   onClick={() =>
-                    window.confirm(`'${s.title || typeLabels[s.type]}' 일정을 삭제할까요?`) && removeSchedule(s.id)
+                    window.confirm(`'${s.title || typeLabel(s)}' 일정을 삭제할까요?`) && removeSchedule(s.id)
                   }
                   className="focus-ring text-error hover:opacity-80"
                 >

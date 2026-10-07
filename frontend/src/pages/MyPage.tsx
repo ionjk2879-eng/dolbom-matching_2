@@ -3,18 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
-import type { ScheduleType } from '../data/types'
+import { typeLabel } from '../data/scheduleLabel'
 import { useAuthStore } from '../store/authStore'
 import type { AuthUser } from '../api/auth'
 import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 import { computeGaps } from '../data/gaps'
 import { ChildManager } from '../components/CareScheduleEditor'
-
-const typeLabels: Record<ScheduleType, string> = {
-  parent_work: '부모 근무',
-  child_school: '아이 학교',
-  care: '돌봄(선택한 옵션)',
-}
 
 const providerLabels: Record<AuthUser['provider'], string> = {
   kakao: '카카오',
@@ -112,7 +106,7 @@ export function MyPage() {
               to="/calendar"
               className="focus-ring rounded-xl border border-line p-3 hover:border-green/40"
             >
-              <p className="text-sm font-bold text-ink">{s.title || typeLabels[s.type]}</p>
+              <p className="text-sm font-bold text-ink">{s.title || typeLabel(s)}</p>
               <p className="mt-1 text-xs text-ink-2">
                 {s.daysOfWeek.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
                 {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}

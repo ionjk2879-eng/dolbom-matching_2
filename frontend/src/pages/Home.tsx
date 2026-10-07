@@ -120,7 +120,8 @@ export function Home() {
 
       {/* 반복 일정 등록 + 맞춤 매칭: 캘린더는 왼쪽, 매칭 결과는 오른쪽 */}
       <section className="mx-auto max-w-6xl px-4 py-10 md:py-14">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        {/* grid-cols-1 caps the single phone column at the screen width (the calendar would otherwise stretch it) */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
           {/* 왼쪽: 캘린더 */}
           <div>
             <h2 className="text-xl font-extrabold text-ink"><span className="mr-1.5 text-green">1</span>반복 일정 등록</h2>
@@ -164,6 +165,9 @@ export function Home() {
                     </Chip>
                   ))}
                 </div>
+                {!match.region && (
+                  <p className="text-xs text-ink-2">일정 등록의 &lsquo;거주지&rsquo;를 선택하면 우리 동네 돌봄만 보여드려요.</p>
+                )}
                 {childGaps.map(({ child, gaps }) => {
                   const selectedCare = schedules.filter(
                     (s) => s.childId === child.id && s.type === 'care'

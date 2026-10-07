@@ -5,6 +5,7 @@ import { overlapWithGap, remainingGap, toMinutes, type Gap } from '../data/gaps'
 import { careTypeLabels } from '../data/careMatch'
 import type { CareOption, Child } from '../data/types'
 import { useCareScheduleStore } from '../store/careScheduleStore'
+import { usePaged } from '../hooks/usePaged'
 
 export function GapMatchPanel({
   child,
@@ -59,6 +60,11 @@ export function GapMatchPanel({
         toMinutes(s.startTime) < toMinutes(gap.end) &&
         toMinutes(s.endTime) > toMinutes(gap.start),
     )
+
+  // Show a few at a time (options is rebuilt each render, so reset on what actually changes);
+  // checked options stay visible even past the cut
+  const paged = usePaged(candidates, 5, `${sortBy}-${here ? 'here' : ''}-${options.length}`)
+  const shown = candidates.filter((c, i) => i < paged.count || checkedFor(c.option.id))
 
   const checkedOverlaps = candidates
     .filter((c) => checkedFor(c.option.id))
@@ -175,7 +181,7 @@ export function GapMatchPanel({
       )}
 
       <div className="mt-3 flex flex-col gap-2">
-        {candidates.map(({ option, overlap, distance }) => {
+        {shown.map(({ option, overlap, distance }) => {
           const checked = Boolean(checkedFor(option.id))
           return (
             <label
@@ -213,6 +219,15 @@ export function GapMatchPanel({
           )
         })}
       </div>
+      {paged.hasMore && (
+        <button
+          type="button"
+          onClick={paged.showMore}
+          className="focus-ring mt-2 min-h-11 w-full rounded-xl border border-line-2 text-sm font-semibold text-ink-2 hover:text-ink"
+        >
+          더 보기 ({Math.min(paged.count, candidates.length)}/{candidates.length})
+        </button>
+      )}
     </Card>
   )
 }
