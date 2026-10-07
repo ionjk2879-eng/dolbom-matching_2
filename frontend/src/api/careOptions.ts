@@ -57,6 +57,8 @@ const demoOptions: CareOption[] = [
 export const isDemoOption = (o: CareOption) => o.id.startsWith('demo-')
 
 export async function fetchCareOption(id: string): Promise<CareOption | null> {
+  // Demo cards (shown when the API is down) link here too; the API doesn't know them
+  if (id.startsWith('demo-')) return demoOptions.find((o) => o.id === id) ?? null
   const res = await apiFetch(`/care-options/${id}`)
   if (res.status === 404) return null
   if (!res.ok) return null

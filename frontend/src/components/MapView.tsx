@@ -77,8 +77,12 @@ export function MapView({
 
   // 키/도메인 인증 실패는 예외가 아니라 이 전역 콜백으로만 알려준다
   useEffect(() => {
-    ;(window as any).navermap_authFailure = () =>
+    ;(window as any).navermap_authFailure = () => {
+      // The SDK sets naver.maps to null on auth failure; drop the map so the marker/pan effects
+      // (which run on every pins/selection change) bail out instead of crashing the whole app
+      mapRef.current = null
       setMapError('네이버 지도 인증 실패: Client ID 또는 콘솔에 등록된 서비스 URL을 확인하세요')
+    }
   }, [])
 
   // 스크립트 로드
