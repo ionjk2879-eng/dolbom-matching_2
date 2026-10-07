@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore'
 import type { AuthUser } from '../api/auth'
 import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 import { computeGaps } from '../data/gaps'
+import { ChildManager } from '../components/CareScheduleEditor'
 
 const typeLabels: Record<ScheduleType, string> = {
   parent_work: '부모 근무',
@@ -37,6 +38,8 @@ function Section({ title, to, children }: { title: string; to: string; children:
 
 export function MyPage() {
   const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
+  const navigate = useNavigate()
   const { children, schedules, exceptions } = useCareScheduleStore()
   const loading = useCareScheduleLoading()
 
@@ -56,6 +59,19 @@ export function MyPage() {
             {user?.email && `${user.email} · `}
             {user ? `${providerLabels[user.provider] ?? '소셜'} 계정으로 로그인` : ''}
           </p>
+          <button
+            type="button"
+            // Leave /mypage first, or RequireAuth would send us to /login with /mypage as the return path
+            onClick={() => { navigate('/'); logout() }}
+            className="focus-ring mt-2 self-start rounded-xl border border-line-2 px-4 py-2 text-sm font-semibold text-ink-2 hover:text-ink"
+          >
+            로그아웃
+          </button>
+        </Card>
+
+        <Card className="flex flex-col gap-3">
+          <p className="text-sm font-bold text-ink">아이 관리</p>
+          {loading ? <p className="text-sm text-ink-2">불러오는 중...</p> : <ChildManager />}
         </Card>
 
         <Section title="오늘의 돌봄 공백" to="/gaps">
