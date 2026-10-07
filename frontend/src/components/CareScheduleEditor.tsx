@@ -263,7 +263,7 @@ export function CareScheduleEditor() {
       </div>
 
       {view === 'gap' ? (
-        <GapWeekGrid children={children} schedules={schedules} />
+        <GapWeekGrid kids={children} schedules={schedules} />
       ) : (
       <>
       <div className="flex flex-col gap-3">
