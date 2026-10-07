@@ -55,6 +55,8 @@ function markerIcon(name: string, isSel: boolean) {
   }
 }
 
+type GeoState = 'idle' | 'loading' | 'error'
+
 export function MapView({
   pins,
   selected,
@@ -68,8 +70,10 @@ export function MapView({
   const mapRef = useRef<any>(null)
   const markersRef = useRef<Map<string, any>>(new Map())
   const prevSelectedRef = useRef<string | null>(null)
+  const myLocationMarkerRef = useRef<any>(null)
   const [ready, setReady] = useState(typeof naver !== 'undefined')
   const [mapError, setMapError] = useState('')
+  const [geoState, setGeoState] = useState<GeoState>('idle')
 
   // 키/도메인 인증 실패는 예외가 아니라 이 전역 콜백으로만 알려준다
   useEffect(() => {
@@ -153,6 +157,38 @@ export function MapView({
     if (pin) mapRef.current.panTo(new naver.maps.LatLng(pin.lat, pin.lng))
   }, [selected, ready])
 
+  const moveToMyLocation = () => {
+    if (!navigator.geolocation) { setGeoState('error'); return }
+    setGeoState('loading')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeoState('idle')
+        if (!mapRef.current) return
+        const latlng = new naver.maps.LatLng(pos.coords.latitude, pos.coords.longitude)
+        mapRef.current.panTo(latlng)
+        mapRef.current.setZoom(15)
+        if (myLocationMarkerRef.current) myLocationMarkerRef.current.setMap(null)
+        myLocationMarkerRef.current = new naver.maps.Marker({
+          position: latlng,
+          map: mapRef.current,
+          icon: {
+            content: `<div style="
+              width:14px;height:14px;
+              background:#3b82f6;
+              border:2.5px solid #fff;
+              border-radius:50%;
+              box-shadow:0 0 0 4px rgba(59,130,246,.25);
+            "></div>`,
+            anchor: new naver.maps.Point(7, 7),
+          },
+          zIndex: 2000,
+        })
+      },
+      () => setGeoState('error'),
+      { timeout: 8000 },
+    )
+  }
+
   if (mapError) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-2xl border border-line-3 bg-ivory-deep p-6 text-center">
@@ -165,14 +201,41 @@ export function MapView({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="h-full w-full overflow-hidden rounded-2xl border border-line-3"
-    >
-      {!ready && (
-        <div className="flex h-full items-center justify-center text-sm text-ink-2">
-          지도 로딩 중...
-        </div>
+    <div className="relative h-full w-full">
+      <div
+        ref={containerRef}
+        className="h-full w-full overflow-hidden rounded-2xl border border-line-3"
+      >
+        {!ready && (
+          <div className="flex h-full items-center justify-center text-sm text-ink-2">
+            지도 로딩 중...
+          </div>
+        )}
+      </div>
+      {ready && (
+        <button
+          type="button"
+          onClick={moveToMyLocation}
+          disabled={geoState === 'loading'}
+          title={geoState === 'error' ? '위치 권한을 허용해 주세요' : '현재 위치로 이동'}
+          className={`absolute bottom-3 left-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl border shadow-md transition ${
+            geoState === 'error'
+              ? 'border-error bg-white text-error'
+              : 'border-line bg-white text-ink-2 hover:text-ink'
+          }`}
+        >
+          {geoState === 'loading' ? (
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+          ) : (
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+              <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
+            </svg>
+          )}
+        </button>
       )}
     </div>
   )
