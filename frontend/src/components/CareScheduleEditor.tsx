@@ -121,6 +121,7 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
   const schedule = schedules.find((s) => s.id === id)
   const [startTime, setStartTime] = useState(schedule?.startTime ?? '')
   const [endTime, setEndTime] = useState(schedule?.endTime ?? '')
+  const [owner, setOwner] = useState<'mom' | 'dad' | ''>(schedule?.parentLabel ?? '')
   const [error, setError] = useState('')
   if (!schedule) return null
 
@@ -128,7 +129,8 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
     e.preventDefault()
     if (startTime >= endTime) return setError('끝나는 시간이 시작 시간보다 늦어야 해요')
     const { id: _id, ...rest } = schedule // eslint-disable-line @typescript-eslint/no-unused-vars
-    if (await updateSchedule(id, { ...rest, startTime, endTime })) onClose()
+    const parentLabel = schedule.type === 'parent_work' ? owner || undefined : rest.parentLabel
+    if (await updateSchedule(id, { ...rest, startTime, endTime, parentLabel })) onClose()
   }
 
   const onRemove = async () => {
@@ -138,6 +140,23 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
 
   return (
     <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border border-line p-3">
+      {schedule.type === 'parent_work' && (
+        <div>
+          <label htmlFor="edit-owner" className="text-xs font-semibold text-ink-2">
+            누구 근무
+          </label>
+          <select
+            id="edit-owner"
+            value={owner}
+            onChange={(e) => setOwner(e.target.value as 'mom' | 'dad' | '')}
+            className="focus-ring mt-1 block rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+          >
+            <option value="">미지정</option>
+            <option value="mom">엄마</option>
+            <option value="dad">아빠</option>
+          </select>
+        </div>
+      )}
       <div>
         <label htmlFor="edit-start" className="text-xs font-semibold text-ink-2">
           시작
@@ -229,7 +248,8 @@ export function CareScheduleEditor() {
 
   const activeSchedules = schedules.filter((s) =>
     target.type === 'parent'
-      ? s.type === 'parent_work' && s.parentLabel === parentLabel
+      // Untagged work shows in both parent tabs so it's never invisible; tag it from the edit form
+      ? s.type === 'parent_work' && (s.parentLabel === parentLabel || !s.parentLabel)
       : (s.type === 'child_school' || s.type === 'care') && s.childId === target.childId
   )
 
