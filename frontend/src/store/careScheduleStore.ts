@@ -96,7 +96,15 @@ type ParentTagState = { parentLabelBySchedule: Record<string, 'mom' | 'dad'> }
 const useParentTags = create<ParentTagState>()(
   persist(() => ({ parentLabelBySchedule: {} }), { name: 'parent-tags' }),
 )
-const initialData = { children: [], schedules: [], exceptions: [], loaded: false, error: null }
+// Removes deleted schedules' local-only tags/notes
+function dropLocalTags(ids: string[]) {
+  const omit = <T,>(rec: Record<string, T>) => Object.fromEntries(Object.entries(rec).filter(([k]) => !ids.includes(k)))
+  useCareOptionTags.setState((s) => ({ careOptionIdBySchedule: omit(s.careOptionIdBySchedule) }))
+  useScheduleNotes.setState((s) => ({ noteBySchedule: omit(s.noteBySchedule) }))
+  useParentTags.setState((s) => ({ parentLabelBySchedule: omit(s.parentLabelBySchedule) }))
+}
+
+const initialData ={ children: [], schedules: [], exceptions: [], loaded: false, error: null }
 
 export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
   const attempt = async (fn: () => Promise<void>): Promise<boolean> => {
@@ -145,9 +153,13 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
     removeChild: (id) =>
       attempt(async () => {
         await deleteChild(id)
+        // The child's schedules (and their exceptions) go with it
+        const removed = get().schedules.filter((sch) => sch.childId === id).map((sch) => sch.id)
+        dropLocalTags(removed)
         set((s) => ({
           children: s.children.filter((c) => c.id !== id),
           schedules: s.schedules.filter((sch) => sch.childId !== id),
+          exceptions: s.exceptions.filter((e) => !removed.includes(e.scheduleId)),
         }))
       }),
 
@@ -204,19 +216,7 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
     removeSchedule: (id) =>
       attempt(async () => {
         await deleteSchedule(id)
-        const tags = useCareOptionTags.getState().careOptionIdBySchedule
-        if (id in tags) {
-          const next = { ...tags }
-          delete next[id]
-          useCareOptionTags.setState({ careOptionIdBySchedule: next })
-        }
-        saveNote(id, {})
-        const parentTags = useParentTags.getState().parentLabelBySchedule
-        if (id in parentTags) {
-          const next = { ...parentTags }
-          delete next[id]
-          useParentTags.setState({ parentLabelBySchedule: next })
-        }
+        dropLocalTags([id])
         set((s) => ({
           schedules: s.schedules.filter((x) => x.id !== id),
           exceptions: s.exceptions.filter((x) => x.scheduleId !== id),
