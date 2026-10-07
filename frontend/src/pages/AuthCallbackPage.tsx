@@ -19,7 +19,14 @@ export default function AuthCallbackPage() {
 
     // Read before the request: StrictMode runs this effect twice, and the first
     // run's removeItem must not leave the second run with no destination
-    const redirect = sessionStorage.getItem(LOGIN_REDIRECT_KEY) ?? '/'
+    const redirect = sessionStorage.getItem(LOGIN_REDIRECT_KEY)
+
+    // Login sets this key when the login button is clicked; without it the token
+    // came from a link this tab didn't start (e.g. someone else's token), so refuse it
+    if (redirect === null) {
+      navigate('/login?error=auth_failed', { replace: true })
+      return
+    }
 
     getMe(token)
       .then((user) => {
