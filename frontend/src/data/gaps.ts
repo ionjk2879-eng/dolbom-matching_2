@@ -94,11 +94,14 @@ export function computeGaps(
     .map(resolve).filter((i): i is Interval => i !== null)
 
   // 맞벌이(엄마+아빠 둘 다 등록): 동시에 근무하는 시간만 공백 후보.
+  // 등록 여부는 그날이 아니라 가족 기준으로 본다 — 아빠가 쉬는 날이면 엄마만 근무해도 공백 없음 (GapMatchPanel과 같은 기준)
   // 누구 것인지 모르는 근무(태그는 localStorage라 다른 기기/예전 일정은 태그 없음)는 놓치지 않게 항상 포함
-  const parentBusy: Interval[] =
-    momWork.length > 0 && dadWork.length > 0
-      ? [...intersect(momWork, dadWork), ...untaggedWork]
-      : [...momWork, ...dadWork, ...untaggedWork]
+  const isWork = (s: RecurringSchedule, label: 'mom' | 'dad') =>
+    s.type === 'parent_work' && s.parentLabel === label && s.childId === null
+  const dualIncome = schedules.some((s) => isWork(s, 'mom')) && schedules.some((s) => isWork(s, 'dad'))
+  const parentBusy: Interval[] = dualIncome
+    ? [...intersect(momWork, dadWork), ...untaggedWork]
+    : [...momWork, ...dadWork, ...untaggedWork]
 
   const childCovered = schedules
     .filter((s) => s.childId === child.id && (s.type === 'child_school' || s.type === 'care'))
