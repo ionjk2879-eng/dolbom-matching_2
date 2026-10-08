@@ -283,7 +283,8 @@ export function WeekScheduleGrid({
 
               {(() => {
                 const dayBlocks = schedules.filter((s) => s.daysOfWeek.includes(day))
-                const { laneOf, lanes } = layoutLanes(dayBlocks)
+                // 돌봄 블록은 layoutLanes에서 제외 — 항상 전체 너비로 표시
+                const { laneOf, lanes } = layoutLanes(dayBlocks.filter((s) => s.type !== 'care'))
                 return dayBlocks
                   .sort((a, b) => (timeToSlot(b.endTime) - timeToSlot(b.startTime)) - (timeToSlot(a.endTime) - timeToSlot(a.startTime)))
                   .map((s) => {
@@ -297,7 +298,8 @@ export function WeekScheduleGrid({
                     const bottom = Math.min(SLOTS_PER_DAY, endSlot)
                     const selSlot = sel?.id === s.id && sel?.day === day ? sel.slot : null
                     const isMultiSel = multiSel.has(s.id)
-                    const lane = laneOf.get(s.id) ?? 0
+                    const lane = s.type === 'care' ? 0 : (laneOf.get(s.id) ?? 0)
+                    const totalLanes = s.type === 'care' ? 1 : lanes
                     return (
                       <div
                         key={s.id}
@@ -308,12 +310,28 @@ export function WeekScheduleGrid({
                           setSel({ id: s.id, day, slot: slotAt(day, e.clientY) })
                           setMenu({ id: s.id, x: e.clientX, y: e.clientY, slot: slotAt(day, e.clientY) })
                         }}
-                        className={`absolute overflow-hidden rounded text-xs font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
+                        onMouseDown={(e) => {
+                          if (e.button !== 0) return
+                          e.stopPropagation()
+                          setMenu(null)
+                          setDrag({
+                            kind: 'move',
+                            id: s.id,
+                            days: s.daysOfWeek,
+                            dur: timeToSlot(s.endTime) - startSlot,
+                            offset: slotAt(day, e.clientY) - startSlot,
+                            preview: startSlot,
+                            origStart: startSlot,
+                            moved: false,
+                            clickedDay: day,
+                          })
+                        }}
+                        className={`absolute overflow-hidden rounded text-[10px] font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
                         style={{
-                          top: top * ROW_HEIGHT,
-                          height: (bottom - top) * ROW_HEIGHT,
-                          left: `calc(${(lane / lanes) * 100}% + 2px)`,
-                          width: `calc(${100 / lanes}% - 4px)`,
+                          top: startSlot * ROW_HEIGHT,
+                          height: (endSlot - startSlot) * ROW_HEIGHT,
+                          left: `calc(${(lane / totalLanes) * 100}% + 2px)`,
+                          width: `calc(${100 / totalLanes}% - 4px)`,
                         }}
                       >
                       {/* 선택된 30분 슬롯 하이라이트 */}

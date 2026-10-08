@@ -15,8 +15,6 @@ import { Schedule } from './pages/Schedule'
 import { ScheduleNew } from './pages/ScheduleNew'
 import { ScheduleSettings } from './pages/ScheduleSettings'
 import { MyPage } from './pages/MyPage'
-import { GapCalendar } from './pages/GapCalendar'
-import { GapSetup } from './pages/GapSetup'
 import { RequireAuth } from './components/RequireAuth'
 import { NotFound } from './pages/NotFound'
 
@@ -51,8 +49,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<RequireAuth />}>
           <Route path="/mypage" element={<MyPage />} />
-          <Route path="/gaps" element={<GapCalendar />} />
-          <Route path="/gaps/setup" element={<GapSetup />} />
+          <Route path="/gaps" element={<Navigate to="/" replace />} />
+          <Route path="/gaps/setup" element={<Navigate to="/" replace />} />
           <Route path="/calendar" element={<Schedule />} />
           <Route path="/calendar/new" element={<ScheduleNew />} />
           <Route path="/calendar/:id/edit" element={<ScheduleNew />} />

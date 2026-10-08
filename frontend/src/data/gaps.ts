@@ -109,11 +109,15 @@ export function computeGaps(
       const interval = resolveInterval(s, date, exceptions)
       if (!interval) return null
       const commuteBuffer = s.type === 'child_school' ? child.commuteMinutes : 0
-      return { start: interval.start, end: interval.end + commuteBuffer }
+      // 등교 전 통학 시간도 커버에 포함: 아이가 집을 나서는 시각부터 귀가까지
+      return { start: Math.max(0, interval.start - commuteBuffer), end: interval.end + commuteBuffer }
     })
     .filter((i): i is Interval => i !== null)
 
   return subtract(merge(parentBusy), childCovered)
+    // 통학 시간보다 짧은 공백은 센터를 이용할 수 없으므로 제외
+    .filter((i) => i.end - i.start > child.commuteMinutes)
+    .sort((a, b) => a.start - b.start)
     .map((i) => ({ start: toTime(i.start), end: toTime(i.end) }))
 }
 

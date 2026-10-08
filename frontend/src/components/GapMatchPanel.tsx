@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Card } from './Card'
 import { distanceKm, formatDistance, type LatLng } from '../data/geo'
 import { overlapWithGap, remainingGap, toMinutes, type Gap } from '../data/gaps'
 import { careTypeLabels } from '../data/careMatch'
+import { WEEKDAY_LABELS } from '../data/date'
 import type { CareOption, Child } from '../data/types'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { usePaged } from '../hooks/usePaged'
@@ -18,12 +20,19 @@ export function GapMatchPanel({
   options: CareOption[]
   className?: string
 }) {
-  const { schedules, addSchedule, removeSchedule } = useCareScheduleStore()
+  const { schedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
   const [sortBy, setSortBy] = useState<'coverage' | 'distance'>('coverage')
   const [here, setHere] = useState<LatLng | null>(null)
   const [locationError, setLocationError] = useState('')
-  // Options whose add/remove request is in flight; blocks a second click from saving a duplicate
   const [pending, setPending] = useState<string[]>([])
+  const [selectingOption, setSelectingOption] = useState<{
+    option: CareOption
+    overlap: Gap
+    days: number[]      // 선택 가능한 전체 요일 (일~토 정렬)
+    takenDays: number[] // 다른 돌봄 센터가 이미 선택한 요일
+    selected: number[]  // 사용자가 고른 요일
+    existingId?: string // 수정 모드: 기존 일정 ID
+  } | null>(null)
 
   const sortByDistance = () => {
     setSortBy('distance')
@@ -81,22 +90,12 @@ export function GapMatchPanel({
   const gapLength = toMinutes(gap.end) - gapStart
   const toPercent = (t: string) => ((toMinutes(t) - gapStart) / gapLength) * 100
 
-  const toggle = async (option: CareOption, overlap: Gap) => {
-    if (pending.includes(option.id)) return
-    setPending((p) => [...p, option.id])
-    await saveToggle(option, overlap)
-    setPending((p) => p.filter((id) => id !== option.id))
-  }
-
-  const saveToggle = async (option: CareOption, overlap: Gap) => {
-    const existing = checkedFor(option.id)
-    if (existing) {
-      await removeSchedule(existing.id)
-      return
-    }
-    const schoolDays =
-      schedules.find((s) => s.childId === child.id && s.type === 'child_school')?.daysOfWeek ?? []
-    // 맞벌이(엄마·아빠 둘 다 등록): 둘 다 근무하는 요일만. 한쪽만 있으면 근무 요일 전체 (computeGaps와 같은 기준)
+  const computeDays = (): number[] => {
+    const schoolDays = [...new Set(
+      schedules
+        .filter((s) => s.childId === child.id && s.type === 'child_school')
+        .flatMap((s) => s.daysOfWeek)
+    )]
     const parentWork = schedules.filter((s) => s.childId === null && s.type === 'parent_work')
     const daysOf = (label: 'mom' | 'dad') => parentWork.filter((s) => s.parentLabel === label).flatMap((s) => s.daysOfWeek)
     const [momDays, dadDays] = [daysOf('mom'), daysOf('dad')]
@@ -105,20 +104,88 @@ export function GapMatchPanel({
       momDays.length && dadDays.length
         ? [...new Set([...momDays.filter((d) => dadDays.includes(d)), ...untaggedDays])]
         : [...new Set(parentWork.flatMap((s) => s.daysOfWeek))]
-    // Without a school schedule the gap spans every work day; never save a schedule with no days
     const days = schoolDays.length > 0 ? schoolDays.filter((d) => workDays.includes(d)) : workDays
-    // Runs on click, not during render
     // eslint-disable-next-line react/purity
-    const daysOfWeek = days.length > 0 ? days : [new Date().getDay()]
-    await addSchedule({
-      type: 'care',
+    const result = days.length > 0 ? days : [new Date().getDay()]
+    return [...new Set(result)].sort((a, b) => a - b)
+  }
+
+  const takenDaysFor = (overlap: Gap, excludeId?: string) =>
+    [...new Set(
+      schedules
+        .filter((s) =>
+          s.childId === child.id &&
+          s.type === 'care' &&
+          s.id !== excludeId &&
+          toMinutes(s.startTime) < toMinutes(overlap.end) &&
+          toMinutes(s.endTime) > toMinutes(overlap.start),
+        )
+        .flatMap((s) => s.daysOfWeek),
+    )].sort((a, b) => a - b)
+
+  const toggle = (option: CareOption, overlap: Gap) => {
+    if (pending.includes(option.id)) return
+    // 이미 피커가 열려 있으면 닫기
+    if (selectingOption?.option.id === option.id) {
+      setSelectingOption(null)
+      return
+    }
+    const allDays = computeDays()
+    const existing = checkedFor(option.id)
+    if (existing) {
+      // 수정 모드: 기존 요일 선택 상태로 피커 열기 (자신 제외)
+      const takenDays = takenDaysFor(overlap, existing.id)
+      setSelectingOption({ option, overlap, days: allDays, takenDays, selected: [...existing.daysOfWeek], existingId: existing.id })
+      return
+    }
+    // 신규: 남은 요일 우선 선택
+    const takenDays = takenDaysFor(overlap)
+    const remaining = allDays.filter((d) => !takenDays.includes(d))
+    const initialSelected = remaining.length > 0 ? remaining : [...allDays]
+    setSelectingOption({ option, overlap, days: allDays, takenDays, selected: initialSelected })
+  }
+
+  const confirmDayPick = async () => {
+    if (!selectingOption || selectingOption.selected.length === 0) return
+    const { option, overlap, selected, existingId } = selectingOption
+    const days = [...selected].sort((a, b) => a - b)
+    setPending((p) => [...p, option.id])
+    const payload = {
+      type: 'care' as const,
       childId: child.id,
       careOptionId: option.id,
-      daysOfWeek,
+      title: option.name,
+      daysOfWeek: days,
       startTime: overlap.start,
       endTime: overlap.end,
-    })
+    }
+    const ok = existingId
+      ? await updateSchedule(existingId, payload)
+      : await addSchedule(payload)
+    setPending((p) => p.filter((id) => id !== option.id))
+    if (ok) setSelectingOption(null)
   }
+
+  const deleteExisting = async (optionId: string) => {
+    const existing = checkedFor(optionId)
+    if (!existing) return
+    setPending((p) => [...p, optionId])
+    await removeSchedule(existing.id)
+    setPending((p) => p.filter((id) => id !== optionId))
+    setSelectingOption(null)
+  }
+
+  const toggleDay = (d: number) =>
+    setSelectingOption((prev) =>
+      prev
+        ? {
+            ...prev,
+            selected: prev.selected.includes(d)
+              ? prev.selected.filter((x) => x !== d)
+              : [...prev.selected, d],
+          }
+        : null,
+    )
 
   return (
     <Card className={className}>
@@ -190,39 +257,103 @@ export function GapMatchPanel({
       <div className="mt-3 flex flex-col gap-2">
         {shown.map(({ option, overlap, distance }) => {
           const checked = Boolean(checkedFor(option.id))
+          const isSelecting = selectingOption?.option.id === option.id
           return (
-            <label
+            <div
               key={option.id}
-              className={`focus-ring flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
-                checked ? 'border-green bg-green-soft/40' : 'border-line bg-ivory-card hover:border-green/40'
+              className={`overflow-hidden rounded-xl border transition ${
+                checked || isSelecting ? 'border-green' : 'border-line'
               }`}
             >
-              <input
-                type="checkbox"
-                checked={checked}
-                disabled={pending.includes(option.id)}
-                onChange={() => toggle(option, overlap)}
-                className="mt-1 h-4 w-4 accent-green"
-              />
-              <div>
-                <p className="text-sm font-bold text-ink">
-                  {option.name} <span className="font-normal text-ink-2">· {careTypeLabels[option.type]}</span>
-                </p>
-                <p className="mt-1 text-xs text-ink-2">
-                  운영 {option.open_time}~{option.close_time} · 공백 커버{' '}
-                  <span className="font-semibold text-green">
-                    {overlap.start}~{overlap.end}
-                  </span>
-                </p>
-                <p className="mt-1 text-xs text-ink-2">
-                  {option.address}
-                </p>
-                <p className="mt-0.5 text-xs text-ink-2">
-                  시간당 {option.cost_per_hour === 0 ? '무료' : `${option.cost_per_hour.toLocaleString()}원`}
-                  {distance != null && ` · ${formatDistance(distance)}`}
-                </p>
-              </div>
-            </label>
+              <label
+                className={`flex cursor-pointer items-start gap-3 p-3 transition ${
+                  checked || isSelecting ? 'bg-green-soft/40' : 'bg-ivory-card hover:bg-green-soft/10'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked || isSelecting}
+                  disabled={pending.includes(option.id)}
+                  onChange={() => toggle(option, overlap)}
+                  className="mt-1 h-4 w-4 accent-green"
+                />
+                <div>
+                  <p className="text-sm font-bold text-ink">
+                    <Link
+                      to={`/find/${option.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:underline"
+                    >
+                      {option.name}
+                    </Link>{' '}
+                    <span className="font-normal text-ink-2">· {careTypeLabels[option.type]}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-ink-2">
+                    운영 {option.open_time}~{option.close_time} · 공백 커버{' '}
+                    <span className="font-semibold text-green">
+                      {overlap.start}~{overlap.end}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs text-ink-2">{option.address}</p>
+                  <p className="mt-0.5 text-xs text-ink-2">
+                    시간당 {option.cost_per_hour === 0 ? '무료' : `${option.cost_per_hour.toLocaleString()}원`}
+                    {distance != null && ` · ${formatDistance(distance)}`}
+                  </p>
+                </div>
+              </label>
+
+              {isSelecting && (
+                <div className="border-t border-green/30 bg-green-soft/20 px-3 py-3 flex flex-col gap-2">
+                  <p className="text-xs font-semibold text-ink-2">적용할 요일 선택</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectingOption.days.map((d) => {
+                      const sel = selectingOption.selected.includes(d)
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => toggleDay(d)}
+                          className={`h-8 w-8 rounded-full text-xs font-semibold transition ${
+                            sel
+                              ? 'bg-green text-white'
+                              : 'border border-line-2 bg-ivory text-ink-2 hover:border-green/50'
+                          }`}
+                        >
+                          {WEEKDAY_LABELS[d]}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={confirmDayPick}
+                      disabled={selectingOption.selected.length === 0 || pending.includes(option.id)}
+                      className="focus-ring rounded-lg bg-green px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                    >
+                      {pending.includes(option.id) ? '저장 중...' : '적용'}
+                    </button>
+                    {selectingOption.existingId && (
+                      <button
+                        type="button"
+                        onClick={() => deleteExisting(option.id)}
+                        disabled={pending.includes(option.id)}
+                        className="focus-ring rounded-lg border border-error/40 px-4 py-1.5 text-xs font-semibold text-error disabled:opacity-40"
+                      >
+                        삭제
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectingOption(null)}
+                      className="focus-ring text-xs font-semibold text-ink-2"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )
         })}
       </div>

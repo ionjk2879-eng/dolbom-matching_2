@@ -1,15 +1,29 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { RecurringSchedule } from '../data/types'
+import { useState, useEffect, type FormEvent } from 'react'
 import { Button } from './Button'
 import { WeekScheduleGrid, type Target } from './WeekScheduleGrid'
 import { isTouchDevice } from '../data/device'
-import { WEEKDAY_LABELS } from '../data/date'
 import { GapWeekGrid } from './GapWeekGrid'
+import { MonthCalendar } from './MonthCalendar'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { blockLabel } from '../data/scheduleLabel'
 import { useMatchStore } from '../store/matchStore'
 import { REGIONS } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
+import { WEEKDAY_LABELS, formatDayLabel, toISO } from '../data/date'
+import { computeGaps } from '../data/gaps'
+import type { RecurringSchedule } from '../data/types'
+
+function durationLabel(start: string, end: string) {
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  const mins = eh * 60 + em - (sh * 60 + sm)
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
+}
+
+let tempId = 0
+const nextTempId = () => `temp-${++tempId}`
 
 function ChildForm() {
   const addChild = useCareScheduleStore((s) => s.addChild)
@@ -28,50 +42,42 @@ function ChildForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
-      <div>
-        <label htmlFor="child-name" className="text-xs font-semibold text-ink-2">
-          아이 이름
-        </label>
+    <form onSubmit={onSubmit} className="flex flex-wrap items-center gap-4">
+      <label htmlFor="child-name" className="flex items-center gap-2 text-sm font-semibold text-ink-2">
+        아이 이름
         <input
           id="child-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="focus-ring mt-1 w-32 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+          className="focus-ring w-36 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm font-normal text-ink"
         />
-      </div>
-      <div>
-        <label htmlFor="child-grade" className="text-xs font-semibold text-ink-2">
-          학년
-        </label>
+      </label>
+      <label htmlFor="child-grade" className="flex items-center gap-2 text-sm font-semibold text-ink-2">
+        학년
         <select
           id="child-grade"
           value={grade}
           onChange={(e) => setGrade(Number(e.target.value))}
-          className="focus-ring mt-1 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+          className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm font-normal text-ink"
         >
           {[1, 2, 3, 4, 5, 6].map((g) => (
-            <option key={g} value={g}>
-              {g}학년
-            </option>
+            <option key={g} value={g}>{g}학년</option>
           ))}
         </select>
-      </div>
-      <div>
-        <label htmlFor="child-commute" className="text-xs font-semibold text-ink-2">
-          통학시간(분)
-        </label>
+      </label>
+      <label htmlFor="child-commute" className="flex items-center gap-2 text-sm font-semibold text-ink-2">
+        통학시간(분)
         <input
           id="child-commute"
           type="number"
           min={0}
           value={commuteMinutes}
-          onChange={(e) => setCommuteMinutes(Math.max(0, Number(e.target.value)))}
-          className="focus-ring mt-1 w-24 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+          onChange={(e) => setCommuteMinutes(Number(e.target.value))}
+          className="focus-ring w-20 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm font-normal text-ink"
         />
-      </div>
+      </label>
       <Button type="submit">아이 추가</Button>
-      {error && <p className="w-full text-xs text-error">{error}</p>}
+      {error && <p className="w-full text-sm text-error">{error}</p>}
     </form>
   )
 }
@@ -93,79 +99,64 @@ function ChildEditForm({ id, onClose }: { id: string; onClose: () => void }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-ivory-card p-3">
-      <div>
-        <label className="text-xs font-semibold text-ink-2">이름</label>
+    <form onSubmit={onSubmit} className="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-ivory-card p-4">
+      <label className="flex items-center gap-2 text-sm font-semibold text-ink-2">
+        이름
         <input value={name} onChange={(e) => setName(e.target.value)}
-          className="focus-ring mt-1 w-32 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm" />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-ink-2">학년</label>
+          className="focus-ring w-36 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm font-normal text-ink" />
+      </label>
+      <label className="flex items-center gap-2 text-sm font-semibold text-ink-2">
+        학년
         <select value={grade} onChange={(e) => setGrade(Number(e.target.value))}
-          className="focus-ring mt-1 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm">
+          className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm font-normal text-ink">
           {[1, 2, 3, 4, 5, 6].map((g) => <option key={g} value={g}>{g}학년</option>)}
         </select>
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-ink-2">통학시간(분)</label>
-        <input type="number" min={0} value={commuteMinutes} onChange={(e) => setCommuteMinutes(Math.max(0, Number(e.target.value)))}
-          className="focus-ring mt-1 w-24 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm" />
-      </div>
+      </label>
+      <label className="flex items-center gap-2 text-sm font-semibold text-ink-2">
+        통학시간(분)
+        <input type="number" min={0} value={commuteMinutes} onChange={(e) => setCommuteMinutes(Number(e.target.value))}
+          className="focus-ring w-20 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm font-normal text-ink" />
+      </label>
       <Button type="submit">저장</Button>
-      <button type="button" onClick={onClose} className="focus-ring tap-target text-xs font-semibold text-ink-2">취소</button>
-      {error && <p className="w-full text-xs text-error">{error}</p>}
+      <button type="button" onClick={onClose} className="focus-ring text-sm font-semibold text-ink-2">취소</button>
+      {error && <p className="w-full text-sm text-error">{error}</p>}
     </form>
   )
 }
 
-function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) {
-  const { children, schedules, updateSchedule, removeSchedule } = useCareScheduleStore()
-  const schedule = schedules.find((s) => s.id === id)
-  const [startTime, setStartTime] = useState(schedule?.startTime ?? '')
-  const [endTime, setEndTime] = useState(schedule?.endTime ?? '')
-  const [owner, setOwner] = useState<'mom' | 'dad' | ''>(schedule?.parentLabel ?? '')
+// 드래프트 방식이므로 store 대신 콜백으로 저장/삭제를 받음
+function ScheduleEditForm({
+  schedule,
+  onClose,
+  onSave,
+  onRemove,
+}: {
+  schedule: RecurringSchedule
+  onClose: () => void
+  onSave: (id: string, data: Omit<RecurringSchedule, 'id'>) => void
+  onRemove: (id: string) => void
+}) {
+  const { children } = useCareScheduleStore()
+  const [startTime, setStartTime] = useState(schedule.startTime)
+  const [endTime, setEndTime] = useState(schedule.endTime)
   const [error, setError] = useState('')
-  const formRef = useRef<HTMLFormElement>(null)
 
-  // The form sits under a tall grid; bring it into view when a block is opened (matters most on phones)
-  useEffect(() => {
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [])
-
-  if (!schedule) return null
-
-  const onSubmit = async (e: FormEvent) => {
+  const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (startTime >= endTime) return setError('끝나는 시간이 시작 시간보다 늦어야 해요')
-    const { id: _id, ...rest } = schedule // eslint-disable-line @typescript-eslint/no-unused-vars
-    const parentLabel = schedule.type === 'parent_work' ? owner || undefined : rest.parentLabel
-    if (await updateSchedule(id, { ...rest, startTime, endTime, parentLabel })) onClose()
+    const { id, ...rest } = schedule
+    onSave(id, { ...rest, startTime, endTime })
+    onClose()
   }
 
-  const onRemove = async () => {
+  const handleRemove = () => {
     if (!window.confirm(`'${blockLabel(schedule, children)}' 일정을 삭제할까요?`)) return
-    if (await removeSchedule(id)) onClose()
+    onRemove(schedule.id)
+    onClose()
   }
 
   return (
-    <form ref={formRef} onSubmit={onSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border border-line p-3">
-      {schedule.type === 'parent_work' && (
-        <div>
-          <label htmlFor="edit-owner" className="text-xs font-semibold text-ink-2">
-            누구 근무
-          </label>
-          <select
-            id="edit-owner"
-            value={owner}
-            onChange={(e) => setOwner(e.target.value as 'mom' | 'dad' | '')}
-            className="focus-ring mt-1 block rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
-          >
-            <option value="">미지정</option>
-            <option value="mom">엄마</option>
-            <option value="dad">아빠</option>
-          </select>
-        </div>
-      )}
+    <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border border-line p-3">
       <div>
         <label htmlFor="edit-start" className="text-xs font-semibold text-ink-2">
           시작
@@ -193,7 +184,7 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
         />
       </div>
       <Button type="submit">저장</Button>
-      <button type="button" onClick={onRemove} className="focus-ring tap-target text-xs font-semibold text-error">
+      <button type="button" onClick={handleRemove} className="focus-ring text-xs font-semibold text-error">
         삭제
       </button>
       <button type="button" onClick={onClose} className="focus-ring tap-target text-xs font-semibold text-ink-2">
@@ -208,7 +199,7 @@ function ScheduleEditForm({ id, onClose }: { id: string; onClose: () => void }) 
 // merges it like a drag would (and tags it with the selected 엄마/아빠/아이 tab)
 function ScheduleAddForm({ targetLabel, onCreate }: {
   targetLabel: string
-  onCreate: (daysOfWeek: number[], startTime: string, endTime: string) => Promise<void>
+  onCreate: (daysOfWeek: number[], startTime: string, endTime: string) => void | Promise<void>
 }) {
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5])
   const [startTime, setStartTime] = useState('09:00')
@@ -305,30 +296,96 @@ export function ChildManager() {
 
 // 아이 등록 + 부모/아이 반복 일정 캘린더. GapSetup 페이지와 Home 메인페이지에서 공용으로 쓴다.
 export function CareScheduleEditor() {
-  const { children, schedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
+  const { children, schedules, exceptions, removeChild, addSchedule, removeSchedule, updateSchedule, addException, removeException } = useCareScheduleStore()
   const match = useMatchStore()
-  const [view, setView] = useState<'schedule' | 'gap'>('schedule')
+  const [view, setView] = useState<'schedule' | 'gap' | 'calendar'>('schedule')
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingChildId, setEditingChildId] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState(() => toISO(new Date()))
+
+  // 드래프트: 저장 버튼 전까지 API 호출 없이 로컬에서만 변경
+  const [draftSchedules, setDraftSchedules] = useState<RecurringSchedule[]>(schedules)
+  const [isDirty, setIsDirty] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // 드래프트가 클린할 때만 store 변경을 반영 (초기 로드 및 저장 완료 후)
+  useEffect(() => {
+    if (!isDirty) setDraftSchedules(schedules)
+  }, [schedules]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const draftAdd = (s: Omit<RecurringSchedule, 'id'>) => {
+    setDraftSchedules((prev) => [...prev, { id: nextTempId(), ...s }])
+    setIsDirty(true)
+  }
+
+  const draftRemove = (id: string) => {
+    setDraftSchedules((prev) => prev.filter((s) => s.id !== id))
+    setIsDirty(true)
+  }
+
+  const draftUpdate = (id: string, data: Omit<RecurringSchedule, 'id'>) => {
+    setDraftSchedules((prev) => prev.map((s) => (s.id === id ? { id, ...data } : s)))
+    setIsDirty(true)
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    const storeIdSet = new Set(schedules.map((s) => s.id))
+    const draftRealIds = new Set(
+      draftSchedules.filter((d) => !d.id.startsWith('temp-')).map((d) => d.id)
+    )
+
+    // 스토어에 있지만 드래프트에서 사라진 것 → 삭제
+    for (const s of schedules) {
+      if (!draftRealIds.has(s.id)) await removeSchedule(s.id)
+    }
+
+    // 같은 ID인데 내용이 달라진 것 → 수정
+    for (const d of draftSchedules) {
+      if (d.id.startsWith('temp-') || !storeIdSet.has(d.id)) continue
+      const orig = schedules.find((s) => s.id === d.id)!
+      const changed =
+        orig.startTime !== d.startTime ||
+        orig.endTime !== d.endTime ||
+        JSON.stringify([...orig.daysOfWeek].sort()) !== JSON.stringify([...d.daysOfWeek].sort()) ||
+        orig.type !== d.type ||
+        orig.childId !== d.childId ||
+        orig.parentLabel !== d.parentLabel
+      if (changed) await updateSchedule(d.id, d)
+    }
+
+    // 임시 ID → 새로 생성
+    for (const d of draftSchedules) {
+      if (!d.id.startsWith('temp-')) continue
+      const { id: _, ...data } = d
+      await addSchedule(data)
+    }
+
+    setIsSaving(false)
+    setIsDirty(false)
+  }
+
+  const handleCancel = () => {
+    setDraftSchedules(schedules)
+    setIsDirty(false)
+    setEditingId(null)
+  }
 
   const type = target.type === 'parent' ? 'parent_work' as const : 'child_school' as const
   const childId = target.type === 'child' ? target.childId : null
   const parentLabel = target.type === 'parent' ? target.parentLabel : undefined
 
-  const activeSchedules = schedules.filter((s) =>
+  const activeSchedules = draftSchedules.filter((s) =>
     target.type === 'parent'
       // Untagged work shows in both parent tabs so it's never invisible; tag it from the edit form
       ? s.type === 'parent_work' && (s.parentLabel === parentLabel || !s.parentLabel)
       : (s.type === 'child_school' || s.type === 'care') && s.childId === target.childId
   )
 
-  // A re-created block (split or restored) keeps everything but its id: name, memo, picked care option, parent tag
-  const keep = ({ id: _id, ...rest }: RecurringSchedule) => rest // eslint-disable-line @typescript-eslint/no-unused-vars
-
-  const onCreate = async (daysOfWeek: number[], startTime: string, endTime: string) => {
-    // 드래그 범위와 겹치는 블록 전체를 한 번씩만 제거
+  const onCreate = (daysOfWeek: number[], startTime: string, endTime: string) => {
     const overlapIds = new Set(
-      schedules
+      draftSchedules
         .filter((s) =>
           s.type === type && s.childId === childId &&
           (type === 'parent_work' ? s.parentLabel === parentLabel : true) &&
@@ -337,75 +394,173 @@ export function CareScheduleEditor() {
         )
         .map((s) => s.id)
     )
-    const overlapping = schedules.filter((s) => overlapIds.has(s.id))
-    // Add the merged blocks only once every overlapping block is gone; otherwise they'd duplicate it
-    const removed = await Promise.all(overlapping.map((s) => removeSchedule(s.id)))
-    if (removed.includes(false)) return
+    const overlapping = draftSchedules.filter((s) => overlapIds.has(s.id))
+    overlapping.forEach((s) => draftRemove(s.id))
 
     // 드래그 범위 밖 요일은 원래 시간 그대로 단일 요일 블록으로 복원
     overlapping.forEach((s) => {
       s.daysOfWeek.filter((d) => !daysOfWeek.includes(d)).forEach((d) =>
-        addSchedule({ ...keep(s), daysOfWeek: [d] })
+        draftAdd({ type, childId, daysOfWeek: [d], startTime: s.startTime, endTime: s.endTime, parentLabel: s.parentLabel })
       )
     })
 
-    // 드래그 범위 각 요일에 병합 블록 생성
+    // 드래그 범위 각 요일에 블록 생성 — 기존 블록 시간과 병합하지 않고 드래그한 시간 그대로 씀
     daysOfWeek.forEach((day) => {
-      const dayOverlap = overlapping.filter((s) => s.daysOfWeek.includes(day))
-      const mergedStart = [startTime, ...dayOverlap.map((s) => s.startTime)].sort()[0]
-      const mergedEnd = [endTime, ...dayOverlap.map((s) => s.endTime)].sort().reverse()[0]
-      addSchedule({ type, childId, daysOfWeek: [day], startTime: mergedStart, endTime: mergedEnd, parentLabel, title: dayOverlap[0]?.title, memo: dayOverlap[0]?.memo })
+      draftAdd({ type, childId, daysOfWeek: [day], startTime, endTime, parentLabel })
     })
   }
 
-  const onPunch = async (id: string, punchStart: string, punchEnd: string) => {
-    const s = schedules.find((x) => x.id === id)
+  const onPunch = (id: string, punchStart: string, punchEnd: string) => {
+    const s = draftSchedules.find((x) => x.id === id)
     if (!s) return
-    const ok = await removeSchedule(id)
-    if (!ok) return
+    draftRemove(id)
     if (s.startTime < punchStart)
-      await addSchedule({ ...keep(s), endTime: punchStart })
+      draftAdd({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: s.startTime, endTime: punchStart, parentLabel: s.parentLabel })
     if (s.endTime > punchEnd)
-      await addSchedule({ ...keep(s), startTime: punchEnd })
+      draftAdd({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: punchEnd, endTime: s.endTime, parentLabel: s.parentLabel })
   }
 
   const onMove = (id: string, daysOfWeek: number[], startTime: string, endTime: string) => {
-    const s = schedules.find((x) => x.id === id)
+    const s = draftSchedules.find((x) => x.id === id)
     if (!s) return
-    const { id: _id, ...rest } = s // eslint-disable-line @typescript-eslint/no-unused-vars
-    updateSchedule(id, { ...rest, daysOfWeek, startTime, endTime })
+    const { id: _id, ...rest } = s
+    draftUpdate(id, { ...rest, daysOfWeek, startTime, endTime })
+  }
+
+  // 공백 캘린더 탭
+  const hasGapOn = (date: string) =>
+    children.some((child) => computeGaps(child, date, schedules, exceptions).length > 0)
+  const calDow = new Date(`${selectedDate}T00:00:00`).getDay()
+  const calGaps = children.map((child) => ({
+    child,
+    gaps: computeGaps(child, selectedDate, schedules, exceptions),
+  }))
+  const calDaySchedules = schedules
+    .filter((s) => s.daysOfWeek.includes(calDow))
+    .map((s) => ({
+      schedule: s,
+      cancel: exceptions.find((e) => e.scheduleId === s.id && e.date === selectedDate && e.isCancelled),
+    }))
+  const toggleCancel = (scheduleId: string, cancelId: string | undefined) => {
+    if (cancelId) removeException(cancelId)
+    else addException({ scheduleId, date: selectedDate, startTime: null, endTime: null, isCancelled: true })
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* 최상위 탭: 일정 등록 / 공백 패턴 */}
+    <div className="flex flex-col gap-10">
+      {/* 최상위 탭: 일정 등록 / 공백 패턴 / 공백 캘린더 */}
       <div className="inline-flex self-start rounded-xl border border-line bg-ivory-deep-2 p-1">
-        <button
-          type="button"
-          onClick={() => setView('schedule')}
-          className={`focus-ring tap-target rounded-lg px-4 py-1.5 text-xs font-semibold ${view === 'schedule' ? 'bg-ivory text-ink shadow-sm' : 'text-ink-2'}`}
-        >
-          일정 등록
-        </button>
-        <button
-          type="button"
-          onClick={() => setView('gap')}
-          className={`focus-ring tap-target rounded-lg px-4 py-1.5 text-xs font-semibold ${view === 'gap' ? 'bg-ivory text-ink shadow-sm' : 'text-ink-2'}`}
-        >
-          공백 패턴
-        </button>
+        {(['schedule', 'gap', 'calendar'] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            className={`focus-ring rounded-lg px-4 py-1.5 text-xs font-semibold ${view === v ? 'bg-ivory text-ink shadow-sm' : 'text-ink-2'}`}
+          >
+            {v === 'schedule' ? '일정 등록' : v === 'gap' ? '공백 패턴' : '공백 캘린더'}
+          </button>
+        ))}
       </div>
 
       {view === 'gap' ? (
-        <GapWeekGrid kids={children} schedules={schedules} />
+        <GapWeekGrid children={children} schedules={draftSchedules} />
+      ) : view === 'calendar' ? (
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-6 sm:grid-cols-[1fr_240px]">
+            {/* 월간 달력 */}
+            <div className="min-w-0">
+              <MonthCalendar
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                renderBadge={(iso, sel) =>
+                  hasGapOn(iso) ? (
+                    <span className={`text-[10px] font-bold leading-none ${sel ? 'text-white' : 'text-warn'}`}>공백</span>
+                  ) : null
+                }
+              />
+            </div>
+
+            {/* 선택 날짜 공백 요약 */}
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-bold text-ink">{formatDayLabel(selectedDate)}</p>
+              {children.length === 0 ? (
+                <p className="text-sm text-ink-2">아이와 일정을 등록하면 공백을 계산해요.</p>
+              ) : (
+                calGaps.map(({ child, gaps }) => (
+                  <div key={child.id} className="rounded-xl border border-line p-3">
+                    <p className="text-sm font-bold text-ink">{child.name}</p>
+                    {gaps.length === 0 ? (
+                      <p className="mt-1 text-sm text-ink-2">이 날은 돌봄 공백이 없어요</p>
+                    ) : (
+                      <div className="mt-2 flex flex-col gap-2">
+                        {gaps.map((g, i) => (
+                          <div key={i} className="rounded-lg bg-warn-bg px-3 py-2.5 text-sm text-warn">
+                            <span className="font-bold">{g.start}~{g.end}</span>{' '}
+                            <span className="opacity-80">({durationLabel(g.start, g.end)})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* 이 날의 일정 — 그리드 아래 전체 너비 */}
+          {calDaySchedules.length > 0 && (
+            <div className="rounded-xl border border-line p-4">
+              <p className="text-sm font-bold text-ink">{formatDayLabel(selectedDate)} 일정</p>
+              <div className="mt-3 flex flex-col gap-3">
+                {calDaySchedules.map(({ schedule, cancel }) => (
+                  <div key={schedule.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span className={cancel ? 'text-ink-2 line-through' : 'text-ink-2'}>
+                      {blockLabel(schedule, children)} {schedule.startTime}~{schedule.endTime}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleCancel(schedule.id, cancel?.id)}
+                      className={`focus-ring shrink-0 font-semibold ${cancel ? 'text-green' : 'text-ink-2 hover:text-ink'}`}
+                    >
+                      {cancel ? '되돌리기' : '이 날만 취소'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
       <>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-6">
         <p className="text-sm font-bold text-ink">아이 등록</p>
-        <ChildManager />
+        <ChildForm />
+        {children.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {children.map((c) => (
+              <div key={c.id} className="flex flex-col gap-2">
+                {editingChildId === c.id ? (
+                  <ChildEditForm key={c.id} id={c.id} onClose={() => setEditingChildId(null)} />
+                ) : (
+                  <div className="flex items-center justify-between rounded-xl border border-line p-3 text-sm">
+                    <span>{c.name} · {c.grade}학년 · 통학 {c.commuteMinutes}분</span>
+                    <div className="flex gap-3">
+                      <button type="button" onClick={() => setEditingChildId(c.id)} className="focus-ring text-sm font-semibold text-ink-2">
+                        수정
+                      </button>
+                      <button type="button" onClick={() => removeChild(c.id)} className="focus-ring text-sm font-semibold text-error">
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-6">
         <p className="text-sm font-bold text-ink">거주지</p>
         <div className="flex flex-wrap gap-2">
           <select
@@ -486,11 +641,66 @@ export function CareScheduleEditor() {
           target={target}
           onCreate={onCreate}
           onEdit={setEditingId}
-          onDelete={(id) => removeSchedule(id)}
+          onDelete={draftRemove}
           onPunch={onPunch}
           onMove={onMove}
         />
-        {editingId && <ScheduleEditForm key={editingId} id={editingId} onClose={() => setEditingId(null)} />}
+        {editingId && (() => {
+          const schedule = draftSchedules.find((s) => s.id === editingId)
+          if (!schedule) return null
+          return (
+            <ScheduleEditForm
+              key={editingId}
+              schedule={schedule}
+              onClose={() => setEditingId(null)}
+              onSave={draftUpdate}
+              onRemove={draftRemove}
+            />
+          )
+        })()}
+
+        {/* 아이 탭: 선택된 돌봄 센터 목록 */}
+        {target.type === 'child' && (() => {
+          const careList = draftSchedules.filter(
+            (s) => s.type === 'care' && s.childId === childId
+          )
+          if (careList.length === 0) return null
+          return (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold text-ink-2">선택된 돌봄</p>
+              <div className="flex flex-col gap-1.5">
+                {careList.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between gap-2 rounded-xl border border-line bg-ivory-card px-3 py-2 text-xs">
+                    <span className="font-semibold text-ink">{s.title ?? '돌봄(선택)'}</span>
+                    <span className="text-ink-2">
+                      {[...s.daysOfWeek].sort((a, b) => a - b).map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* 저장 / 취소 버튼 */}
+        <div className="flex items-center gap-3">
+          <Button onClick={handleSave} disabled={isSaving || !isDirty}>
+            {isSaving ? '저장 중...' : '저장'}
+          </Button>
+          {isDirty && (
+            <>
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={isSaving}
+                className="focus-ring text-xs font-semibold text-ink-2 disabled:opacity-40"
+              >
+                취소
+              </button>
+              <span className="text-xs text-warn">저장하지 않은 변경 사항이 있어요</span>
+            </>
+          )}
+        </div>
       </div>
       </>
       )}
