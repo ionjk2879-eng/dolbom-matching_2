@@ -123,6 +123,8 @@ function ChildEditForm({ id, onClose }: { id: string; onClose: () => void }) {
 }
 
 // 드래프트 방식이므로 store 대신 콜백으로 저장/삭제를 받음
+const SCHEDULE_PALETTE = ['#4285f4','#db4437','#0f9d58','#9c27b0','#00897b','#e64a19','#5c6bc0','#039be5','#8d6e63','#546e7a']
+
 function ScheduleEditForm({
   schedule,
   onClose,
@@ -137,13 +139,14 @@ function ScheduleEditForm({
   const { children } = useCareScheduleStore()
   const [startTime, setStartTime] = useState(schedule.startTime)
   const [endTime, setEndTime] = useState(schedule.endTime)
+  const [color, setColor] = useState(schedule.color ?? '')
   const [error, setError] = useState('')
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (startTime >= endTime) return setError('끝나는 시간이 시작 시간보다 늦어야 해요')
     const { id, ...rest } = schedule
-    onSave(id, { ...rest, startTime, endTime })
+    onSave(id, { ...rest, startTime, endTime, color: color || undefined })
     onClose()
   }
 
@@ -180,6 +183,26 @@ function ScheduleEditForm({
           onChange={(e) => setEndTime(e.target.value)}
           className="focus-ring mt-1 block rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
         />
+      </div>
+      <div>
+        <label className="text-xs font-semibold text-ink-2">색상</label>
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setColor('')}
+            className={`h-6 w-6 rounded-full border-2 bg-ivory-card ${!color ? 'border-ink' : 'border-line'}`}
+            title="기본"
+          />
+          {SCHEDULE_PALETTE.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setColor(c)}
+              className={`h-6 w-6 rounded-full border-2 ${color === c ? 'border-ink' : 'border-transparent'}`}
+              style={{ backgroundColor: c }}
+            />
+          ))}
+        </div>
       </div>
       <Button type="submit">저장</Button>
       <button type="button" onClick={handleRemove} className="focus-ring text-xs font-semibold text-error">

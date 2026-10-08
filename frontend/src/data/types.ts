@@ -52,6 +52,7 @@ export type RecurringSchedule = {
   title?: string // 사용자가 붙인 이름 (예: 피아노 학원). 없으면 유형 기본 이름을 씀
   memo?: string
   parentLabel?: 'mom' | 'dad' // type: 'parent_work'일 때, 엄마/아빠 구분
+  color?: string // 사용자 지정 색상 (hex). 없으면 type 기본 색상 사용
 }
 
 export type ScheduleException = {

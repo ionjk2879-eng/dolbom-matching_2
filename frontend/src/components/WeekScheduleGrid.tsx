@@ -357,6 +357,7 @@ export function WeekScheduleGrid({
                           height: (endSlot - startSlot) * ROW_HEIGHT,
                           left: `calc(${(lane / totalLanes) * 100}% + 2px)`,
                           width: `calc(${100 / totalLanes}% - 4px)`,
+                          ...(s.color ? { backgroundColor: s.color, color: 'white' } : {}),
                         }}
                       >
                       {/* 선택된 30분 슬롯 하이라이트 */}

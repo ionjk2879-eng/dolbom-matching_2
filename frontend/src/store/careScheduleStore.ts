@@ -96,12 +96,25 @@ type ParentTagState = { parentLabelBySchedule: Record<string, 'mom' | 'dad'> }
 const useParentTags = create<ParentTagState>()(
   persist(() => ({ parentLabelBySchedule: {} }), { name: 'parent-tags' }),
 )
+
+type ScheduleColorState = { colorBySchedule: Record<string, string> }
+const useScheduleColors = create<ScheduleColorState>()(
+  persist(() => ({ colorBySchedule: {} }), { name: 'schedule-colors' }),
+)
+function saveColor(id: string, color: string | undefined) {
+  const next = { ...useScheduleColors.getState().colorBySchedule }
+  if (color) next[id] = color
+  else delete next[id]
+  useScheduleColors.setState({ colorBySchedule: next })
+}
+
 // Removes deleted schedules' local-only tags/notes
 function dropLocalTags(ids: string[]) {
   const omit = <T,>(rec: Record<string, T>) => Object.fromEntries(Object.entries(rec).filter(([k]) => !ids.includes(k)))
   useCareOptionTags.setState((s) => ({ careOptionIdBySchedule: omit(s.careOptionIdBySchedule) }))
   useScheduleNotes.setState((s) => ({ noteBySchedule: omit(s.noteBySchedule) }))
   useParentTags.setState((s) => ({ parentLabelBySchedule: omit(s.parentLabelBySchedule) }))
+  useScheduleColors.setState((s) => ({ colorBySchedule: omit(s.colorBySchedule) }))
 }
 
 const initialData ={ children: [], schedules: [], exceptions: [], loaded: false, error: null }
@@ -135,9 +148,10 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
         const tags = useCareOptionTags.getState().careOptionIdBySchedule
         const notes = useScheduleNotes.getState().noteBySchedule
         const parentTags = useParentTags.getState().parentLabelBySchedule
+        const colors = useScheduleColors.getState().colorBySchedule
         set({
           children: childRows.map(toChild),
-          schedules: scheduleRows.map((r) => ({ ...toRecurring(r), careOptionId: tags[r.id], ...notes[r.id], parentLabel: parentTags[r.id] })),
+          schedules: scheduleRows.map((r) => ({ ...toRecurring(r), careOptionId: tags[r.id], ...notes[r.id], parentLabel: parentTags[r.id], color: colors[r.id] })),
           exceptions: exceptionRows.flat().map(toException),
           loaded: true,
         })
@@ -192,8 +206,9 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
           const parentTags = useParentTags.getState().parentLabelBySchedule
           useParentTags.setState({ parentLabelBySchedule: { ...parentTags, [row.id]: sch.parentLabel } })
         }
+        saveColor(row.id, sch.color)
         set((s) => ({
-          schedules: [...s.schedules, { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel }],
+          schedules: [...s.schedules, { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel, color: sch.color }],
         }))
       }),
 
@@ -216,9 +231,10 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
         else delete parentTags[id]
         useParentTags.setState({ parentLabelBySchedule: parentTags })
         saveNote(id, sch)
+        saveColor(id, sch.color)
         set((s) => ({
           schedules: s.schedules.map((x) =>
-            x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel } : x,
+            x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel, color: sch.color } : x,
           ),
         }))
       }),
