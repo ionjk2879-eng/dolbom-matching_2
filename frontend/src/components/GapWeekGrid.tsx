@@ -16,8 +16,8 @@ function timeToSlot(t: string) {
   return Math.min(SLOTS_PER_DAY, Math.max(0, (h * 60 + m - START_HOUR * 60) / 30))
 }
 
-// 아이별 공백 색상 — warn(주황갈색) vs green(짙은 초록)으로 명확히 구분
-const GAP_COLORS = ['bg-warn text-white', 'bg-green text-white']
+// 아이별 공백 색상 — warn(주황갈색) vs ink-2(회갈색); green은 "선택한 돌봄" 블록 전용
+const GAP_COLORS = ['bg-warn text-white', 'bg-ink-2 text-white']
 // 학교 블록 참고용 — 연하게
 const SCHOOL_BG = ['bg-green/20', 'bg-sand/40']
 
