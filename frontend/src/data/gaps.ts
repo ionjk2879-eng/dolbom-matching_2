@@ -115,8 +115,6 @@ export function computeGaps(
     .filter((i): i is Interval => i !== null)
 
   return subtract(merge(parentBusy), childCovered)
-    // 통학 시간보다 짧은 공백은 센터를 이용할 수 없으므로 제외
-    .filter((i) => i.end - i.start > child.commuteMinutes)
     .sort((a, b) => a.start - b.start)
     .map((i) => ({ start: toTime(i.start), end: toTime(i.end) }))
 }
