@@ -322,6 +322,7 @@ export function CareScheduleEditor() {
   const [view, setView] = useState<'schedule' | 'gap' | 'calendar'>('schedule')
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [multiSelIds, setMultiSelIds] = useState<string[]>([])
   const [editingChildId, setEditingChildId] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(() => toISO(new Date()))
   const [override, setOverride] = useState<{ id: string; start: string; end: string } | null>(null)
@@ -650,6 +651,7 @@ export function CareScheduleEditor() {
           onDelete={removeSchedule}
           onPunch={onPunch}
           onMove={onMove}
+          onSelectionChange={setMultiSelIds}
         />
         {editingId && (() => {
           const schedule = schedules.find((s) => s.id === editingId)
@@ -659,7 +661,15 @@ export function CareScheduleEditor() {
               key={editingId}
               schedule={schedule}
               onClose={() => setEditingId(null)}
-              onSave={updateSchedule}
+              onSave={(id, data) => {
+                updateSchedule(id, data)
+                if (multiSelIds.length > 1) {
+                  multiSelIds.filter((sid) => sid !== id).forEach((sid) => {
+                    const s = schedules.find((x) => x.id === sid)
+                    if (s) updateSchedule(sid, { ...s, color: data.color })
+                  })
+                }
+              }}
               onRemove={removeSchedule}
             />
           )

@@ -73,6 +73,7 @@ export function WeekScheduleGrid({
   onDelete,
   onPunch,
   onMove,
+  onSelectionChange,
 }: {
   schedules: RecurringSchedule[]
   kids: Child[]
@@ -82,6 +83,7 @@ export function WeekScheduleGrid({
   onDelete: (id: string) => void
   onPunch: (id: string, startTime: string, endTime: string) => void
   onMove: (id: string, daysOfWeek: number[], startTime: string, endTime: string) => void
+  onSelectionChange?: (ids: string[]) => void
 }) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const [sel, setSel] = useState<{ id: string; day: number; slot: number } | null>(null)
@@ -225,6 +227,7 @@ export function WeekScheduleGrid({
   }, [drag])
 
   useEffect(() => { multiSelRef.current = multiSel }, [multiSel])
+  useEffect(() => { onSelectionChange?.([...multiSel]) }, [multiSel]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { schedulesRef.current = schedules }, [schedules])
 
   const slotAt = (col: number, clientY: number) => {
