@@ -303,6 +303,7 @@ export function CareScheduleEditor() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingChildId, setEditingChildId] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(() => toISO(new Date()))
+  const [override, setOverride] = useState<{ id: string; start: string; end: string } | null>(null)
 
   // 드래프트: 저장 버튼 전까지 API 호출 없이 로컬에서만 변경
   const [draftSchedules, setDraftSchedules] = useState<RecurringSchedule[]>(schedules)
@@ -437,13 +438,20 @@ export function CareScheduleEditor() {
   }))
   const calDaySchedules = schedules
     .filter((s) => s.daysOfWeek.includes(calDow))
+    // 그 날의 예외(취소 또는 시간 변경 — computeGaps처럼 날짜당 1개)
     .map((s) => ({
       schedule: s,
-      cancel: exceptions.find((e) => e.scheduleId === s.id && e.date === selectedDate && e.isCancelled),
+      exception: exceptions.find((e) => e.scheduleId === s.id && e.date === selectedDate),
     }))
-  const toggleCancel = (scheduleId: string, cancelId: string | undefined) => {
-    if (cancelId) removeException(cancelId)
+  const toggleCancel = (scheduleId: string, exceptionId: string | undefined) => {
+    if (exceptionId) removeException(exceptionId)
     else addException({ scheduleId, date: selectedDate, startTime: null, endTime: null, isCancelled: true })
+  }
+  // Only offered when the day has no exception yet, so there is nothing to replace
+  const saveOverride = async (scheduleId: string) => {
+    if (!override || override.start >= override.end) return
+    const ok = await addException({ scheduleId, date: selectedDate, startTime: override.start, endTime: override.end, isCancelled: false })
+    if (ok) setOverride(null)
   }
 
   return (
@@ -512,20 +520,70 @@ export function CareScheduleEditor() {
             <div className="rounded-xl border border-line p-4">
               <p className="text-sm font-bold text-ink">{formatDayLabel(selectedDate)} 일정</p>
               <div className="mt-3 flex flex-col gap-3">
-                {calDaySchedules.map(({ schedule, cancel }) => (
-                  <div key={schedule.id} className="flex items-center justify-between gap-3 text-sm">
-                    <span className={cancel ? 'text-ink-2 line-through' : 'text-ink-2'}>
-                      {blockLabel(schedule, children)} {schedule.startTime}~{schedule.endTime}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => toggleCancel(schedule.id, cancel?.id)}
-                      className={`focus-ring shrink-0 font-semibold ${cancel ? 'text-green' : 'text-ink-2 hover:text-ink'}`}
-                    >
-                      {cancel ? '되돌리기' : '이 날만 취소'}
-                    </button>
-                  </div>
-                ))}
+                {calDaySchedules.map(({ schedule, exception }) =>
+                  override?.id === schedule.id ? (
+                    <div key={schedule.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                      <span className="flex items-center gap-1 text-ink-2">
+                        {blockLabel(schedule, children)}
+                        <input
+                          type="time"
+                          value={override.start}
+                          onChange={(e) => setOverride({ ...override, start: e.target.value })}
+                          aria-label="이 날 시작 시간"
+                          className="focus-ring rounded border border-line px-1"
+                        />
+                        ~
+                        <input
+                          type="time"
+                          value={override.end}
+                          onChange={(e) => setOverride({ ...override, end: e.target.value })}
+                          aria-label="이 날 끝 시간"
+                          className="focus-ring rounded border border-line px-1"
+                        />
+                      </span>
+                      <div className="flex shrink-0 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => saveOverride(schedule.id)}
+                          disabled={override.start >= override.end}
+                          className="focus-ring font-semibold text-green disabled:opacity-50"
+                        >
+                          저장
+                        </button>
+                        <button type="button" onClick={() => setOverride(null)} className="focus-ring font-semibold text-ink-2">
+                          닫기
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={schedule.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                      <span className={exception?.isCancelled ? 'text-ink-2 line-through' : 'text-ink-2'}>
+                        {blockLabel(schedule, children)} {schedule.startTime}~{schedule.endTime}
+                        {exception && !exception.isCancelled && (
+                          <b className="text-ink"> → 이 날만 {exception.startTime}~{exception.endTime}</b>
+                        )}
+                      </span>
+                      <div className="flex shrink-0 gap-3">
+                        {!exception && (
+                          <button
+                            type="button"
+                            onClick={() => setOverride({ id: schedule.id, start: schedule.startTime, end: schedule.endTime })}
+                            className="focus-ring font-semibold text-ink-2 hover:text-ink"
+                          >
+                            시간 변경
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => toggleCancel(schedule.id, exception?.id)}
+                          className={`focus-ring font-semibold ${exception ? 'text-green' : 'text-ink-2 hover:text-ink'}`}
+                        >
+                          {exception ? '되돌리기' : '이 날만 취소'}
+                        </button>
+                      </div>
+                    </div>
+                  ),
+                )}
               </div>
             </div>
           )}
