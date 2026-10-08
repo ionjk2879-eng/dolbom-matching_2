@@ -264,7 +264,7 @@ export function Home() {
                     ))}
                   </div>
                 </div>
-                <Button onClick={goMatch} className="w-full">
+                <Button onClick={goMatch} className="min-h-11 w-full">
                   {match.region || match.grade || match.time ? '조건에 맞는 돌봄' : '전체 돌봄 옵션'} {matchedCount}곳 보기
                 </Button>
               </Card>
