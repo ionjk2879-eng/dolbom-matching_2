@@ -62,6 +62,16 @@ export function GapWeekGrid({
     })
   )
 
+  // 선택된 돌봄 블록
+  const careByChildDay = children.map((child) =>
+    REF.map((date) => {
+      const dow = new Date(`${date}T00:00:00`).getDay()
+      return schedules
+        .filter((s) => s.childId === child.id && s.type === 'care' && s.daysOfWeek.includes(dow))
+        .map((s) => ({ start: timeToSlot(s.startTime), end: timeToSlot(s.endTime), title: s.title ?? '돌봄' }))
+    })
+  )
+
   const n = children.length
 
   return (
@@ -81,6 +91,9 @@ export function GapWeekGrid({
             <span className={`h-3 w-3 rounded ${GAP_COLORS[i % GAP_COLORS.length].split(' ')[0]}`} /> {c.name} 돌봄 공백
           </span>
         ))}
+        <span className="flex items-center gap-1">
+          <span className="h-3 w-3 rounded bg-green" /> 선택한 돌봄
+        </span>
       </div>
 
       <div className="flex">
@@ -134,6 +147,19 @@ export function GapWeekGrid({
                     className={`pointer-events-none absolute inset-x-0.5 rounded ${SCHOOL_BG[ci % SCHOOL_BG.length]}`}
                     style={{ top: b.start * ROW_HEIGHT, height: (b.end - b.start) * ROW_HEIGHT }}
                   />
+                ))
+              )}
+
+              {/* 선택한 돌봄 */}
+              {children.map((_child, ci) =>
+                careByChildDay[ci][day].map((c, i) => (
+                  <div
+                    key={`care-${ci}-${i}`}
+                    className="pointer-events-none absolute inset-x-0.5 overflow-hidden rounded bg-green text-xs font-semibold text-white"
+                    style={{ top: c.start * ROW_HEIGHT, height: (c.end - c.start) * ROW_HEIGHT }}
+                  >
+                    <span className="block truncate px-1 pt-1">{c.title}</span>
+                  </div>
                 ))
               )}
 
