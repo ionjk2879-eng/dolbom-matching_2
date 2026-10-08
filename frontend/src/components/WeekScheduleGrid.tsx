@@ -196,7 +196,7 @@ export function WeekScheduleGrid({
         } else {
           if (sel?.id === drag.id || multiSel.has(drag.id)) {
             setSel(null)
-            setMultiSel((prev) => { const next = new Set(prev); next.delete(drag.id); return next })
+            setMultiSel(new Set())
             setSelAnchor(null)
           } else {
             setSel({ id: drag.id, day: drag.clickedDay, slot: drag.origStart })
