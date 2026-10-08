@@ -58,7 +58,7 @@ function layoutLanes(items: RecurringSchedule[]) {
 
 type Cell = { day: number; slot: number }
 type Drag =
-  | { kind: 'create'; start: Cell; end: Cell; ctrl: boolean; shift: boolean }
+  | { kind: 'create'; start: Cell; end: Cell }
   | { kind: 'move'; id: string; days: number[]; dur: number; offset: number; preview: number; origStart: number; moved: boolean; clickedDay: number }
   | { kind: 'resize'; id: string; days: number[]; startSlot: number; endSlot: number }
 
@@ -88,7 +88,39 @@ export function WeekScheduleGrid({
   const [drag, setDrag] = useState<Drag | null>(null)
   const [sel, setSel] = useState<{ id: string; day: number; slot: number } | null>(null)
   const [multiSel, setMultiSel] = useState<Set<string>>(new Set())
-  const [selAnchor, setSelAnchor] = useState<string | null>(null)
+  const [selAnchor, setSelAnchor] = useState<{ id: string; day: number } | null>(null)
+
+  // Ctrl/Shift+click on a block. Handled on the block itself (not the column) so it acts on
+  // the block that was clicked even when blocks overlap, and never starts a create drag.
+  const modifierSelect = (id: string, day: number, shift: boolean) => {
+    setSel(null)
+    setMenu(null)
+    const anchor = shift && selAnchor ? schedules.find((x) => x.id === selAnchor.id) : undefined
+    const hit = schedules.find((x) => x.id === id)
+    if (anchor && hit) {
+      // Range = the box between anchor and clicked block: their days and their start times
+      const dLo = Math.min(selAnchor!.day, day)
+      const dHi = Math.max(selAnchor!.day, day)
+      const lo = anchor.startTime < hit.startTime ? anchor.startTime : hit.startTime
+      const hi = anchor.startTime > hit.startTime ? anchor.startTime : hit.startTime
+      setMultiSel((prev) => {
+        const next = new Set(prev)
+        schedules.forEach((x) => {
+          if (x.startTime >= lo && x.startTime <= hi && x.daysOfWeek.some((d) => d >= dLo && d <= dHi)) next.add(x.id)
+        })
+        return next
+      })
+      return
+    }
+    // Ctrl, or Shift with no (or a removed) anchor: toggle just this block
+    setSelAnchor({ id, day })
+    setMultiSel((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
   const multiSelRef = useRef<Set<string>>(new Set())
   const schedulesRef = useRef(schedules)
   const [hover, setHover] = useState<Cell | null>(null)
@@ -140,37 +172,17 @@ export function WeekScheduleGrid({
               timeToSlot(s.endTime) > drag.start.slot
           )
           if (hit) {
-            if (drag.shift && selAnchor) {
-              const anchor = schedules.find((s) => s.id === selAnchor)
-              if (anchor) {
-                const lo = anchor.startTime < hit.startTime ? anchor.startTime : hit.startTime
-                const hi = anchor.startTime > hit.startTime ? anchor.startTime : hit.startTime
-                setSel(null)
-                setMultiSel((prev) => {
-                  const next = new Set(prev)
-                  schedules.forEach((s) => { if (s.startTime >= lo && s.startTime <= hi) next.add(s.id) })
-                  return next
-                })
-              }
-            } else if (drag.ctrl) {
-              setSel(null)
-              setSelAnchor(hit.id)
-              setMultiSel((prev) => {
-                const next = new Set(prev)
-                if (next.has(hit.id)) next.delete(hit.id)
-                else next.add(hit.id)
-                return next
-              })
-            } else if (sel?.id === hit.id) {
+            if (sel?.id === hit.id) {
               setSel(null)
             } else {
               setSel({ id: hit.id, day: drag.start.day, slot: drag.start.slot })
-              setSelAnchor(hit.id)
+              setSelAnchor({ id: hit.id, day: drag.start.day })
               setMultiSel(new Set())
             }
           } else {
             setSel(null)
             setMultiSel(new Set())
+            setSelAnchor(null)
             if (sel === null && multiSel.size === 0) {
               onCreate(days, slotToTime(slotLo), slotToTime(slotLo + 1))
             }
@@ -202,7 +214,7 @@ export function WeekScheduleGrid({
             setSelAnchor(null)
           } else {
             setSel({ id: drag.id, day: drag.clickedDay, slot: drag.origStart })
-            setSelAnchor(drag.id)
+            setSelAnchor({ id: drag.id, day: drag.clickedDay })
             setMultiSel(new Set())
           }
         }
@@ -282,7 +294,7 @@ export function WeekScheduleGrid({
                 if (e.button !== 0 || isTouchDevice) return
                 setMenu(null)
                 const slot = slotAt(day, e.clientY)
-                setDrag({ kind: 'create', start: { day, slot }, end: { day, slot }, ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey })
+                setDrag({ kind: 'create', start: { day, slot }, end: { day, slot } })
               }}
               onMouseMove={(e) => {
                 const slot = slotAt(day, e.clientY)
@@ -338,9 +350,11 @@ export function WeekScheduleGrid({
                         }}
                         onMouseDown={(e) => {
                           if (e.button !== 0) return
-                          if (e.ctrlKey || e.metaKey) return // Ctrl+클릭은 컬럼으로 전파해 다중선택 처리
-                          if (e.shiftKey) return // Shift+클릭은 컬럼으로 전파해 범위 선택 처리
                           e.stopPropagation()
+                          if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                            modifierSelect(s.id, day, e.shiftKey)
+                            return
+                          }
                           setMenu(null)
                           setDrag({
                             kind: 'move',
