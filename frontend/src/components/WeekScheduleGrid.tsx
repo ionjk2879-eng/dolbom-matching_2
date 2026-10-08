@@ -194,8 +194,15 @@ export function WeekScheduleGrid({
             onMove(drag.id, drag.days, slotToTime(newStart), slotToTime(newStart + drag.dur))
           }
         } else {
-          setSel({ id: drag.id, day: drag.clickedDay, slot: drag.origStart })
-          setSelAnchor(drag.id)
+          if (sel?.id === drag.id || multiSel.has(drag.id)) {
+            setSel(null)
+            setMultiSel((prev) => { const next = new Set(prev); next.delete(drag.id); return next })
+            setSelAnchor(null)
+          } else {
+            setSel({ id: drag.id, day: drag.clickedDay, slot: drag.origStart })
+            setSelAnchor(drag.id)
+            setMultiSel(new Set())
+          }
         }
       } else if (drag.kind === 'resize') {
         const end = Math.max(drag.startSlot + 1, drag.endSlot)
