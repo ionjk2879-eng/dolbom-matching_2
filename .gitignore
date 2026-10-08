@@ -5,3 +5,4 @@ dist/
 .wrangler/
 CLAUDE.md
 .idea/
+!.claude/CLAUDE.md
