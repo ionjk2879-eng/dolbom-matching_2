@@ -58,7 +58,7 @@ function layoutLanes(items: RecurringSchedule[]) {
 
 type Cell = { day: number; slot: number }
 type Drag =
-  | { kind: 'create'; start: Cell; end: Cell; ctrl: boolean }
+  | { kind: 'create'; start: Cell; end: Cell; ctrl: boolean; shift: boolean }
   | { kind: 'move'; id: string; days: number[]; dur: number; offset: number; preview: number; origStart: number; moved: boolean; clickedDay: number }
   | { kind: 'resize'; id: string; days: number[]; startSlot: number; endSlot: number }
 
@@ -86,6 +86,7 @@ export function WeekScheduleGrid({
   const [drag, setDrag] = useState<Drag | null>(null)
   const [sel, setSel] = useState<{ id: string; day: number; slot: number } | null>(null)
   const [multiSel, setMultiSel] = useState<Set<string>>(new Set())
+  const [selAnchor, setSelAnchor] = useState<string | null>(null)
   const multiSelRef = useRef<Set<string>>(new Set())
   const schedulesRef = useRef(schedules)
   const [hover, setHover] = useState<Cell | null>(null)
@@ -105,7 +106,7 @@ export function WeekScheduleGrid({
       // Backspace while typing in a form field must edit the text, not delete the selected block
       const t = e.target as HTMLElement
       if (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return
-      if (e.key === 'Escape') { setDrag(null); setSel(null); setMultiSel(new Set()) }
+      if (e.key === 'Escape') { setDrag(null); setSel(null); setMultiSel(new Set()); setSelAnchor(null) }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (multiSel.size > 0) {
           multiSel.forEach((id) => onDelete(id))
@@ -137,8 +138,21 @@ export function WeekScheduleGrid({
               timeToSlot(s.endTime) > drag.start.slot
           )
           if (hit) {
-            if (drag.ctrl) {
+            if (drag.shift && selAnchor) {
+              const anchor = schedules.find((s) => s.id === selAnchor)
+              if (anchor) {
+                const lo = anchor.startTime < hit.startTime ? anchor.startTime : hit.startTime
+                const hi = anchor.startTime > hit.startTime ? anchor.startTime : hit.startTime
+                setSel(null)
+                setMultiSel((prev) => {
+                  const next = new Set(prev)
+                  schedules.forEach((s) => { if (s.startTime >= lo && s.startTime <= hi) next.add(s.id) })
+                  return next
+                })
+              }
+            } else if (drag.ctrl) {
               setSel(null)
+              setSelAnchor(hit.id)
               setMultiSel((prev) => {
                 const next = new Set(prev)
                 if (next.has(hit.id)) next.delete(hit.id)
@@ -149,6 +163,7 @@ export function WeekScheduleGrid({
               setSel(null)
             } else {
               setSel({ id: hit.id, day: drag.start.day, slot: drag.start.slot })
+              setSelAnchor(hit.id)
               setMultiSel(new Set())
             }
           } else {
@@ -180,6 +195,7 @@ export function WeekScheduleGrid({
           }
         } else {
           setSel({ id: drag.id, day: drag.clickedDay, slot: drag.origStart })
+          setSelAnchor(drag.id)
         }
       } else if (drag.kind === 'resize') {
         const end = Math.max(drag.startSlot + 1, drag.endSlot)
@@ -256,7 +272,7 @@ export function WeekScheduleGrid({
                 if (e.button !== 0 || isTouchDevice) return
                 setMenu(null)
                 const slot = slotAt(day, e.clientY)
-                setDrag({ kind: 'create', start: { day, slot }, end: { day, slot }, ctrl: e.ctrlKey || e.metaKey })
+                setDrag({ kind: 'create', start: { day, slot }, end: { day, slot }, ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey })
               }}
               onMouseMove={(e) => {
                 const slot = slotAt(day, e.clientY)
@@ -312,6 +328,8 @@ export function WeekScheduleGrid({
                         }}
                         onMouseDown={(e) => {
                           if (e.button !== 0) return
+                          if (e.ctrlKey || e.metaKey) return // Ctrl+클릭은 컬럼으로 전파해 다중선택 처리
+                          if (e.shiftKey) return // Shift+클릭은 컬럼으로 전파해 범위 선택 처리
                           e.stopPropagation()
                           setMenu(null)
                           setDrag({
