@@ -154,7 +154,8 @@ export function MapView({
   useEffect(() => {
     if (!ready || !mapRef.current) return
     const listener = naver.maps.Event.addListener(mapRef.current, 'idle', syncMarkers)
-    return () => naver.maps.Event.removeListener(listener)
+    // naver.maps is null after an auth failure; leaving the page then must not crash the app
+    return () => naver.maps?.Event.removeListener(listener)
   }, [ready, syncMarkers])
 
   // New result list (filter/sort): drop markers that left it, draw what's now in view
