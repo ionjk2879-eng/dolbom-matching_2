@@ -1,6 +1,6 @@
 # 인수인계 문서
 
-> 마지막 업데이트: 2026-10-07
+> 마지막 업데이트: 2026-10-08
 
 ## 현재 브랜치
 - 작업 브랜치: `main`
@@ -95,7 +95,6 @@ frontend/src/
 ├── pages/
 │   ├── Home.tsx           # 메인 (일정 등록 + 맞춤 매칭)
 │   ├── Find.tsx           # 돌봄 찾기 (sticky 필터 + 360px 지도 + 카드 목록)
-│   ├── GapCalendar.tsx    # /gaps 페이지 (CareScheduleEditor 탭으로 통합됨, 별도 라우트 잔존)
 │   └── CareOptionDetail.tsx  # /find/:id 돌봄 기관 상세
 └── store/
     ├── careScheduleStore.ts  # 아이/일정 상태 (API 연동, useParentTags 포함)
@@ -153,7 +152,7 @@ frontend/src/
 | 엄마/아빠 근무 분리 | CareScheduleEditor | 각 탭 독립 저장, 서로 다른 색상 |
 | 아이 학교 일정 | CareScheduleEditor | 아이별 탭, care 타입도 함께 표시 |
 | 공백 패턴 뷰 | CareScheduleEditor > 공백 패턴 탭 | 주간 공백 시각화 |
-| **공백 캘린더 탭** | CareScheduleEditor > 공백 캘린더 탭 | 월간 달력 + 날짜 선택 + 이 날만 취소 기능 (MonthCalendar 사용) |
+| **공백 캘린더 탭** | CareScheduleEditor > 공백 캘린더 탭 | 월간 달력 + 날짜 선택 + 이 날만 취소/시간 변경 (MonthCalendar 사용). `/gaps`·`/gaps/setup`은 `/`로 리다이렉트 |
 | 거주지 입력 | CareScheduleEditor | 시/도 + 구/군, matchStore에 저장 |
 | 저장 버튼 항상 표시 | CareScheduleEditor | 변경 없을 때 disabled, 변경 시 활성화 |
 | 맞춤 매칭 (체크박스) | Home.tsx + GapMatchPanel | 공백별 돌봄 옵션 선택, progress bar |
@@ -169,11 +168,11 @@ frontend/src/
 | 항목 | 설명 |
 |------|------|
 | 네이버 지도 핀 좌표 | care_providers에 lat/lng 없는 항목이 많음 → 지도 핀 부족 |
-| schedule_exceptions GET/DELETE | 현재 POST만 구현 |
 | 운영 DB 스키마 동기화 | 운영 PostgreSQL에 최신 schema.sql 반영 확인 필요 |
 | 맞벌이 공백 UX 설명 | 교집합 계산 방식 사용자 안내 없음 |
 | 동 레벨 필터 | 현재 구/군까지만, 동 레벨 미구현 |
-| `schedule_exceptions GET/DELETE` | 현재 POST만 구현 |
+| 이 날만 시간 변경 배포 확인 | 공백 캘린더 탭에서 저장 → 공백 재계산 → 되돌리기 실제 화면 확인 필요 (계산 로직은 검증됨, PR #20) |
+| 로컬 OAuth 로그인 | 콜백이 항상 `FRONTEND_URL`(배포 주소)로 돌아가서 localhost에선 로그인 불가 — 백엔드에서 돌아갈 주소 선택 필요 |
 
 ---
 
@@ -242,6 +241,8 @@ npx wrangler dev   # 포트 8787
 - `care_providers` 좌표(lat/lng) 없는 기관 많음 → 지도 핀 적게 표시됨
 - localStorage 키: `match` (matchStore), `parent-tags`, `care-option-tags`, `schedule-notes`
 - 재로그인 필요 상황: JWT_SECRET 변경 시 기존 토큰 무효
+- **schedule_exceptions 예외는 일정·날짜당 1개**: `computeGaps`가 첫 번째만 씀. 시간 변경은 예외 없는 일정에서만 열리고, 되돌리기로 지운 뒤 다시 설정.
+- **로컬 로그인 우회**: localhost에서 로그인 → 배포 주소의 `/auth/callback?token=...`으로 넘어가면 같은 탭에서 도메인만 `http://localhost:5173`으로 바꿔 열기 (`AuthCallbackPage`는 로그인 버튼을 누른 탭에서만 토큰 수락).
 - 포트 충돌 시: `Get-Process -Name "node" | Stop-Process -Force` 후 재실행
 
 ---
