@@ -8,7 +8,7 @@ import { useAuthStore } from '../store/authStore'
 import type { AuthUser } from '../api/auth'
 import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 import { computeGaps } from '../data/gaps'
-import { ChildManager } from '../components/CareScheduleEditor'
+import { ChildManager } from '../components/ChildManager'
 
 const providerLabels: Record<AuthUser['provider'], string> = {
   kakao: '카카오',
