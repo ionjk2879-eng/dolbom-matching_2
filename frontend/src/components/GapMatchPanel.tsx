@@ -77,10 +77,12 @@ export function GapMatchPanel({
     return overlap && mine.find((s) => !s.careOptionId && s.startTime === overlap.start && s.endTime === overlap.end)
   }
 
-  // Show a few at a time (options is rebuilt each render, so reset on what actually changes);
-  // checked options stay visible even past the cut
+  // Show a few at a time (options is rebuilt each render, so reset on what actually changes)
   const paged = usePaged(candidates, 5, `${sortBy}-${here ? 'here' : ''}-${options.length}`)
-  const shown = candidates.filter((c, i) => i < paged.count || checkedFor(c.option.id))
+  // Checked items always pinned to top; unchecked items paged below
+  const checkedCandidates = candidates.filter((c) => checkedFor(c.option.id))
+  const uncheckedCandidates = candidates.filter((c) => !checkedFor(c.option.id))
+  const shown = [...checkedCandidates, ...uncheckedCandidates.slice(0, paged.count)]
 
   const checkedOverlaps = candidates
     .filter((c) => checkedFor(c.option.id))
