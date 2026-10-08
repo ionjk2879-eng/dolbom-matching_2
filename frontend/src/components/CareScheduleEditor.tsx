@@ -123,7 +123,12 @@ function ChildEditForm({ id, onClose }: { id: string; onClose: () => void }) {
 }
 
 // 드래프트 방식이므로 store 대신 콜백으로 저장/삭제를 받음
-const SCHEDULE_PALETTE = ['#4285f4','#db4437','#0f9d58','#9c27b0','#00897b','#e64a19','#5c6bc0','#039be5','#8d6e63','#546e7a']
+const SCHEDULE_PALETTE = [
+  { hex: '#4285f4', name: '파랑' }, { hex: '#db4437', name: '빨강' }, { hex: '#0f9d58', name: '초록' },
+  { hex: '#9c27b0', name: '보라' }, { hex: '#00897b', name: '청록' }, { hex: '#e64a19', name: '주황' },
+  { hex: '#5c6bc0', name: '남색' }, { hex: '#039be5', name: '하늘' }, { hex: '#8d6e63', name: '갈색' },
+  { hex: '#546e7a', name: '회청' },
+]
 
 function ScheduleEditForm({
   schedule,
@@ -185,22 +190,24 @@ function ScheduleEditForm({
         />
       </div>
       <div>
-        <label className="text-xs font-semibold text-ink-2">색상</label>
-        <div className="mt-1 flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setColor('')}
-            className={`h-6 w-6 rounded-full border-2 bg-ivory-card ${!color ? 'border-ink' : 'border-line'}`}
-            title="기본"
-          />
-          {SCHEDULE_PALETTE.map((c) => (
+        <p id="edit-color" className="text-xs font-semibold text-ink-2">색상</p>
+        {/* The dot stays 24px; tap-target widens only the touch area on phones */}
+        <div role="group" aria-labelledby="edit-color" className="mt-1 flex flex-wrap gap-1.5">
+          {[{ hex: '', name: '기본' }, ...SCHEDULE_PALETTE].map(({ hex, name }) => (
             <button
-              key={c}
+              key={name}
               type="button"
-              onClick={() => setColor(c)}
-              className={`h-6 w-6 rounded-full border-2 ${color === c ? 'border-ink' : 'border-transparent'}`}
-              style={{ backgroundColor: c }}
-            />
+              onClick={() => setColor(hex)}
+              aria-label={name}
+              aria-pressed={color === hex}
+              title={name}
+              className="focus-ring tap-target flex items-center justify-center rounded-full"
+            >
+              <span
+                className={`block h-6 w-6 rounded-full border-2 ${color === hex ? 'border-ink' : hex ? 'border-transparent' : 'border-line'} ${hex ? '' : 'bg-ivory-card'}`}
+                style={hex ? { backgroundColor: hex } : undefined}
+              />
+            </button>
           ))}
         </div>
       </div>
@@ -355,7 +362,7 @@ export function CareScheduleEditor() {
     overlapping.forEach((s) => removeSchedule(s.id))
     overlapping.forEach((s) => {
       s.daysOfWeek.filter((d) => !daysOfWeek.includes(d)).forEach((d) =>
-        addSchedule({ type, childId, daysOfWeek: [d], startTime: s.startTime, endTime: s.endTime, parentLabel: s.parentLabel })
+        addSchedule({ type, childId, daysOfWeek: [d], startTime: s.startTime, endTime: s.endTime, parentLabel: s.parentLabel, color: s.color, title: s.title, memo: s.memo })
       )
     })
     daysOfWeek.forEach((day) => {
@@ -368,9 +375,9 @@ export function CareScheduleEditor() {
     if (!s) return
     removeSchedule(id)
     if (s.startTime < punchStart)
-      addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: s.startTime, endTime: punchStart, parentLabel: s.parentLabel })
+      addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: s.startTime, endTime: punchStart, parentLabel: s.parentLabel, color: s.color, title: s.title, memo: s.memo, careOptionId: s.careOptionId })
     if (s.endTime > punchEnd)
-      addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: punchEnd, endTime: s.endTime, parentLabel: s.parentLabel })
+      addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: punchEnd, endTime: s.endTime, parentLabel: s.parentLabel, color: s.color, title: s.title, memo: s.memo, careOptionId: s.careOptionId })
   }
 
   const onMove = (id: string, daysOfWeek: number[], startTime: string, endTime: string) => {
@@ -681,10 +688,11 @@ export function CareScheduleEditor() {
               onClose={() => setEditingId(null)}
               onSave={(id, data) => {
                 updateSchedule(id, data)
-                if (multiSelIds.length > 1) {
+                // Selected blocks follow only a color change; a time-only edit must not repaint them
+                if (multiSelIds.length > 1 && data.color !== schedule.color) {
                   multiSelIds.filter((sid) => sid !== id).forEach((sid) => {
                     const s = schedules.find((x) => x.id === sid)
-                    if (s) updateSchedule(sid, { ...s, color: data.color })
+                    if (s && s.color !== data.color) updateSchedule(sid, { ...s, color: data.color })
                   })
                 }
               }}
