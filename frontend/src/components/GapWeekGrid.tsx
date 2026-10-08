@@ -68,7 +68,7 @@ export function GapWeekGrid({
       const dow = new Date(`${date}T00:00:00`).getDay()
       return schedules
         .filter((s) => s.childId === child.id && s.type === 'care' && s.daysOfWeek.includes(dow))
-        .map((s) => ({ start: timeToSlot(s.startTime), end: timeToSlot(s.endTime), title: s.title ?? '돌봄' }))
+        .map((s) => ({ start: timeToSlot(s.startTime), end: timeToSlot(s.endTime), title: s.title ?? '돌봄', startTime: s.startTime, endTime: s.endTime }))
     })
   )
 
@@ -158,7 +158,10 @@ export function GapWeekGrid({
                     className="pointer-events-none absolute inset-x-0.5 overflow-hidden rounded bg-green text-xs font-semibold text-white"
                     style={{ top: c.start * ROW_HEIGHT, height: (c.end - c.start) * ROW_HEIGHT }}
                   >
-                    <span className="block truncate px-1 pt-1">{c.title}</span>
+                    <span className="block break-keep px-1 pt-1 leading-tight">{c.title}</span>
+                    {(c.end - c.start) >= 2 && (
+                      <span className="block px-1 opacity-80">{c.startTime}~<wbr />{c.endTime}</span>
+                    )}
                   </div>
                 ))
               )}
