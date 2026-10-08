@@ -158,7 +158,7 @@ export function GapWeekGrid({
                     className="pointer-events-none absolute inset-x-0.5 overflow-hidden rounded bg-green text-xs font-semibold text-white"
                     style={{ top: c.start * ROW_HEIGHT, height: (c.end - c.start) * ROW_HEIGHT }}
                   >
-                    <span className="block break-keep px-1 pt-1 leading-tight">{c.title}</span>
+                    <span className="block px-1 pt-1 leading-tight">{c.title}</span>
                     {(c.end - c.start) >= 2 && (
                       <span className="block px-1 opacity-80">{c.startTime}~<wbr />{c.endTime}</span>
                     )}
