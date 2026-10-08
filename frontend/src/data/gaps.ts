@@ -115,6 +115,7 @@ export function computeGaps(
     .filter((i): i is Interval => i !== null)
 
   return subtract(merge(parentBusy), childCovered)
+    .filter((i) => i.end - i.start > child.commuteMinutes)
     .sort((a, b) => a.start - b.start)
     .map((i) => ({ start: toTime(i.start), end: toTime(i.end) }))
 }
