@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
 type MatchState = {
   grade: string
@@ -15,29 +14,18 @@ type MatchState = {
   reset: () => void
 }
 
-export const useMatchStore = create<MatchState>()(
-  persist(
-    (set) => ({
-      grade: '',
-      time: '',
-      region: '',
-      district: '',
-      costFilter: 'all',
-      setGrade: (v) => set({ grade: v }),
-      setTime: (v) => set({ time: v }),
-      setRegion: (v) => set({ region: v, district: '' }),
-      setDistrict: (v) => set({ district: v }),
-      setCostFilter: (v) => set({ costFilter: v }),
-      reset: () => set({ grade: '', time: '', region: '', district: '', costFilter: 'all' }),
-    }),
-    {
-      name: 'match',
-      version: 1,
-      // v0 saved the old name 전라북도, which no address uses anymore
-      migrate: (state) => {
-        const s = state as MatchState
-        return s.region === '전라북도' ? { ...s, region: '전북특별자치도', district: '' } : s
-      },
-    },
-  ),
-)
+// Not persisted: a filter left over from a past visit made /find open empty; the region is
+// filled from the user's location on each visit instead (useAutoRegion)
+export const useMatchStore = create<MatchState>()((set) => ({
+  grade: '',
+  time: '',
+  region: '',
+  district: '',
+  costFilter: 'all',
+  setGrade: (v) => set({ grade: v }),
+  setTime: (v) => set({ time: v }),
+  setRegion: (v) => set({ region: v, district: '' }),
+  setDistrict: (v) => set({ district: v }),
+  setCostFilter: (v) => set({ costFilter: v }),
+  reset: () => set({ grade: '', time: '', region: '', district: '', costFilter: 'all' }),
+}))

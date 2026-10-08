@@ -9,6 +9,7 @@ import { CareScheduleEditor } from '../components/CareScheduleEditor'
 import { useMatchStore } from '../store/matchStore'
 import { useAuthStore } from '../store/authStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
+import { useAutoRegion } from '../hooks/useAutoRegion'
 import { fetchCareOptions, fetchCareOptionsForGap } from '../api/careOptions'
 import { matchesCareOption, gradeBuckets as grades, timeBuckets as times, REGIONS } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
@@ -69,6 +70,7 @@ export function Home() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gapsKey, today])
+  useAutoRegion(careOptions)
 
   useEffect(() => {
     if (user) useCareScheduleStore.getState().loadAll()

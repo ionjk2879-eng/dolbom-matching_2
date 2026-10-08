@@ -8,6 +8,7 @@ import { useMatchStore } from '../store/matchStore'
 import { useAuthStore } from '../store/authStore'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { usePaged } from '../hooks/usePaged'
+import { useAutoRegion } from '../hooks/useAutoRegion'
 import { fetchCareOptions } from '../api/careOptions'
 import { careTypeLabels, matchesCareOption, gradeBuckets, timeBuckets, REGIONS } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
@@ -70,6 +71,7 @@ export function Find() {
       .catch((err) => setError((err as Error).message))
       .finally(() => setLoading(false))
   }, [])
+  useAutoRegion(options)
 
   const results = useMemo(() => {
     const q = query.trim()

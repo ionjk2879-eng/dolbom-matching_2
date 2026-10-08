@@ -53,6 +53,15 @@ export function matchesLocation(c: CareOption, region: string, district: string)
   return true
 }
 
+// 주소 -> 필터용 시/도, 구/군. 구/군은 두 번째 토큰의 앞부분으로 본다: '서구'가 '강서구'에 걸리지 않고,
+// 띄어쓰기가 빠진 주소('김해시삼안로')도 잡힌다
+export function locationOf(address: string): { region: string; district: string } | null {
+  const region = REGIONS.find((r) => address.includes(r) || inMergedRegion(address, r))
+  if (!region) return null
+  const second = address.split(' ')[1] ?? ''
+  return { region, district: DISTRICTS[region]?.find((d) => second.startsWith(d)) ?? '' }
+}
+
 export function matchesCost(c: CareOption, costFilter: 'all' | 'free' | 'paid'): boolean {
   if (costFilter === 'free') return c.cost_per_hour === 0
   if (costFilter === 'paid') return c.cost_per_hour > 0
