@@ -30,6 +30,14 @@ export const useMatchStore = create<MatchState>()(
       setCostFilter: (v) => set({ costFilter: v }),
       reset: () => set({ grade: '', time: '', region: '', district: '', costFilter: 'all' }),
     }),
-    { name: 'match' },
+    {
+      name: 'match',
+      version: 1,
+      // v0 saved the old name 전라북도, which no address uses anymore
+      migrate: (state) => {
+        const s = state as MatchState
+        return s.region === '전라북도' ? { ...s, region: '전북특별자치도', district: '' } : s
+      },
+    },
   ),
 )

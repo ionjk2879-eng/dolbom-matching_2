@@ -1,4 +1,5 @@
 import type { CareOption } from './types'
+import { DISTRICTS } from './districts'
 
 export const careTypeLabels: Record<CareOption['type'], string> = {
   school_care: '학교돌봄',
@@ -37,8 +38,17 @@ export function coversCloseTime(closeTime: string, time: string): boolean {
   return true
 }
 
+// Addresses under the merged Gwangju-Jeonnam name belong to whichever old region (광주광역시 / 전라남도) lists their district
+const MERGED_GWANGJU_JEONNAM = '전남광주통합특별시'
+
+function inMergedRegion(address: string, region: string): boolean {
+  if (region !== '광주광역시' && region !== '전라남도') return false
+  const [head, district] = address.split(' ')
+  return head === MERGED_GWANGJU_JEONNAM && DISTRICTS[region].includes(district)
+}
+
 export function matchesLocation(c: CareOption, region: string, district: string): boolean {
-  if (region && !c.address.includes(region)) return false
+  if (region && !c.address.includes(region) && !inMergedRegion(c.address, region)) return false
   if (district && !c.address.includes(district)) return false
   return true
 }
@@ -63,6 +73,6 @@ export function matchesCareOption(
 export const REGIONS = [
   '서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시',
   '대전광역시', '울산광역시', '세종특별자치시', '경기도', '강원특별자치도',
-  '충청북도', '충청남도', '전라북도', '전라남도', '경상북도', '경상남도',
+  '충청북도', '충청남도', '전북특별자치도', '전라남도', '경상북도', '경상남도',
   '제주특별자치도',
 ]
