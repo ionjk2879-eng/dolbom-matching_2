@@ -30,11 +30,13 @@ export function GapCalendar() {
     gaps: computeGaps(child, selected, schedules, exceptions),
   }))
 
-  // 선택한 날짜에 원래 잡혀 있는 반복 일정 + 그 날의 취소 예외
+  // 선택한 날짜에 원래 잡혀 있는 반복 일정 + 그 날의 예외(취소 또는 시간 변경 — computeGaps처럼 날짜당 1개)
   const selectedDow = new Date(`${selected}T00:00:00`).getDay()
   const selectedDaySchedules = schedules
     .filter((s) => s.daysOfWeek.includes(selectedDow))
-    .map((s) => ({ schedule: s, cancel: exceptions.find((e) => e.scheduleId === s.id && e.date === selected && e.isCancelled) }))
+    .map((s) => ({ schedule: s, exception: exceptions.find((e) => e.scheduleId === s.id && e.date === selected) }))
+
+  const [editing, setEditing] = useState<{ id: string; start: string; end: string } | null>(null)
 
   // Schedules whose cancel/undo request is in flight; blocks a second click from saving a duplicate
   const [pending, setPending] = useState<string[]>([])
@@ -46,6 +48,15 @@ export function GapCalendar() {
     if (cancelId) await removeException(cancelId)
     else await addException({ scheduleId, date: selected, startTime: null, endTime: null, isCancelled: true })
     setPending((p) => p.filter((id) => id !== scheduleId))
+  }
+
+  // Only offered when the day has no exception yet, so there is nothing to replace
+  const saveOverride = async (scheduleId: string) => {
+    if (!editing || editing.start >= editing.end || pending.includes(scheduleId)) return
+    setPending((p) => [...p, scheduleId])
+    const ok = await addException({ scheduleId, date: selected, startTime: editing.start, endTime: editing.end, isCancelled: false })
+    setPending((p) => p.filter((id) => id !== scheduleId))
+    if (ok) setEditing(null)
   }
 
   return (
@@ -99,19 +110,72 @@ export function GapCalendar() {
             <div className="rounded-xl border border-line p-3">
               <p className="text-sm font-bold text-ink">이 날의 일정</p>
               <div className="mt-2 flex flex-col gap-2">
-                {selectedDaySchedules.map(({ schedule, cancel }) => (
-                  <div key={schedule.id} className="flex items-center justify-between gap-2 text-xs">
-                    <span className={cancel ? 'text-ink-2 line-through' : 'text-ink-2'}>
+                {selectedDaySchedules.map(({ schedule, exception }) => {
+                  const cancelled = exception?.isCancelled
+                  const busy = pending.includes(schedule.id)
+                  if (editing?.id === schedule.id)
+                    return (
+                      <div key={schedule.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span className="flex items-center gap-1 text-ink-2">
+                          {blockLabel(schedule, children)}
+                          <input
+                            type="time"
+                            value={editing.start}
+                            onChange={(e) => setEditing({ ...editing, start: e.target.value })}
+                            aria-label="이 날 시작 시간"
+                            className="focus-ring rounded border border-line px-1"
+                          />
+                          ~
+                          <input
+                            type="time"
+                            value={editing.end}
+                            onChange={(e) => setEditing({ ...editing, end: e.target.value })}
+                            aria-label="이 날 끝 시간"
+                            className="focus-ring rounded border border-line px-1"
+                          />
+                        </span>
+                        <div className="flex shrink-0 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => saveOverride(schedule.id)}
+                            disabled={busy || editing.start >= editing.end}
+                            className="focus-ring tap-target font-semibold text-green disabled:opacity-50"
+                          >
+                            저장
+                          </button>
+                          <button type="button" onClick={() => setEditing(null)} className="focus-ring tap-target font-semibold text-ink-2">
+                            닫기
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  return (
+                  <div key={schedule.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className={cancelled ? 'text-ink-2 line-through' : 'text-ink-2'}>
                       {blockLabel(schedule, children)} {schedule.startTime}~{schedule.endTime}
+                      {exception && !cancelled && (
+                        <b className="text-ink">
+                          {' '}→ 이 날만 {exception.startTime}~{exception.endTime}
+                        </b>
+                      )}
                     </span>
                     <div className="flex shrink-0 gap-3">
+                      {!exception && (
+                        <button
+                          type="button"
+                          onClick={() => setEditing({ id: schedule.id, start: schedule.startTime, end: schedule.endTime })}
+                          className="focus-ring tap-target font-semibold text-ink-2 hover:text-ink"
+                        >
+                          시간 변경
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => toggleCancel(schedule.id, cancel?.id)}
-                        disabled={pending.includes(schedule.id)}
-                        className={`focus-ring tap-target font-semibold ${cancel ? 'text-green' : 'text-ink-2 hover:text-ink'}`}
+                        onClick={() => toggleCancel(schedule.id, exception?.id)}
+                        disabled={busy}
+                        className={`focus-ring tap-target font-semibold ${exception ? 'text-green' : 'text-ink-2 hover:text-ink'}`}
                       >
-                        {cancel ? '취소 되돌리기' : '이 날만 취소'}
+                        {cancelled ? '취소 되돌리기' : exception ? '되돌리기' : '이 날만 취소'}
                       </button>
                       <button
                         type="button"
@@ -126,8 +190,10 @@ export function GapCalendar() {
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>            </div>
+                  )
+                })}
+              </div>
+            </div>
           )}
         </Card>
       </div>
