@@ -471,7 +471,7 @@ export function CareScheduleEditor() {
       </div>
 
       {view === 'gap' ? (
-        <GapWeekGrid kids={children} schedules={draftSchedules} />
+        <GapWeekGrid kids={children} schedules={draftSchedules.filter((s) => s.type !== 'care')} />
       ) : view === 'calendar' ? (
         <div className="flex flex-col gap-4">
           <div className="grid gap-6 sm:grid-cols-[1fr_240px]">
