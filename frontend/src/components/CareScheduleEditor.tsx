@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Button } from './Button'
 import { WeekScheduleGrid, type Target } from './WeekScheduleGrid'
 import { isTouchDevice } from '../data/device'
@@ -22,8 +22,6 @@ function durationLabel(start: string, end: string) {
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
 }
 
-let tempId = 0
-const nextTempId = () => `temp-${++tempId}`
 
 function ChildForm() {
   const addChild = useCareScheduleStore((s) => s.addChild)
@@ -305,88 +303,19 @@ export function CareScheduleEditor() {
   const [selectedDate, setSelectedDate] = useState(() => toISO(new Date()))
   const [override, setOverride] = useState<{ id: string; start: string; end: string } | null>(null)
 
-  // 드래프트: 저장 버튼 전까지 API 호출 없이 로컬에서만 변경
-  const [draftSchedules, setDraftSchedules] = useState<RecurringSchedule[]>(schedules)
-  const [isDirty, setIsDirty] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-
-  // 드래프트가 클린할 때만 store 변경을 반영 (초기 로드 및 저장 완료 후)
-  useEffect(() => {
-    if (!isDirty) setDraftSchedules(schedules)
-  }, [schedules]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const draftAdd = (s: Omit<RecurringSchedule, 'id'>) => {
-    setDraftSchedules((prev) => [...prev, { id: nextTempId(), ...s }])
-    setIsDirty(true)
-  }
-
-  const draftRemove = (id: string) => {
-    setDraftSchedules((prev) => prev.filter((s) => s.id !== id))
-    setIsDirty(true)
-  }
-
-  const draftUpdate = (id: string, data: Omit<RecurringSchedule, 'id'>) => {
-    setDraftSchedules((prev) => prev.map((s) => (s.id === id ? { id, ...data } : s)))
-    setIsDirty(true)
-  }
-
-  const handleSave = async () => {
-    setIsSaving(true)
-    const storeIdSet = new Set(schedules.map((s) => s.id))
-    const draftRealIds = new Set(
-      draftSchedules.filter((d) => !d.id.startsWith('temp-')).map((d) => d.id)
-    )
-
-    // 스토어에 있지만 드래프트에서 사라진 것 → 삭제
-    for (const s of schedules) {
-      if (!draftRealIds.has(s.id)) await removeSchedule(s.id)
-    }
-
-    // 같은 ID인데 내용이 달라진 것 → 수정
-    for (const d of draftSchedules) {
-      if (d.id.startsWith('temp-') || !storeIdSet.has(d.id)) continue
-      const orig = schedules.find((s) => s.id === d.id)!
-      const changed =
-        orig.startTime !== d.startTime ||
-        orig.endTime !== d.endTime ||
-        JSON.stringify([...orig.daysOfWeek].sort()) !== JSON.stringify([...d.daysOfWeek].sort()) ||
-        orig.type !== d.type ||
-        orig.childId !== d.childId ||
-        orig.parentLabel !== d.parentLabel
-      if (changed) await updateSchedule(d.id, d)
-    }
-
-    // 임시 ID → 새로 생성
-    for (const d of draftSchedules) {
-      if (!d.id.startsWith('temp-')) continue
-      const { id: _, ...data } = d
-      await addSchedule(data)
-    }
-
-    setIsSaving(false)
-    setIsDirty(false)
-  }
-
-  const handleCancel = () => {
-    setDraftSchedules(schedules)
-    setIsDirty(false)
-    setEditingId(null)
-  }
-
   const type = target.type === 'parent' ? 'parent_work' as const : 'child_school' as const
   const childId = target.type === 'child' ? target.childId : null
   const parentLabel = target.type === 'parent' ? target.parentLabel : undefined
 
-  const activeSchedules = draftSchedules.filter((s) =>
+  const activeSchedules = schedules.filter((s) =>
     target.type === 'parent'
-      // Untagged work shows in both parent tabs so it's never invisible; tag it from the edit form
       ? s.type === 'parent_work' && (s.parentLabel === parentLabel || !s.parentLabel)
       : (s.type === 'child_school' || s.type === 'care') && s.childId === target.childId
   )
 
   const onCreate = (daysOfWeek: number[], startTime: string, endTime: string) => {
     const overlapIds = new Set(
-      draftSchedules
+      schedules
         .filter((s) =>
           s.type === type && s.childId === childId &&
           (type === 'parent_work' ? s.parentLabel === parentLabel : true) &&
@@ -395,37 +324,33 @@ export function CareScheduleEditor() {
         )
         .map((s) => s.id)
     )
-    const overlapping = draftSchedules.filter((s) => overlapIds.has(s.id))
-    overlapping.forEach((s) => draftRemove(s.id))
-
-    // 드래그 범위 밖 요일은 원래 시간 그대로 단일 요일 블록으로 복원
+    const overlapping = schedules.filter((s) => overlapIds.has(s.id))
+    overlapping.forEach((s) => removeSchedule(s.id))
     overlapping.forEach((s) => {
       s.daysOfWeek.filter((d) => !daysOfWeek.includes(d)).forEach((d) =>
-        draftAdd({ type, childId, daysOfWeek: [d], startTime: s.startTime, endTime: s.endTime, parentLabel: s.parentLabel })
+        addSchedule({ type, childId, daysOfWeek: [d], startTime: s.startTime, endTime: s.endTime, parentLabel: s.parentLabel })
       )
     })
-
-    // 드래그 범위 각 요일에 블록 생성 — 기존 블록 시간과 병합하지 않고 드래그한 시간 그대로 씀
     daysOfWeek.forEach((day) => {
-      draftAdd({ type, childId, daysOfWeek: [day], startTime, endTime, parentLabel })
+      addSchedule({ type, childId, daysOfWeek: [day], startTime, endTime, parentLabel })
     })
   }
 
   const onPunch = (id: string, punchStart: string, punchEnd: string) => {
-    const s = draftSchedules.find((x) => x.id === id)
+    const s = schedules.find((x) => x.id === id)
     if (!s) return
-    draftRemove(id)
+    removeSchedule(id)
     if (s.startTime < punchStart)
-      draftAdd({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: s.startTime, endTime: punchStart, parentLabel: s.parentLabel })
+      addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: s.startTime, endTime: punchStart, parentLabel: s.parentLabel })
     if (s.endTime > punchEnd)
-      draftAdd({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: punchEnd, endTime: s.endTime, parentLabel: s.parentLabel })
+      addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: punchEnd, endTime: s.endTime, parentLabel: s.parentLabel })
   }
 
   const onMove = (id: string, daysOfWeek: number[], startTime: string, endTime: string) => {
-    const s = draftSchedules.find((x) => x.id === id)
+    const s = schedules.find((x) => x.id === id)
     if (!s) return
     const { id: _id, ...rest } = s
-    draftUpdate(id, { ...rest, daysOfWeek, startTime, endTime })
+    updateSchedule(id, { ...rest, daysOfWeek, startTime, endTime })
   }
 
   // 공백 캘린더 탭
@@ -471,7 +396,7 @@ export function CareScheduleEditor() {
       </div>
 
       {view === 'gap' ? (
-        <GapWeekGrid kids={children} schedules={draftSchedules.filter((s) => s.type !== 'care')} />
+        <GapWeekGrid kids={children} schedules={schedules.filter((s) => s.type !== 'care')} />
       ) : view === 'calendar' ? (
         <div className="flex flex-col gap-4">
           <div className="grid gap-6 sm:grid-cols-[1fr_240px]">
@@ -699,27 +624,27 @@ export function CareScheduleEditor() {
           target={target}
           onCreate={onCreate}
           onEdit={setEditingId}
-          onDelete={draftRemove}
+          onDelete={removeSchedule}
           onPunch={onPunch}
           onMove={onMove}
         />
         {editingId && (() => {
-          const schedule = draftSchedules.find((s) => s.id === editingId)
+          const schedule = schedules.find((s) => s.id === editingId)
           if (!schedule) return null
           return (
             <ScheduleEditForm
               key={editingId}
               schedule={schedule}
               onClose={() => setEditingId(null)}
-              onSave={draftUpdate}
-              onRemove={draftRemove}
+              onSave={updateSchedule}
+              onRemove={removeSchedule}
             />
           )
         })()}
 
         {/* 아이 탭: 선택된 돌봄 센터 목록 */}
         {target.type === 'child' && (() => {
-          const careList = draftSchedules.filter(
+          const careList = schedules.filter(
             (s) => s.type === 'care' && s.childId === childId
           )
           if (careList.length === 0) return null
@@ -740,25 +665,6 @@ export function CareScheduleEditor() {
           )
         })()}
 
-        {/* 저장 / 취소 버튼 */}
-        <div className="flex items-center gap-3">
-          <Button onClick={handleSave} disabled={isSaving || !isDirty}>
-            {isSaving ? '저장 중...' : '저장'}
-          </Button>
-          {isDirty && (
-            <>
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={isSaving}
-                className="focus-ring text-xs font-semibold text-ink-2 disabled:opacity-40"
-              >
-                취소
-              </button>
-              <span className="text-xs text-warn">저장하지 않은 변경 사항이 있어요</span>
-            </>
-          )}
-        </div>
       </div>
       </>
       )}
