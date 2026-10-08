@@ -10,13 +10,13 @@ export function NotFound() {
       <div className="mt-8 flex gap-2">
         <Link
           to="/"
-          className="focus-ring rounded-xl bg-green px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+          className="focus-ring inline-flex min-h-11 items-center rounded-xl bg-green px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
         >
           홈으로
         </Link>
         <Link
           to="/find"
-          className="focus-ring rounded-xl border border-line-2 px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ivory-deep"
+          className="focus-ring inline-flex min-h-11 items-center rounded-xl border border-line-2 px-5 py-2.5 text-sm font-semibold text-ink hover:bg-ivory-deep"
         >
           돌봄 찾기
         </Link>

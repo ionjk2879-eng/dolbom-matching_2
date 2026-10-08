@@ -20,7 +20,7 @@ export function Consult() {
           <p className="mt-1 text-sm text-ink-2">그동안은 돌봄 찾기에서 기관에 전화로 문의해 주세요.</p>
           <Link
             to="/find"
-            className="focus-ring mt-5 inline-block rounded-xl bg-green px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+            className="focus-ring mt-5 inline-flex min-h-11 items-center rounded-xl bg-green px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
           >
             돌봄 찾기
           </Link>
