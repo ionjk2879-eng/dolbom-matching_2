@@ -43,8 +43,9 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
   const [type, setType] = useState<ScheduleType>(editing?.type ?? 'parent_work')
   const [childId, setChildId] = useState(editing?.childId ?? '')
   const [days, setDays] = useState<number[]>(editing?.daysOfWeek ?? [1, 2, 3, 4, 5])
-  // Off = one-time schedule on `date` only
-  const [repeat, setRepeat] = useState(!editing?.date)
+  // Off = one-time schedule on `date` only. The 매주 반복 / 하루만 switch is hidden for now
+  // (restore it from commit 1743cdb), so new schedules always repeat; a one-time one stays editable.
+  const repeat = !editing?.date
   const [date, setDate] = useState(() => editing?.date ?? toISO(new Date()))
   const [startTime, setStartTime] = useState(editing?.startTime ?? '09:00')
   const [endTime, setEndTime] = useState(editing?.endTime ?? '18:00')
@@ -154,27 +155,6 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
                 </select>
               </label>
             )}
-
-            <div>
-              <p className="text-sm font-semibold text-ink">반복</p>
-              {/* Same segmented switch as 유형 above */}
-              <div className="mt-1.5 inline-flex rounded-xl border border-line bg-ivory-deep-2 p-1">
-                {([true, false] as const).map((r) => (
-                  <button
-                    key={String(r)}
-                    type="button"
-                    aria-pressed={repeat === r}
-                    onClick={() => setRepeat(r)}
-                    className={`focus-ring tap-target rounded-lg px-4 py-2 text-sm font-semibold ${repeat === r ? 'bg-ivory text-ink' : 'text-ink-2'}`}
-                  >
-                    {r ? '매주 반복' : '하루만'}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-1.5 text-xs text-ink-2">
-                {repeat ? '다음 주에도 같은 요일·시간에 계속 적용돼요' : '고른 날짜 하루에만 적용돼요'}
-              </p>
-            </div>
 
             {repeat ? (
               <div>
