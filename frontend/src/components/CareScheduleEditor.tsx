@@ -10,6 +10,7 @@ import { useCareScheduleStore } from '../store/careScheduleStore'
 import { blockLabel } from '../data/scheduleLabel'
 import { useMatchStore } from '../store/matchStore'
 import { useFavoritesStore } from '../store/favoritesStore'
+import { HeartButton } from './HeartButton'
 import { REGIONS, careTypeLabels } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
 import { ChildManager } from './ChildManager'
@@ -752,14 +753,11 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                           </Link>
                           {sub && <p className="text-xs text-ink-2">{sub}</p>}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => favorites.toggle(fid)}
-                          aria-label="즐겨찾기 해제"
-                          className="focus-ring tap-target shrink-0 text-lg leading-none"
-                        >
-                          ❤️
-                        </button>
+                        <HeartButton
+                          active={true}
+                          onToggle={() => favorites.toggle(fid)}
+                          className="shrink-0"
+                        />
                       </div>
                     )
                   })}

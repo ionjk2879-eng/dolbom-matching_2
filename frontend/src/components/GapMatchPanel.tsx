@@ -9,6 +9,7 @@ import type { CareOption, Child } from '../data/types'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { usePaged } from '../hooks/usePaged'
 import { useFavoritesStore } from '../store/favoritesStore'
+import { HeartButton } from './HeartButton'
 
 export function GapMatchPanel({
   child,
@@ -296,14 +297,11 @@ export function GapMatchPanel({
                     {distance != null && ` · ${formatDistance(distance)}`}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); favorites.toggle(option.id) }}
-                  aria-label={favorites.has(option.id) ? '즐겨찾기 해제' : '즐겨찾기'}
-                  className="focus-ring tap-target shrink-0 self-start text-lg leading-none"
-                >
-                  {favorites.has(option.id) ? '❤️' : '🤍'}
-                </button>
+                <HeartButton
+                  active={favorites.has(option.id)}
+                  onToggle={(e) => { e.preventDefault(); e.stopPropagation(); favorites.toggle(option.id) }}
+                  className="shrink-0 self-start"
+                />
               </label>
 
               {isSelecting && (

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useFavoritesStore } from '../store/favoritesStore'
+import { HeartButton } from '../components/HeartButton'
 import { Link, useParams } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
@@ -76,14 +77,11 @@ export function CareOptionDetail() {
         <Card className="flex flex-col gap-5">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-bold text-ink">{option.name}</p>
-            <button
-              type="button"
-              onClick={() => favorites.toggle(option.id)}
-              aria-label={favorites.has(option.id) ? '즐겨찾기 해제' : '즐겨찾기'}
-              className="focus-ring tap-target shrink-0 text-2xl leading-none"
-            >
-              {favorites.has(option.id) ? '❤️' : '🤍'}
-            </button>
+            <HeartButton
+              active={favorites.has(option.id)}
+              onToggle={() => favorites.toggle(option.id)}
+              size={22}
+            />
           </div>
           <div className="grid grid-cols-3 gap-2">
             {facts.map(([label, value]) => (

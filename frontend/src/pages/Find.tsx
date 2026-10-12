@@ -16,6 +16,7 @@ import { computeGaps, overlapWithGap } from '../data/gaps'
 import { toISO } from '../data/date'
 import type { CareOption, CareProviderType } from '../data/types'
 import { useFavoritesStore } from '../store/favoritesStore'
+import { HeartButton } from '../components/HeartButton'
 
 type SortKey = 'name' | 'cost'
 
@@ -248,14 +249,10 @@ export function Find() {
           <div className="mt-2 rounded-2xl sm:absolute sm:bottom-3 sm:right-3 sm:mt-0 sm:w-64 border border-line bg-ivory-card p-3 shadow-[0_24px_40px_-28px_rgba(60,50,30,.45)]">
             <div className="flex items-start justify-between gap-2">
               <p className="text-sm font-bold leading-tight text-ink">{selectedOption.name}</p>
-              <button
-                type="button"
-                onClick={() => favorites.toggle(selectedOption.id)}
-                aria-label={favorites.has(selectedOption.id) ? '즐겨찾기 해제' : '즐겨찾기'}
-                className="focus-ring tap-target shrink-0 text-lg leading-none"
-              >
-                {favorites.has(selectedOption.id) ? '❤️' : '🤍'}
-              </button>
+              <HeartButton
+                active={favorites.has(selectedOption.id)}
+                onToggle={(e) => { e.stopPropagation(); favorites.toggle(selectedOption.id) }}
+              />
             </div>
             <p className="mt-0.5 text-xs text-ink-2">{selectedOption.address}</p>
             <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -326,14 +323,10 @@ export function Find() {
                       {c.cost_per_hour === 0 && (
                         <span className="rounded-full bg-green-soft px-2 py-0.5 text-xs font-bold text-green">무료</span>
                       )}
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); favorites.toggle(c.id) }}
-                        aria-label={favorites.has(c.id) ? '즐겨찾기 해제' : '즐겨찾기'}
-                        className="focus-ring tap-target text-lg leading-none"
-                      >
-                        {favorites.has(c.id) ? '❤️' : '🤍'}
-                      </button>
+                      <HeartButton
+                        active={favorites.has(c.id)}
+                        onToggle={(e) => { e.stopPropagation(); favorites.toggle(c.id) }}
+                      />
                     </div>
                   </div>
                   <p className="mt-1 text-xs text-ink-2">
