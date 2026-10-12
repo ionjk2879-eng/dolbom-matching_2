@@ -16,6 +16,8 @@ export type Preset = {
   name: string
   createdAt: string
   items: PresetItem[]
+  region?: string
+  district?: string
 }
 
 const KEY = 'schedule-presets'

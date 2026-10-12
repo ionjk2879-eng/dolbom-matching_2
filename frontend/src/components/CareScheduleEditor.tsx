@@ -188,11 +188,12 @@ function PresetSection({
 }: {
   draft: RecurringSchedule[]
   kids: Child[]
-  onLoad: (items: PresetItem[]) => void
+  onLoad: (preset: Preset) => void
 }) {
   const [presets, setPresets] = useState<Preset[]>(() => loadPresets())
   const [saveName, setSaveName] = useState('')
   const [showInput, setShowInput] = useState(false)
+  const match = useMatchStore()
 
   const handleSavePreset = () => {
     if (!saveName.trim()) return
@@ -201,6 +202,8 @@ function PresetSection({
       name: saveName.trim(),
       createdAt: new Date().toISOString(),
       items: draftToPresetItems(draft, kids),
+      region: match.region || undefined,
+      district: match.district || undefined,
     }
     upsertPreset(p)
     setPresets(loadPresets())
@@ -248,7 +251,7 @@ function PresetSection({
               <span className="flex-1 text-ink">{p.name}</span>
               <button
                 type="button"
-                onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 불러올까요?`)) onLoad(p.items) }}
+                onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 불러올까요?`)) onLoad(p) }}
                 className="focus-ring text-xs font-semibold text-green"
               >
                 불러오기
@@ -606,10 +609,18 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                       const careChild = children.find((c) => c.id === s.childId)
                       const days = [...s.daysOfWeek].sort((a, b) => a - b).map((d) => WEEKDAY_LABELS[d]).join('')
                       return (
-                        <div key={s.id} className="rounded-xl border border-green bg-green-soft/20 px-3 py-3">
+                        <div
+                          key={s.id}
+                          className="cursor-pointer rounded-xl border border-green bg-green-soft/20 px-3 py-3 hover:bg-green-soft/40 transition-colors"
+                          onClick={() => { if (s.childId) setTarget({ type: 'child', childId: s.childId }) }}
+                        >
                           <p className="text-sm font-bold text-ink">
                             {s.careOptionId ? (
-                              <Link to={`/find/${s.careOptionId}`} className="hover:underline">
+                              <Link
+                                to={`/find/${s.careOptionId}`}
+                                className="hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 {s.title ?? option?.name ?? '돌봄(선택)'}
                               </Link>
                             ) : (s.title ?? '돌봄(선택)')}
@@ -642,9 +653,11 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
             <PresetSection
               draft={draft}
               kids={children}
-              onLoad={(items) => {
+              onLoad={(preset) => {
                 if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
-                setDraft(presetItemsToDraft(items, children, tmpId))
+                setDraft(presetItemsToDraft(preset.items, children, tmpId))
+                if (preset.region !== undefined) match.setRegion(preset.region)
+                if (preset.district !== undefined) match.setDistrict(preset.district)
                 setIsDirty(true)
               }}
             />
