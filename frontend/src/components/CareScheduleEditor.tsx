@@ -626,20 +626,29 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                         setDraft((prev) => prev.map((s) => ids.includes(s.id) ? { ...s, color } : s))
                       }}
                       onSave={(id, data) => {
-                        const s = schedules.find((x) => x.id === id)
-                        if (s?.type === 'care') {
-                          updateSchedule(id, data)
-                        } else {
-                          draftUpdate(id, data)
+                        // Non-temp (existing server) schedules auto-save immediately
+                        const saveOne = (sid: string, sdata: Omit<RecurringSchedule, 'id'>) => {
+                          const existing = schedules.find((x) => x.id === sid)
+                          if (!existing) return
+                          if (existing.type === 'care' || !isTemp(sid)) {
+                            updateSchedule(sid, sdata)
+                            if (existing.type !== 'care') {
+                              // sync draft silently (no isDirty) so handleSave diff stays clean
+                              setDraft((prev) => prev.map((d) => d.id === sid ? { ...sdata, id: sid } : d))
+                            }
+                          } else {
+                            draftUpdate(sid, sdata)
+                          }
                         }
-                        if (multiSelIds.length > 1 && data.color !== schedule.color) {
+                        saveOne(id, data)
+                        // Multi-select: propagate color change to all selected
+                        const origColor = editOriginalColorsRef.current.get(id)
+                        if (multiSelIds.length > 1 && data.color !== origColor) {
                           multiSelIds.filter((sid) => sid !== id).forEach((sid) => {
                             const ms = schedules.find((x) => x.id === sid)
-                            if (ms && ms.color !== data.color) {
-                              const { id: _msId, ...msRest } = ms
-                              if (ms.type === 'care') updateSchedule(sid, { ...msRest, color: data.color })
-                              else draftUpdate(sid, { ...msRest, color: data.color })
-                            }
+                            if (!ms) return
+                            const { id: _msId, ...msRest } = ms
+                            saveOne(sid, { ...msRest, color: data.color })
                           })
                         }
                       }}
