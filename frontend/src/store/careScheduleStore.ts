@@ -204,63 +204,94 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
         }))
       }),
 
-    addSchedule: (sch) =>
-      attempt(async () => {
-        const row = await createSchedule(toPayload(sch))
-        if (sch.date && !row.schedule_date) {
-          await deleteSchedule(row.id)
-          throw new Error(ONE_TIME_UNSUPPORTED)
+    addSchedule: (sch) => {
+      const tempId = `temp_${Math.random().toString(36).slice(2)}`
+      set((s) => ({
+        schedules: [...s.schedules, { id: tempId, childId: sch.childId, type: sch.type, daysOfWeek: sch.daysOfWeek, date: sch.date, startTime: sch.startTime, endTime: sch.endTime, parentLabel: sch.parentLabel, color: sch.color, title: sch.title, memo: sch.memo, careOptionId: sch.careOptionId }],
+      }))
+      return attempt(async () => {
+        try {
+          const row = await createSchedule(toPayload(sch))
+          if (sch.date && !row.schedule_date) {
+            await deleteSchedule(row.id)
+            throw new Error(ONE_TIME_UNSUPPORTED)
+          }
+          if (sch.careOptionId) {
+            const tags = useCareOptionTags.getState().careOptionIdBySchedule
+            useCareOptionTags.setState({ careOptionIdBySchedule: { ...tags, [row.id]: sch.careOptionId } })
+          }
+          saveNote(row.id, sch)
+          if (sch.parentLabel) {
+            const parentTags = useParentTags.getState().parentLabelBySchedule
+            useParentTags.setState({ parentLabelBySchedule: { ...parentTags, [row.id]: sch.parentLabel } })
+          }
+          saveColor(row.id, sch.color)
+          set((s) => ({
+            schedules: s.schedules.map((x) =>
+              x.id === tempId ? { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel, color: sch.color } : x
+            ),
+          }))
+        } catch (err) {
+          set((s) => ({ schedules: s.schedules.filter((x) => x.id !== tempId) }))
+          throw err
         }
-        if (sch.careOptionId) {
-          const tags = useCareOptionTags.getState().careOptionIdBySchedule
-          useCareOptionTags.setState({ careOptionIdBySchedule: { ...tags, [row.id]: sch.careOptionId } })
-        }
-        saveNote(row.id, sch)
-        if (sch.parentLabel) {
-          const parentTags = useParentTags.getState().parentLabelBySchedule
-          useParentTags.setState({ parentLabelBySchedule: { ...parentTags, [row.id]: sch.parentLabel } })
-        }
-        saveColor(row.id, sch.color)
-        set((s) => ({
-          schedules: [...s.schedules, { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel, color: sch.color }],
-        }))
-      }),
+      })
+    },
 
-    updateSchedule: (id, sch) =>
-      attempt(async () => {
-        const row = await apiUpdateSchedule(id, toPayload(sch))
-        if (sch.date && !row.schedule_date) {
-          // Put the old days/times back so the schedule isn't left on a single weekday
-          const prev = get().schedules.find((x) => x.id === id)
-          if (prev) await apiUpdateSchedule(id, toPayload(prev))
-          throw new Error(ONE_TIME_UNSUPPORTED)
+    updateSchedule: (id, sch) => {
+      const snapshot = get().schedules.find((x) => x.id === id)
+      set((s) => ({
+        schedules: s.schedules.map((x) =>
+          x.id === id ? { ...x, childId: sch.childId, type: sch.type, daysOfWeek: sch.daysOfWeek, date: sch.date, startTime: sch.startTime, endTime: sch.endTime, parentLabel: sch.parentLabel, color: sch.color, title: sch.title, memo: sch.memo, careOptionId: sch.careOptionId } : x
+        ),
+      }))
+      return attempt(async () => {
+        try {
+          const row = await apiUpdateSchedule(id, toPayload(sch))
+          if (sch.date && !row.schedule_date) {
+            // Put the old days/times back on the server so the schedule isn't left on a single weekday
+            if (snapshot) await apiUpdateSchedule(id, toPayload(snapshot))
+            throw new Error(ONE_TIME_UNSUPPORTED)
+          }
+          const tags = { ...useCareOptionTags.getState().careOptionIdBySchedule }
+          if (sch.careOptionId) tags[id] = sch.careOptionId
+          else delete tags[id]
+          useCareOptionTags.setState({ careOptionIdBySchedule: tags })
+          const parentTags = { ...useParentTags.getState().parentLabelBySchedule }
+          if (sch.parentLabel) parentTags[id] = sch.parentLabel
+          else delete parentTags[id]
+          useParentTags.setState({ parentLabelBySchedule: parentTags })
+          saveNote(id, sch)
+          saveColor(id, sch.color)
+          set((s) => ({
+            schedules: s.schedules.map((x) =>
+              x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel, color: sch.color } : x,
+            ),
+          }))
+        } catch (err) {
+          if (snapshot) set((s) => ({ schedules: s.schedules.map((x) => x.id === id ? snapshot : x) }))
+          throw err
         }
-        const tags = { ...useCareOptionTags.getState().careOptionIdBySchedule }
-        if (sch.careOptionId) tags[id] = sch.careOptionId
-        else delete tags[id]
-        useCareOptionTags.setState({ careOptionIdBySchedule: tags })
-        const parentTags = { ...useParentTags.getState().parentLabelBySchedule }
-        if (sch.parentLabel) parentTags[id] = sch.parentLabel
-        else delete parentTags[id]
-        useParentTags.setState({ parentLabelBySchedule: parentTags })
-        saveNote(id, sch)
-        saveColor(id, sch.color)
-        set((s) => ({
-          schedules: s.schedules.map((x) =>
-            x.id === id ? { ...toRecurring(row), careOptionId: sch.careOptionId, title: sch.title, memo: sch.memo, parentLabel: sch.parentLabel, color: sch.color } : x,
-          ),
-        }))
-      }),
+      })
+    },
 
-    removeSchedule: (id) =>
-      attempt(async () => {
-        await deleteSchedule(id)
-        dropLocalTags([id])
-        set((s) => ({
-          schedules: s.schedules.filter((x) => x.id !== id),
-          exceptions: s.exceptions.filter((x) => x.scheduleId !== id),
-        }))
-      }),
+    removeSchedule: (id) => {
+      const snapshot = get().schedules.find((x) => x.id === id)
+      const snapshotExceptions = get().exceptions.filter((x) => x.scheduleId === id)
+      set((s) => ({
+        schedules: s.schedules.filter((x) => x.id !== id),
+        exceptions: s.exceptions.filter((x) => x.scheduleId !== id),
+      }))
+      return attempt(async () => {
+        try {
+          await deleteSchedule(id)
+          dropLocalTags([id])
+        } catch (err) {
+          if (snapshot) set((s) => ({ schedules: [...s.schedules, snapshot], exceptions: [...s.exceptions, ...snapshotExceptions] }))
+          throw err
+        }
+      })
+    },
 
     addException: (e) =>
       attempt(async () => {

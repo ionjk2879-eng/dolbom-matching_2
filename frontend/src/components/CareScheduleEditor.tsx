@@ -193,7 +193,7 @@ export function CareScheduleEditor() {
 
   const activeSchedules = schedules.filter((s) =>
     target.type === 'parent'
-      ? s.type === 'parent_work' && (s.parentLabel === parentLabel || !s.parentLabel)
+      ? s.type === 'parent_work' && (s.parentLabel === parentLabel || (!s.parentLabel && parentLabel === 'mom'))
       : (s.type === 'child_school' || s.type === 'care') && s.childId === target.childId
   )
 
