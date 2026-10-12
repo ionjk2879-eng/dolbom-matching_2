@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from './Card'
 import { distanceKm, formatDistance, type LatLng } from '../data/geo'
-import { overlapWithGap, remainingGap, toMinutes, type Gap } from '../data/gaps'
+import { matchPicks, overlapWithGap, remainingGap, toMinutes, type Gap } from '../data/gaps'
 import { careTypeLabels } from '../data/careMatch'
 import { WEEKDAY_LABELS } from '../data/date'
 import type { CareOption, Child } from '../data/types'
@@ -62,22 +62,12 @@ export function GapMatchPanel({
       return dur(b.overlap) - dur(a.overlap)
     })
 
-  // Only a pick whose time falls inside this gap counts as checked here (one option can serve several gaps)
-  const checkedFor = (optionId: string) => {
-    const mine = schedules.filter((s) => s.childId === child.id && s.type === 'care')
-    const tagged = mine.find(
-      (s) =>
-        s.careOptionId === optionId &&
-        toMinutes(s.startTime) < toMinutes(gap.end) &&
-        toMinutes(s.endTime) > toMinutes(gap.start),
-    )
-    if (tagged) return tagged
-    // careOptionId lives in localStorage, so on another device a pick has no tag. Recognize it by its
-    // exact time (it was saved as this option's overlap) so the box shows checked instead of inviting a duplicate.
-    // ponytail: two options with the identical overlap both read as checked; fixed once the tag is stored server-side
-    const overlap = candidates.find((c) => c.option.id === optionId)?.overlap
-    return overlap && mine.find((s) => !s.careOptionId && s.startTime === overlap.start && s.endTime === overlap.end)
-  }
+  const picks = matchPicks(
+    candidates,
+    schedules.filter((s) => s.childId === child.id && s.type === 'care'),
+    gap,
+  )
+  const checkedFor = (optionId: string) => picks.get(optionId)
 
   // Show a few at a time (options is rebuilt each render, so reset on what actually changes)
   const paged = usePaged(candidates, 5, `${sortBy}-${here ? 'here' : ''}-${options.length}`)

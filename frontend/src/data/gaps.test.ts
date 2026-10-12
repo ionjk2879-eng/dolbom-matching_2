@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeGaps, occursOn, overlapWithGap, remainingGap, subtract, toMinutes, toTime } from './gaps'
+import { computeGaps, matchPicks, occursOn, overlapWithGap, remainingGap, subtract, toMinutes, toTime } from './gaps'
 import type { CareOption, Child, RecurringSchedule, ScheduleException } from './types'
 
 const MON = '2026-10-12'
@@ -176,5 +176,23 @@ describe('care option overlap', () => {
       { start: '13:00', end: '14:00' },
       { start: '17:00', end: '18:00' },
     ])
+  })
+})
+
+describe('matchPicks', () => {
+  const gap = { start: '14:50', end: '15:30' }
+  const candidates = ['a', 'b'].map((id) => ({
+    option: { id, open_time: '14:00', close_time: '19:00' } as CareOption,
+    overlap: gap,
+  }))
+
+  it('gives an untagged pick to only one of two options with the same overlap', () => {
+    const picks = matchPicks(candidates, [care('14:50', '15:30')], gap)
+    expect([...picks.keys()]).toEqual(['a'])
+  })
+
+  it('gives a tagged pick to its own option', () => {
+    const picks = matchPicks(candidates, [care('14:50', '15:30', { careOptionId: 'b' })], gap)
+    expect([...picks.keys()]).toEqual(['b'])
   })
 })

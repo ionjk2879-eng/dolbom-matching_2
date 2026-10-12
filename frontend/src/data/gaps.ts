@@ -140,6 +140,34 @@ export function overlapWithGap(option: CareOption, gap: Gap): Gap | null {
   return { start: toTime(start), end: toTime(end) }
 }
 
+// 후보 옵션별로 이 공백에서 선택된 돌봄 일정을 찾는다. 태그(careOptionId)가 없는 일정은 정확한 시간으로
+// 알아보되, 한 일정은 한 후보만 가져가서 겹침이 같은 옵션들이 다 같이 체크돼 보이지 않게 한다.
+// ponytail: 동점 중 실제로 어느 옵션을 골랐는지는 여전히 모름 — 태그가 서버에 저장되면 해결
+export function matchPicks(
+  candidates: { option: CareOption; overlap: Gap }[],
+  careSchedules: RecurringSchedule[],
+  gap: Gap,
+): Map<string, RecurringSchedule> {
+  const claimed = new Set<string>()
+  const map = new Map<string, RecurringSchedule>()
+  for (const { option, overlap } of candidates) {
+    const pick =
+      careSchedules.find(
+        (s) =>
+          s.careOptionId === option.id &&
+          toMinutes(s.startTime) < toMinutes(gap.end) &&
+          toMinutes(s.endTime) > toMinutes(gap.start),
+      ) ??
+      careSchedules.find(
+        (s) => !s.careOptionId && !claimed.has(s.id) && s.startTime === overlap.start && s.endTime === overlap.end,
+      )
+    if (!pick) continue
+    map.set(option.id, pick)
+    if (!pick.careOptionId) claimed.add(pick.id)
+  }
+  return map
+}
+
 // 공백에서 이미 선택한(체크된) 옵션들의 커버 구간을 뺀 나머지
 export function remainingGap(gap: Gap, covered: Gap[]): Gap[] {
   return subtract(
