@@ -24,16 +24,17 @@ CREATE TABLE IF NOT EXISTS children (
   created_at      TIMESTAMPTZ  DEFAULT NOW()
 );
 
--- 아이/부모의 반복 주간 일정 패턴
+-- 아이/부모의 반복 주간 일정 패턴 (schedule_date가 있으면 단발 일정)
 CREATE TABLE IF NOT EXISTS schedules (
-  id           UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id      UUID          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  child_id     UUID          REFERENCES children(id) ON DELETE CASCADE,
-  type         schedule_type NOT NULL,
-  days_of_week INTEGER[]     NOT NULL,
-  start_time   TIME          NOT NULL,
-  end_time     TIME          NOT NULL,
-  created_at   TIMESTAMPTZ   DEFAULT NOW()
+  id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  child_id      UUID          REFERENCES children(id) ON DELETE CASCADE,
+  type          schedule_type NOT NULL,
+  days_of_week  INTEGER[]     NOT NULL,
+  start_time    TIME          NOT NULL,
+  end_time      TIME          NOT NULL,
+  schedule_date DATE          NULL,
+  created_at    TIMESTAMPTZ   DEFAULT NOW()
 );
 
 -- 특정 날짜만 다른 경우

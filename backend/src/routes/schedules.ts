@@ -34,6 +34,7 @@ schedules.post('/', async (c) => {
     days_of_week: number[]
     start_time: string
     end_time: string
+    schedule_date?: string | null
   }>()
 
   if (!VALID_TYPES.includes(body.type as ScheduleType))
@@ -49,6 +50,7 @@ schedules.post('/', async (c) => {
     days_of_week: body.days_of_week,
     start_time: body.start_time,
     end_time: body.end_time,
+    schedule_date: body.schedule_date ?? null,
   })
   await sql.end()
   return c.json(row, 201)
@@ -62,6 +64,7 @@ schedules.patch('/:id', async (c) => {
     days_of_week?: number[]
     start_time?: string
     end_time?: string
+    schedule_date?: string | null
   }>()
 
   if (body.type !== undefined && !VALID_TYPES.includes(body.type as ScheduleType))
@@ -73,6 +76,7 @@ schedules.patch('/:id', async (c) => {
   if (body.days_of_week !== undefined) patch.days_of_week = body.days_of_week
   if (body.start_time !== undefined) patch.start_time = body.start_time
   if (body.end_time !== undefined) patch.end_time = body.end_time
+  if ('schedule_date' in body) patch.schedule_date = body.schedule_date ?? null
 
   if (Object.keys(patch).length === 0)
     return c.json({ error: 'No fields to update' }, 400)

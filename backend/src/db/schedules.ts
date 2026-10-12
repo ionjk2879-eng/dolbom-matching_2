@@ -8,6 +8,7 @@ export type Schedule = {
   days_of_week: number[]
   start_time: string
   end_time: string
+  schedule_date: string | null
   created_at: string
 }
 
@@ -26,7 +27,7 @@ export const getSchedulesByUser = (sql: Db, userId: string) =>
 
 export async function createSchedule(
   sql: Db,
-  data: Pick<Schedule, 'user_id' | 'child_id' | 'type' | 'days_of_week' | 'start_time' | 'end_time'>
+  data: Pick<Schedule, 'user_id' | 'child_id' | 'type' | 'days_of_week' | 'start_time' | 'end_time' | 'schedule_date'>
 ): Promise<Schedule> {
   const [row] = await sql<Schedule[]>`INSERT INTO schedules ${sql(data)} RETURNING *`
   return row
@@ -36,7 +37,7 @@ export async function updateSchedule(
   sql: Db,
   id: string,
   userId: string,
-  patch: Partial<Pick<Schedule, 'child_id' | 'type' | 'days_of_week' | 'start_time' | 'end_time'>>
+  patch: Partial<Pick<Schedule, 'child_id' | 'type' | 'days_of_week' | 'start_time' | 'end_time' | 'schedule_date'>>
 ): Promise<Schedule | null> {
   const [row] = await sql<Schedule[]>`
     UPDATE schedules SET ${sql(patch)} WHERE id = ${id} AND user_id = ${userId} RETURNING *
@@ -62,7 +63,10 @@ export async function getActiveSchedulesForDate(
     LEFT JOIN schedule_exceptions se
       ON se.schedule_id = s.id AND se.exception_date = ${date}::date
     WHERE s.user_id = ${userId}
-      AND s.days_of_week @> ARRAY[(EXTRACT(DOW FROM ${date}::date))::int]
+      AND (
+        (s.schedule_date IS NULL AND s.days_of_week @> ARRAY[(EXTRACT(DOW FROM ${date}::date))::int])
+        OR s.schedule_date = ${date}::date
+      )
       AND (se.is_cancelled IS NULL OR se.is_cancelled = FALSE)
   `
   return rows.map(r => ({
