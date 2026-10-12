@@ -19,8 +19,8 @@ function gradeLabel(c: CareOption) {
 // No single-item API yet, so look the option up in the list endpoint
 export function CareOptionDetail() {
   const { id } = useParams()
-  // Result is tagged with the id it was fetched for, so loading is derived instead of set in the effect
   const [result, setResult] = useState<{ id: string; option: CareOption | null } | null>(null)
+  const favorites = useFavoritesStore()
 
   useEffect(() => {
     if (!id) return
@@ -32,7 +32,6 @@ export function CareOptionDetail() {
   const loading = !!id && result?.id !== id
   const option = result && result.id === id ? result.option : null
 
-  // Stable reference so MapView doesn't redraw its markers on every render
   const pins = useMemo<MapPin[]>(
     () =>
       option?.latitude != null && option.longitude != null
@@ -54,7 +53,6 @@ export function CareOptionDetail() {
     )
   }
 
-  // 핵심 정보는 타일로 먼저 보여주고, 나머지는 아래 목록에 둔다
   const facts: [string, string][] = [
     ['운영 시간', `${option.open_time}~${option.close_time}`],
     ['비용', option.cost_per_hour === 0 ? '무료' : `시간당 ${option.cost_per_hour.toLocaleString()}원`],
@@ -62,12 +60,9 @@ export function CareOptionDetail() {
   ]
   const rows: [string, string][] = [
     ['유형', careTypeLabels[option.type]],
-    // Non-breaking hyphen keeps lot numbers like 30-26 on one line
     ['주소', option.address.replaceAll('-', '‑')],
     ['전화', option.phone ?? '정보 없음'],
   ]
-
-  const favorites = useFavoritesStore()
 
   return (
     <div>
