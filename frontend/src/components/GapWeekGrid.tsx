@@ -1,9 +1,8 @@
-import { useCallback } from 'react'
 import type { Child, RecurringSchedule } from '../data/types'
 import { computeGaps } from '../data/gaps'
 import { WEEKDAY_LABELS } from '../data/date'
-// Same hour window and scroll box as the schedule grid, so switching tabs keeps the view
-import { START_HOUR, END_HOUR, INITIAL_SCROLL_HOUR, VISIBLE_HOURS, SLOTS_PER_DAY, ROW_HEIGHT } from './weekGridLayout'
+// Same hour window as the schedule grid, so switching tabs keeps the view
+import { START_HOUR, END_HOUR, SLOTS_PER_DAY, ROW_HEIGHT } from './weekGridLayout'
 
 // 예외 일정 없이 순수 반복 패턴만 보기 위한 기준 주 (2025-01-05 일 ~ 2025-01-11 토)
 const REF = ['2025-01-05','2025-01-06','2025-01-07','2025-01-08','2025-01-09','2025-01-10','2025-01-11']
@@ -26,10 +25,6 @@ export function GapWeekGrid({
   kids: Child[]
   schedules: RecurringSchedule[]
 }) {
-  // Callback ref: the box mounts only once there's data, so scroll it to the daytime view when it appears
-  const scrollRef = useCallback((el: HTMLDivElement | null) => {
-    if (el) el.scrollTop = (INITIAL_SCROLL_HOUR - START_HOUR) * 2 * ROW_HEIGHT
-  }, [])
   const hasParentWork = schedules.some((s) => s.type === 'parent_work')
   const hasChildSchool = schedules.some((s) => s.type === 'child_school')
 
@@ -98,16 +93,13 @@ export function GapWeekGrid({
         </span>
       </div>
 
-      {/* Whole day scrolls inside this box; weekday header stays pinned */}
-      <div ref={scrollRef} className="overflow-auto" style={{ maxHeight: ROW_HEIGHT * (VISIBLE_HOURS * 2 + 1) }}>
-      <div className="flex pb-2">
+      <div className="flex">
         {/* 시간 레이블 */}
         <div className="w-14 shrink-0">
-          <div style={{ height: ROW_HEIGHT }} className="sticky top-0 z-30 bg-ivory-card" />
+          <div style={{ height: ROW_HEIGHT }} />
           <div className="relative" style={{ height: ROW_HEIGHT * SLOTS_PER_DAY }}>
-            {/* 01:00 ~ 24:00 — the top 00:00 label would sit under the pinned header */}
             {Array.from({ length: SLOTS_PER_DAY / 2 + 1 }, (_, i) =>
-              i > 0 && START_HOUR + i <= END_HOUR && (
+              START_HOUR + i <= END_HOUR && (
                 <div
                   key={i}
                   className="absolute right-1.5 -translate-y-1/2 text-xs leading-none text-ink-2"
@@ -122,7 +114,7 @@ export function GapWeekGrid({
 
         {WEEKDAY_LABELS.map((label, day) => (
           <div key={day} className="flex-1 border-l border-line">
-            <div style={{ height: ROW_HEIGHT }} className="sticky top-0 z-30 bg-ivory-card text-center text-xs font-semibold text-ink-2">
+            <div style={{ height: ROW_HEIGHT }} className="text-center text-xs font-semibold text-ink-2">
               {label}
             </div>
             <div className="relative border-t border-line" style={{ height: ROW_HEIGHT * SLOTS_PER_DAY }}>
@@ -199,7 +191,6 @@ export function GapWeekGrid({
             </div>
           </div>
         ))}
-      </div>
       </div>
     </div>
   )
