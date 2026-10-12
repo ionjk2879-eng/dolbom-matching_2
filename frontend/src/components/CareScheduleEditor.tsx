@@ -606,10 +606,18 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                       const careChild = children.find((c) => c.id === s.childId)
                       const days = [...s.daysOfWeek].sort((a, b) => a - b).map((d) => WEEKDAY_LABELS[d]).join('')
                       return (
-                        <div key={s.id} className="rounded-xl border border-green bg-green-soft/20 px-3 py-3">
+                        <div
+                          key={s.id}
+                          className="cursor-pointer rounded-xl border border-green bg-green-soft/20 px-3 py-3 hover:bg-green-soft/40 transition-colors"
+                          onClick={() => { if (s.childId) setTarget({ type: 'child', childId: s.childId }) }}
+                        >
                           <p className="text-sm font-bold text-ink">
                             {s.careOptionId ? (
-                              <Link to={`/find/${s.careOptionId}`} className="hover:underline">
+                              <Link
+                                to={`/find/${s.careOptionId}`}
+                                className="hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 {s.title ?? option?.name ?? '돌봄(선택)'}
                               </Link>
                             ) : (s.title ?? '돌봄(선택)')}
