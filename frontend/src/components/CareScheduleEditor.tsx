@@ -248,14 +248,14 @@ function PresetSection({
               <span className="flex-1 text-ink">{p.name}</span>
               <button
                 type="button"
-                onClick={() => onLoad(p.items)}
+                onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 불러올까요?`)) onLoad(p.items) }}
                 className="focus-ring text-xs font-semibold text-green"
               >
                 불러오기
               </button>
               <button
                 type="button"
-                onClick={() => { deletePreset(p.id); setPresets(loadPresets()) }}
+                onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 삭제할까요?`)) { deletePreset(p.id); setPresets(loadPresets()) } }}
                 className="focus-ring text-xs font-semibold text-error"
               >
                 삭제
