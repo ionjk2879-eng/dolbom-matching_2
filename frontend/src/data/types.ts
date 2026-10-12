@@ -29,6 +29,7 @@ export type Schedule = {
   days_of_week: number[]
   start_time: string
   end_time: string
+  schedule_date?: string | null // set = one-time schedule on this date only (docs/backend-request-one-time-schedule.md)
   created_at: string
 }
 
@@ -53,6 +54,7 @@ export type RecurringSchedule = {
   memo?: string
   parentLabel?: 'mom' | 'dad' // type: 'parent_work'일 때, 엄마/아빠 구분
   color?: string // 사용자 지정 색상 (hex). 없으면 type 기본 색상 사용
+  date?: string // 'YYYY-MM-DD'. 있으면 매주 반복이 아니라 이 날짜 하루만의 일정
 }
 
 export type ScheduleException = {

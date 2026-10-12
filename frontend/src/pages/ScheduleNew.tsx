@@ -5,7 +5,7 @@ import { PageHero } from '../components/PageHero'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { Chip } from '../components/Chip'
-import { WEEKDAY_LABELS } from '../data/date'
+import { WEEKDAY_LABELS, toISO } from '../data/date'
 import type { RecurringSchedule, ScheduleType } from '../data/types'
 import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 
@@ -43,6 +43,9 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
   const [type, setType] = useState<ScheduleType>(editing?.type ?? 'parent_work')
   const [childId, setChildId] = useState(editing?.childId ?? '')
   const [days, setDays] = useState<number[]>(editing?.daysOfWeek ?? [1, 2, 3, 4, 5])
+  // Off = one-time schedule on `date` only
+  const [repeat, setRepeat] = useState(!editing?.date)
+  const [date, setDate] = useState(() => editing?.date ?? toISO(new Date()))
   const [startTime, setStartTime] = useState(editing?.startTime ?? '09:00')
   const [endTime, setEndTime] = useState(editing?.endTime ?? '18:00')
   const [title, setTitle] = useState(editing?.title ?? '')
@@ -59,14 +62,16 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    if (days.length === 0) return setError('요일을 하나 이상 선택해주세요')
+    if (repeat && days.length === 0) return setError('요일을 하나 이상 선택해주세요')
+    if (!repeat && !date) return setError('날짜를 선택해주세요')
     if (startTime >= endTime) return setError('종료 시간은 시작 시간보다 늦어야 해요')
     if (needsChild && !childId) return setError('아이를 선택해주세요')
 
     const data = {
       type,
       childId: needsChild ? childId : null,
-      daysOfWeek: days,
+      daysOfWeek: repeat ? days : [new Date(`${date}T00:00:00`).getDay()],
+      date: repeat ? undefined : date,
       startTime,
       endTime,
       careOptionId: editing?.careOptionId,
@@ -150,16 +155,43 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
               </label>
             )}
 
-            <div>
-              <p className="text-sm font-semibold text-ink">요일</p>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                {WEEKDAY_LABELS.map((label, i) => (
-                  <Chip key={i} selected={days.includes(i)} onClick={() => toggleDay(i)}>
-                    {label}
-                  </Chip>
-                ))}
+            <label className="flex items-start gap-2.5 text-sm font-semibold text-ink">
+              <input
+                type="checkbox"
+                checked={repeat}
+                onChange={(e) => setRepeat(e.target.checked)}
+                className="focus-ring mt-0.5 h-4 w-4 accent-green"
+              />
+              <span>
+                매주 반복
+                <span className="mt-0.5 block text-xs font-normal text-ink-2">
+                  {repeat ? '다음 주에도 같은 요일·시간에 계속 적용돼요' : '고른 날짜 하루에만 적용돼요'}
+                </span>
+              </span>
+            </label>
+
+            {repeat ? (
+              <div>
+                <p className="text-sm font-semibold text-ink">요일</p>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  {WEEKDAY_LABELS.map((label, i) => (
+                    <Chip key={i} selected={days.includes(i)} onClick={() => toggleDay(i)}>
+                      {label}
+                    </Chip>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <label className="text-sm font-semibold text-ink">
+                날짜
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="focus-ring mt-1.5 w-full rounded-xl border border-line-2 bg-ivory-card px-4 py-2.5 text-sm font-normal"
+                />
+              </label>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <label className="text-sm font-semibold text-ink">

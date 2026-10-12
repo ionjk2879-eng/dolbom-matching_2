@@ -3,7 +3,7 @@ import { MonthCalendar } from './MonthCalendar'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { blockLabel } from '../data/scheduleLabel'
 import { formatDayLabel } from '../data/date'
-import { computeGaps } from '../data/gaps'
+import { computeGaps, occursOn } from '../data/gaps'
 
 function durationLabel(start: string, end: string) {
   const [sh, sm] = start.split(':').map(Number)
@@ -25,13 +25,12 @@ export function GapCalendarTab({ selectedDate, onSelectDate }: { selectedDate: s
 
   const hasGapOn = (date: string) =>
     children.some((child) => computeGaps(child, date, schedules, exceptions).length > 0)
-  const calDow = new Date(`${selectedDate}T00:00:00`).getDay()
   const calGaps = children.map((child) => ({
     child,
     gaps: computeGaps(child, selectedDate, schedules, exceptions),
   }))
   const calDaySchedules = schedules
-    .filter((s) => s.daysOfWeek.includes(calDow))
+    .filter((s) => occursOn(s, selectedDate))
     // 그 날의 예외(취소 또는 시간 변경 — computeGaps처럼 날짜당 1개)
     .map((s) => ({
       schedule: s,

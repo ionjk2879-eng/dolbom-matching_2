@@ -7,6 +7,9 @@ import { blockLabel } from '../data/scheduleLabel'
 import { isTouchDevice } from '../data/device'
 import { START_HOUR, END_HOUR, SLOTS_PER_DAY, ROW_HEIGHT, slotToTime, timeToSlot, fitsWindow, childColors, blockColor, layoutLanes } from './weekGridLayout'
 
+// Height (px) of the edge strip for a block lying wholly outside 06–22
+const OUTSIDE_STRIP = 6
+
 type Cell = { day: number; slot: number }
 type Drag =
   | { kind: 'create'; start: Cell; end: Cell }
@@ -285,6 +288,9 @@ export function WeekScheduleGrid({
                     const fits = fitsWindow(s)
                     const top = Math.max(0, startSlot)
                     const bottom = Math.min(SLOTS_PER_DAY, endSlot)
+                    // Entirely before 06 or after 22: keep a thin strip at that edge so it isn't lost
+                    const outside = bottom <= top
+                    const blockTop = !outside ? top * ROW_HEIGHT : startSlot >= SLOTS_PER_DAY ? SLOTS_PER_DAY * ROW_HEIGHT - OUTSIDE_STRIP : 0
                     const selSlot = sel?.id === s.id && sel?.day === day ? sel.slot : null
                     const isMultiSel = multiSel.has(s.id)
                     const lane = s.type === 'care' ? 0 : (laneOf.get(s.id) ?? 0)
@@ -292,6 +298,7 @@ export function WeekScheduleGrid({
                     return (
                       <div
                         key={s.id}
+                        title={outside ? `${blockLabel(s, kids)} ${s.startTime}~${s.endTime}` : undefined}
                         onClick={isTouchDevice ? () => onEdit(s.id) : undefined}
                         onContextMenu={(e) => {
                           e.preventDefault()
@@ -321,8 +328,9 @@ export function WeekScheduleGrid({
                         }}
                         className={`absolute overflow-hidden rounded text-[10px] font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
                         style={{
-                          top: startSlot * ROW_HEIGHT,
-                          height: (endSlot - startSlot) * ROW_HEIGHT,
+                          // Clipped to the 06–22 window so early/late blocks don't spill over the day header
+                          top: blockTop,
+                          height: outside ? OUTSIDE_STRIP : (bottom - top) * ROW_HEIGHT,
                           left: `calc(${(lane / totalLanes) * 100}% + 2px)`,
                           width: `calc(${100 / totalLanes}% - 4px)`,
                           ...(s.color ? { backgroundColor: s.color, color: 'white' } : {}),

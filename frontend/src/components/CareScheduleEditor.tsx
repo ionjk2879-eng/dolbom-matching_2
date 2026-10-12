@@ -177,7 +177,9 @@ function ScheduleAddForm({ targetLabel, onCreate }: {
 
 // 아이 등록 + 부모/아이 반복 일정 캘린더. GapSetup 페이지와 Home 메인페이지에서 공용으로 쓴다.
 export function CareScheduleEditor() {
-  const { children, schedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
+  const { children, schedules: allSchedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
+  // The week grids show the repeating pattern; one-time schedules appear only on the gap calendar tab
+  const schedules = allSchedules.filter((s) => !s.date)
   const match = useMatchStore()
   const [view, setView] = useState<'schedule' | 'gap' | 'calendar'>('schedule')
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })

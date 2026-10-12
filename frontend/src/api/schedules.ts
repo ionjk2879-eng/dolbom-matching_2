@@ -7,6 +7,7 @@ export type NewSchedule = {
   days_of_week: number[]
   start_time: string
   end_time: string
+  schedule_date: string | null
 }
 
 export async function fetchSchedules(): Promise<Schedule[]> {
