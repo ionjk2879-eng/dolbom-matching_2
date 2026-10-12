@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { WEEKDAY_LABELS } from '../data/date'
 import type { Child, RecurringSchedule } from '../data/types'
 import { blockLabel } from '../data/scheduleLabel'
+import { isPendingSchedule } from '../store/careScheduleStore'
 // On touch the grid's drag/right-click/Ctrl don't work: a tap on a block opens its edit form,
 // and new blocks come from the editor's add form instead
 import { isTouchDevice } from '../data/device'
@@ -294,10 +295,12 @@ export function WeekScheduleGrid({
                     const isBulkResizing = drag?.kind === 'resize' && multiSel.size > 1 && multiSel.has(drag.id) && multiSel.has(s.id)
                     const startSlot = timeToSlot(s.startTime)
                     const endSlot = (isResizing || isBulkResizing) ? Math.max(startSlot + 1, drag.endSlot) : timeToSlot(s.endTime)
-                    const fits = fitsWindow(s)
+                    // Still saving: the server has no id for it yet, so it only shows until the save lands
+                    const pending = isPendingSchedule(s.id)
+                    const fits = fitsWindow(s) && !pending
                     const top = Math.max(0, startSlot)
                     const bottom = Math.min(SLOTS_PER_DAY, endSlot)
-                    // Entirely before 06 or after 22: keep a thin strip at that edge so it isn't lost
+                    // Entirely outside the grid window: keep a thin strip at that edge so it isn't lost
                     const outside = bottom <= top
                     const blockTop = !outside ? top * ROW_HEIGHT : startSlot >= SLOTS_PER_DAY ? SLOTS_PER_DAY * ROW_HEIGHT - OUTSIDE_STRIP : 0
                     const selSlot = sel?.id === s.id && sel?.day === day ? sel.slot : null
@@ -308,16 +311,19 @@ export function WeekScheduleGrid({
                       <div
                         key={s.id}
                         title={outside ? `${blockLabel(s, kids)} ${s.startTime}~${s.endTime}` : undefined}
-                        onClick={isTouchDevice ? () => onEdit(s.id) : undefined}
+                        onClick={isTouchDevice && !pending ? () => onEdit(s.id) : undefined}
                         onContextMenu={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
+                          if (pending) return
                           setSel({ id: s.id, day, slot: slotAt(day, e.clientY) })
                           setMenu({ id: s.id, x: e.clientX, y: e.clientY, slot: slotAt(day, e.clientY) })
                         }}
                         onMouseDown={(e) => {
                           if (e.button !== 0) return
+                          // Stop here too, so a click on a saving block doesn't draw a new one underneath
                           e.stopPropagation()
+                          if (pending) return
                           if (e.ctrlKey || e.metaKey || e.shiftKey) {
                             modifierSelect(s.id, day, e.shiftKey)
                             return
@@ -335,7 +341,7 @@ export function WeekScheduleGrid({
                             clickedDay: day,
                           })
                         }}
-                        className={`absolute overflow-hidden rounded text-[10px] font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
+                        className={`absolute overflow-hidden rounded text-[10px] font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${pending ? 'cursor-wait opacity-60' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
                         style={{
                           // Clipped to the grid window so early/late blocks don't spill over the day header
                           top: blockTop,
