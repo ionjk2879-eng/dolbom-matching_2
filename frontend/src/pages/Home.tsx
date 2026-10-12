@@ -16,6 +16,8 @@ import { DISTRICTS } from '../data/districts'
 import type { CareOption } from '../data/types'
 import { toISO } from '../data/date'
 import { computeGaps, toMinutes } from '../data/gaps'
+import { useFavoritesStore } from '../store/favoritesStore'
+import { HeartButton } from '../components/HeartButton'
 
 const steps = [
   { title: '반복 일정 등록', desc: '부모 근무·아이 학교 시간을 한 번만' },
@@ -43,6 +45,7 @@ function endTimeToBucket(end: string): string {
 export function Home() {
   const navigate = useNavigate()
   const match = useMatchStore()
+  const favorites = useFavoritesStore()
   const user = useAuthStore((s) => s.user)
   const { children, schedules, exceptions } = useCareScheduleStore()
   const [today] = useState(() => toISO(new Date()))
@@ -150,6 +153,38 @@ export function Home() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-extrabold text-ink"><span className="mr-1.5 text-green">2</span>맞춤 매칭</h2>
             </div>
+
+            {favorites.ids.length > 0 && (
+              <div className="mt-5 flex flex-col gap-2">
+                <p className="text-xs font-semibold text-ink-2">즐겨찾기</p>
+                {favorites.ids.map((fid) => {
+                  const opt = careOptions.find((o) => o.id === fid)
+                  return (
+                    <div key={fid} className="flex items-center gap-3 rounded-xl border border-line bg-ivory-card px-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          to={`/find/${fid}`}
+                          className="focus-ring text-sm font-semibold text-ink hover:underline"
+                        >
+                          {opt?.name ?? fid}
+                        </Link>
+                        {opt && (
+                          <p className="text-xs text-ink-2">
+                            {opt.open_time}~{opt.close_time}
+                            {opt.cost_per_hour === 0 ? ' · 무료' : ` · 시간당 ${opt.cost_per_hour.toLocaleString()}원`}
+                          </p>
+                        )}
+                      </div>
+                      <HeartButton
+                        active={true}
+                        onToggle={() => favorites.toggle(fid)}
+                        className="shrink-0"
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             <DemoNotice options={careOptions} className="mt-5" />
 
