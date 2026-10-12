@@ -59,7 +59,9 @@ export function Login() {
           alt="아이와 선생님이 함께 공부하는 모습"
           width={960}
           height={640}
-          className="mt-6 aspect-video w-full rounded-xl border border-line-3 object-cover"
+          className="mt-6 aspect-video w-full select-none rounded-xl border border-line-3 object-cover"
+          draggable={false}
+          onContextMenu={(e) => e.preventDefault()}
         />
       </div>
     </div>

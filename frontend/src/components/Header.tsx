@@ -18,7 +18,15 @@ export function Header() {
       {/* Phones: logo + account on the first row, menu on its own row below */}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-1 px-4 py-3">
         <Link to="/" className="tap-target flex items-center">
-          <img src={logo} alt="After School" width={316} height={120} className="h-9 w-auto" />
+          <img
+            src={logo}
+            alt="After School"
+            width={316}
+            height={120}
+            className="h-9 w-auto select-none"
+            draggable={false}
+            onContextMenu={(e) => e.preventDefault()}
+          />
         </Link>
 
         <nav aria-label="주요 메뉴" className="order-last flex w-full gap-6 sm:order-none sm:w-auto">
