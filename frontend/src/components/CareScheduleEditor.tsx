@@ -326,12 +326,13 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const [view, setView] = useState<'schedule' | 'gap' | 'calendar'>('schedule')
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })
   const [editingId, setEditingId] = useState<string | null>(null)
-  const editOriginalColorRef = useRef<string | undefined>(undefined)
+  const editOriginalColorsRef = useRef<Map<string, string | undefined>>(new Map())
   const [multiSelIds, setMultiSelIds] = useState<string[]>([])
 
   const cancelEdit = () => {
     if (editingId) {
-      setDraft((prev) => prev.map((s) => s.id === editingId ? { ...s, color: editOriginalColorRef.current } : s))
+      const orig = editOriginalColorsRef.current
+      setDraft((prev) => prev.map((s) => orig.has(s.id) ? { ...s, color: orig.get(s.id) } : s))
     }
     setEditingId(null)
   }
@@ -591,7 +592,8 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
               target={target}
               onCreate={onCreate}
               onEdit={(id) => {
-                editOriginalColorRef.current = schedules.find((s) => s.id === id)?.color
+                const ids = multiSelIds.length > 1 ? multiSelIds : [id]
+                editOriginalColorsRef.current = new Map(ids.map((sid) => [sid, schedules.find((s) => s.id === sid)?.color]))
                 setEditingId(id)
               }}
               onDelete={(id) => {
@@ -620,7 +622,8 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                       schedule={schedule}
                       onClose={() => setEditingId(null)}
                       onColorPreview={(id, color) => {
-                        setDraft((prev) => prev.map((s) => (s.id === id ? { ...s, color } : s)))
+                        const ids = multiSelIds.length > 1 ? multiSelIds : [id]
+                        setDraft((prev) => prev.map((s) => ids.includes(s.id) ? { ...s, color } : s))
                       }}
                       onSave={(id, data) => {
                         const s = schedules.find((x) => x.id === id)
