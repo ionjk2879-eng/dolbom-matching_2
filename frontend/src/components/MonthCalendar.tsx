@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
 
 const navButton =
@@ -14,7 +14,22 @@ export function MonthCalendar({
   onSelect: (iso: string) => void
   renderBadge?: (iso: string, isSelected: boolean) => ReactNode
 }) {
-  const [today] = useState(() => toISO(new Date()))
+  const [today, setToday] = useState(() => toISO(new Date()))
+
+  // Move the "today" mark past midnight. The timer covers an open tab; the visibility check covers
+  // a tab that was hidden or a laptop that slept through midnight, where the timer can fire late.
+  useEffect(() => {
+    const refresh = () => setToday(toISO(new Date()))
+    const now = new Date()
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    const timer = setTimeout(refresh, nextMidnight.getTime() - now.getTime() + 1000)
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [today])
   const [viewDate, setViewDate] = useState(() => new Date(`${selected}T00:00:00`))
   const year = viewDate.getFullYear()
   const month = viewDate.getMonth()
