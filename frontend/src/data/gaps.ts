@@ -99,8 +99,9 @@ export function computeGaps(
   const isWork = (s: RecurringSchedule, label: 'mom' | 'dad') =>
     s.type === 'parent_work' && s.parentLabel === label && s.childId === null
   const dualIncome = schedules.some((s) => isWork(s, 'mom')) && schedules.some((s) => isWork(s, 'dad'))
+  // dualIncome이면 교집합만 사용 — untagged(구형 데이터)가 19:00짜리로 남아있어도 오염되지 않음
   const parentBusy: Interval[] = dualIncome
-    ? [...intersect(momWork, dadWork), ...untaggedWork]
+    ? intersect(momWork, dadWork)
     : [...momWork, ...dadWork, ...untaggedWork]
 
   const childCovered = schedules
