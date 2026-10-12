@@ -114,8 +114,11 @@ export function computeGaps(
     })
     .filter((i): i is Interval => i !== null)
 
+  const firstCover = childCovered.length > 0 ? Math.min(...childCovered.map((c) => c.start)) : 0
+
   return subtract(merge(parentBusy), childCovered)
     .filter((i) => i.end - i.start > child.commuteMinutes)
+    .filter((i) => i.end > firstCover)
     .sort((a, b) => a.start - b.start)
     .map((i) => ({ start: toTime(i.start), end: toTime(i.end) }))
 }
