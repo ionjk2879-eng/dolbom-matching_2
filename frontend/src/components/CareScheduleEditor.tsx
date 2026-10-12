@@ -15,7 +15,7 @@ import { WEEKDAY_LABELS, toISO } from '../data/date'
 import type { CareOption, Child, RecurringSchedule } from '../data/types'
 import {
   loadPresets, upsertPreset, deletePreset, draftToPresetItems, presetItemsToDraft,
-  type Preset, type PresetItem,
+  type Preset,
 } from '../data/presets'
 
 // Temporary IDs for draft-only schedules (never sent to server until save)
