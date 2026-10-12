@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from './Button'
 import { WeekScheduleGrid, type Target } from './WeekScheduleGrid'
@@ -12,10 +12,16 @@ import { REGIONS, careTypeLabels } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
 import { ChildManager } from './ChildManager'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
-import type { CareOption, RecurringSchedule } from '../data/types'
+import type { CareOption, Child, RecurringSchedule } from '../data/types'
+import {
+  loadPresets, upsertPreset, deletePreset, draftToPresetItems, presetItemsToDraft,
+  type Preset, type PresetItem,
+} from '../data/presets'
 
+// Temporary IDs for draft-only schedules (never sent to server until save)
+const tmpId = () => `__${Math.random().toString(36).slice(2, 9)}`
+const isTemp = (id: string) => id.startsWith('__')
 
-// 드래프트 방식이므로 store 대신 콜백으로 저장/삭제를 받음
 const SCHEDULE_PALETTE = [
   { hex: '#4285f4', name: '파랑' }, { hex: '#db4437', name: '빨강' }, { hex: '#0f9d58', name: '초록' },
   { hex: '#9c27b0', name: '보라' }, { hex: '#00897b', name: '청록' }, { hex: '#e64a19', name: '주황' },
@@ -84,7 +90,6 @@ function ScheduleEditForm({
       </div>
       <div>
         <p id="edit-color" className="text-xs font-semibold text-ink-2">색상</p>
-        {/* The dot stays 24px; tap-target widens only the touch area on phones */}
         <div role="group" aria-labelledby="edit-color" className="mt-1 flex flex-wrap gap-1.5">
           {[{ hex: '', name: '기본' }, ...SCHEDULE_PALETTE].map(({ hex, name }) => (
             <button
@@ -176,11 +181,120 @@ function ScheduleAddForm({ targetLabel, onCreate }: {
   )
 }
 
+function PresetSection({
+  draft,
+  kids,
+  onLoad,
+}: {
+  draft: RecurringSchedule[]
+  kids: Child[]
+  onLoad: (items: PresetItem[]) => void
+}) {
+  const [presets, setPresets] = useState<Preset[]>(() => loadPresets())
+  const [saveName, setSaveName] = useState('')
+  const [showInput, setShowInput] = useState(false)
+
+  const handleSavePreset = () => {
+    if (!saveName.trim()) return
+    const p: Preset = {
+      id: Math.random().toString(36).slice(2),
+      name: saveName.trim(),
+      createdAt: new Date().toISOString(),
+      items: draftToPresetItems(draft, kids),
+    }
+    upsertPreset(p)
+    setPresets(loadPresets())
+    setSaveName('')
+    setShowInput(false)
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <p className="text-xs font-semibold text-ink-2">프리셋</p>
+        <button
+          type="button"
+          onClick={() => setShowInput((v) => !v)}
+          className="focus-ring text-xs font-semibold text-green"
+        >
+          현재 일정을 프리셋으로 저장
+        </button>
+      </div>
+      {showInput && (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="프리셋 이름을 입력해주세요"
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+            autoFocus
+            className="focus-ring flex-1 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+          />
+          <Button onClick={handleSavePreset} disabled={!saveName.trim()}>저장</Button>
+          <button
+            type="button"
+            onClick={() => { setShowInput(false); setSaveName('') }}
+            className="focus-ring text-xs font-semibold text-ink-2"
+          >
+            취소
+          </button>
+        </div>
+      )}
+      {presets.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {presets.map((p) => (
+            <div key={p.id} className="flex items-center gap-2 rounded-lg bg-ivory-deep-2 px-3 py-2 text-sm">
+              <span className="flex-1 text-ink">{p.name}</span>
+              <button
+                type="button"
+                onClick={() => onLoad(p.items)}
+                className="focus-ring text-xs font-semibold text-green"
+              >
+                불러오기
+              </button>
+              <button
+                type="button"
+                onClick={() => { deletePreset(p.id); setPresets(loadPresets()) }}
+                className="focus-ring text-xs font-semibold text-error"
+              >
+                삭제
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // 아이 등록 + 부모/아이 반복 일정 캘린더. GapSetup 페이지와 Home 메인페이지에서 공용으로 쓴다.
 export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[] } = {}) {
-  const { children, schedules: allSchedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
-  // The week grids show the repeating pattern; one-time schedules appear only on the gap calendar tab
-  const schedules = allSchedules.filter((s) => !s.date)
+  const { children, schedules: allSchedules, addSchedule, removeSchedule, updateSchedule, loaded } = useCareScheduleStore()
+
+  // Server non-care repeating schedules (source of truth for diff on save)
+  const serverSchedules = allSchedules.filter((s) => !s.date && s.type !== 'care')
+  // Care schedules always come from server (GapMatchPanel manages them, not draft)
+  const careSchedules = allSchedules.filter((s) => s.type === 'care' && !s.date)
+
+  // Draft state: user's pending changes (not yet sent to server)
+  const [draft, setDraft] = useState<RecurringSchedule[]>([])
+  const [isDirty, setIsDirty] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [initialized, setInitialized] = useState(false)
+
+  // Sync server → draft once on initial load; never overwrite user's in-progress edits
+  useEffect(() => {
+    if (loaded && !initialized) {
+      setDraft(serverSchedules)
+      setInitialized(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded])
+
+  // What the grid sees: user's draft + server-managed care schedules
+  const schedules = [...draft, ...careSchedules]
+
   const match = useMatchStore()
   const [view, setView] = useState<'schedule' | 'gap' | 'calendar'>('schedule')
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })
@@ -198,46 +312,121 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
       : (s.type === 'child_school' || s.type === 'care') && s.childId === target.childId
   )
 
+  // Draft mutation helpers
+  const draftUpdate = (id: string, sch: Omit<RecurringSchedule, 'id'>) => {
+    setDraft((prev) => prev.map((s) => (s.id === id ? { ...sch, id } : s)))
+    setIsDirty(true)
+  }
+  const draftRemove = (id: string) => {
+    setDraft((prev) => prev.filter((s) => s.id !== id))
+    setIsDirty(true)
+  }
+
+  // Save draft to server: diff draft vs server, apply changes
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const serverIds = new Set(serverSchedules.map((s) => s.id))
+      const draftServerIds = new Set(draft.filter((s) => !isTemp(s.id)).map((s) => s.id))
+      const toDelete = serverSchedules.filter((s) => !draftServerIds.has(s.id))
+      const toAdd = draft.filter((s) => isTemp(s.id))
+      const toUpdate = draft
+        .filter((s) => !isTemp(s.id) && serverIds.has(s.id))
+        .filter((s) => {
+          const orig = serverSchedules.find((x) => x.id === s.id)!
+          return (
+            s.daysOfWeek.join() !== orig.daysOfWeek.join() ||
+            s.startTime !== orig.startTime ||
+            s.endTime !== orig.endTime ||
+            s.parentLabel !== orig.parentLabel ||
+            s.color !== orig.color ||
+            s.title !== orig.title ||
+            s.memo !== orig.memo
+          )
+        })
+      await Promise.all([
+        ...toDelete.map((s) => removeSchedule(s.id)),
+        ...toUpdate.map((s) => { const { id, ...rest } = s; return updateSchedule(id, rest) }),
+        ...toAdd.map((s) => { const { id: _id, ...rest } = s; return addSchedule(rest) }),
+      ])
+    } finally {
+      const final = useCareScheduleStore.getState().schedules.filter((s) => !s.date && s.type !== 'care')
+      setDraft(final)
+      setIsDirty(false)
+      setSaving(false)
+    }
+  }
+
+  const handleDiscard = () => {
+    setDraft(serverSchedules)
+    setIsDirty(false)
+  }
+
+  // Grid callbacks operate on draft state
   const onCreate = (daysOfWeek: number[], startTime: string, endTime: string) => {
-    const overlapIds = new Set(
-      schedules
-        .filter((s) =>
-          s.type === type && s.childId === childId &&
-          (type === 'parent_work' ? s.parentLabel === parentLabel : true) &&
-          s.daysOfWeek.some((d) => daysOfWeek.includes(d)) &&
-          s.startTime < endTime && s.endTime > startTime
-        )
-        .map((s) => s.id)
-    )
-    const overlapping = schedules.filter((s) => overlapIds.has(s.id))
-    overlapping.forEach((s) => removeSchedule(s.id))
-    overlapping.forEach((s) => {
-      s.daysOfWeek.filter((d) => !daysOfWeek.includes(d)).forEach((d) =>
-        addSchedule({ type, childId, daysOfWeek: [d], startTime: s.startTime, endTime: s.endTime, parentLabel: s.parentLabel, color: s.color, title: s.title, memo: s.memo })
+    setDraft((prev) => {
+      const overlapIds = new Set(
+        prev
+          .filter(
+            (s) =>
+              s.type === type &&
+              s.childId === childId &&
+              (type === 'parent_work' ? s.parentLabel === parentLabel : true) &&
+              s.daysOfWeek.some((d) => daysOfWeek.includes(d)) &&
+              s.startTime < endTime &&
+              s.endTime > startTime,
+          )
+          .map((s) => s.id),
       )
+      const overlapping = prev.filter((s) => overlapIds.has(s.id))
+      const remnants = overlapping.flatMap((s) =>
+        s.daysOfWeek
+          .filter((d) => !daysOfWeek.includes(d))
+          .map((d) => ({ ...s, id: tmpId(), daysOfWeek: [d] })),
+      )
+      const newBlocks = daysOfWeek.map(
+        (day) =>
+          ({
+            id: tmpId(),
+            type,
+            childId,
+            daysOfWeek: [day],
+            startTime,
+            endTime,
+            parentLabel,
+          }) as RecurringSchedule,
+      )
+      return [...prev.filter((s) => !overlapIds.has(s.id)), ...remnants, ...newBlocks]
     })
-    daysOfWeek.forEach((day) => {
-      addSchedule({ type, childId, daysOfWeek: [day], startTime, endTime, parentLabel })
-    })
+    setIsDirty(true)
   }
 
   const onPunch = (id: string, punchStart: string, punchEnd: string) => {
     const s = schedules.find((x) => x.id === id)
     if (!s) return
-    removeSchedule(id)
-    if (s.startTime < punchStart)
-      addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: s.startTime, endTime: punchStart, parentLabel: s.parentLabel, color: s.color, title: s.title, memo: s.memo, careOptionId: s.careOptionId })
-    if (s.endTime > punchEnd)
-      addSchedule({ type: s.type, childId: s.childId, daysOfWeek: s.daysOfWeek, startTime: punchEnd, endTime: s.endTime, parentLabel: s.parentLabel, color: s.color, title: s.title, memo: s.memo, careOptionId: s.careOptionId })
+    if (s.type === 'care') { removeSchedule(id); return }
+    setDraft((prev) => {
+      const found = prev.find((x) => x.id === id)
+      if (!found) return prev
+      const rem: RecurringSchedule[] = []
+      if (found.startTime < punchStart) rem.push({ ...found, id: tmpId(), endTime: punchStart })
+      if (found.endTime > punchEnd) rem.push({ ...found, id: tmpId(), startTime: punchEnd })
+      return [...prev.filter((x) => x.id !== id), ...rem]
+    })
+    setIsDirty(true)
   }
 
   const onMove = (id: string, daysOfWeek: number[], startTime: string, endTime: string) => {
     const s = schedules.find((x) => x.id === id)
     if (!s) return
+    if (s.type === 'care') {
+      const { id: _id, ...rest } = s
+      updateSchedule(id, { ...rest, daysOfWeek, startTime, endTime })
+      return
+    }
     const { id: _id, ...rest } = s
-    updateSchedule(id, { ...rest, daysOfWeek, startTime, endTime })
+    draftUpdate(id, { ...rest, daysOfWeek, startTime, endTime })
   }
-
 
   return (
     <div className="flex flex-col gap-10">
@@ -260,168 +449,214 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
       ) : view === 'calendar' ? (
         <GapCalendarTab selectedDate={selectedDate} onSelectDate={setSelectedDate} />
       ) : (
-      <>
-      <div className="flex flex-col gap-6">
-        <p className="text-sm font-bold text-ink">아이 등록</p>
-        <ChildManager />
-      </div>
-
-      <div className="flex flex-col gap-6">
-        <p className="text-sm font-bold text-ink">거주지</p>
-        <div className="flex flex-wrap gap-2">
-          <select
-            aria-label="시/도"
-            value={match.region}
-            onChange={(e) => match.setRegion(e.target.value)}
-            className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
-          >
-            <option value="">시/도 선택</option>
-            {REGIONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-          <select
-            aria-label="구/군"
-            value={match.district}
-            onChange={(e) => match.setDistrict(e.target.value)}
-            disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
-            className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
-          >
-            <option value="">구/군 전체</option>
-            {(DISTRICTS[match.region] ?? []).map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-bold text-ink">반복 일정 캘린더</p>
-          <div className="inline-flex rounded-xl border border-line bg-ivory-deep-2 p-1">
-            {(['mom', 'dad'] as const).map((label) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => setTarget({ type: 'parent', parentLabel: label })}
-                className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                  target.type === 'parent' && target.parentLabel === label ? 'bg-ivory text-ink' : 'text-ink-2'
-                }`}
-              >
-                {label === 'mom' ? '엄마 근무' : '아빠 근무'}
-              </button>
-            ))}
-            {children.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setTarget({ type: 'child', childId: c.id })}
-                className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                  target.type === 'child' && target.childId === c.id ? 'bg-ivory text-ink' : 'text-ink-2'
-                }`}
-              >
-                {c.name} 학교
-              </button>
-            ))}
+        <>
+          <div className="flex flex-col gap-6">
+            <p className="text-sm font-bold text-ink">아이 등록</p>
+            <ChildManager />
           </div>
-        </div>
 
-        {children.length === 0 && (
-          <p className="text-xs text-ink-2">
-            지금은 "부모 근무"만 등록할 수 있어요. 아이 학교 일정을 넣으려면 위에서 아이를 먼저 등록해주세요.
-          </p>
-        )}
-        {isTouchDevice && (
-          <ScheduleAddForm
-            targetLabel={
-              target.type === 'parent'
-                ? (target.parentLabel === 'mom' ? '엄마 근무' : '아빠 근무')
-                : `${children.find((c) => c.id === target.childId)?.name ?? '아이'} 학교`
-            }
-            onCreate={onCreate}
-          />
-        )}
-        <WeekScheduleGrid
-          schedules={activeSchedules}
-          kids={children}
-          target={target}
-          onCreate={onCreate}
-          onEdit={setEditingId}
-          onDelete={removeSchedule}
-          onPunch={onPunch}
-          onMove={onMove}
-          onSelectionChange={setMultiSelIds}
-        />
-        {editingId && (() => {
-          const schedule = schedules.find((s) => s.id === editingId)
-          if (!schedule) return null
-          return (
-            <ScheduleEditForm
-              key={editingId}
-              schedule={schedule}
-              onClose={() => setEditingId(null)}
-              onSave={(id, data) => {
-                updateSchedule(id, data)
-                // Selected blocks follow only a color change; a time-only edit must not repaint them
-                if (multiSelIds.length > 1 && data.color !== schedule.color) {
-                  multiSelIds.filter((sid) => sid !== id).forEach((sid) => {
-                    const s = schedules.find((x) => x.id === sid)
-                    if (s && s.color !== data.color) updateSchedule(sid, { ...s, color: data.color })
-                  })
-                }
-              }}
-              onRemove={removeSchedule}
-            />
-          )
-        })()}
+          <div className="flex flex-col gap-6">
+            <p className="text-sm font-bold text-ink">거주지</p>
+            <div className="flex flex-wrap gap-2">
+              <select
+                aria-label="시/도"
+                value={match.region}
+                onChange={(e) => match.setRegion(e.target.value)}
+                className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+              >
+                <option value="">시/도 선택</option>
+                {REGIONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              <select
+                aria-label="구/군"
+                value={match.district}
+                onChange={(e) => match.setDistrict(e.target.value)}
+                disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
+                className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
+              >
+                <option value="">구/군 전체</option>
+                {(DISTRICTS[match.region] ?? []).map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-        {/* 아이 탭: 선택된 돌봄 센터 목록 */}
-        {target.type === 'child' && (() => {
-          const careList = schedules.filter(
-            (s) => s.type === 'care' && s.childId === childId
-          )
-          if (careList.length === 0) return null
-          return (
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold text-ink-2">선택된 돌봄</p>
-              <div className="flex flex-col gap-2">
-                {careList.map((s) => {
-                  const option = careOptions?.find((o) => o.id === s.careOptionId)
-                  const days = [...s.daysOfWeek].sort((a, b) => a - b).map((d) => WEEKDAY_LABELS[d]).join('')
-                  return (
-                    <div key={s.id} className="rounded-xl border border-green bg-green-soft/20 px-3 py-3">
-                      <p className="text-sm font-bold text-ink">
-                        {s.careOptionId ? (
-                          <Link to={`/find/${s.careOptionId}`} className="hover:underline">
-                            {s.title ?? option?.name ?? '돌봄(선택)'}
-                          </Link>
-                        ) : (s.title ?? '돌봄(선택)')}
-                        {option && <span className="ml-1 text-xs font-normal text-ink-2">· {careTypeLabels[option.type]}</span>}
-                      </p>
-                      {option ? (
-                        <>
-                          <p className="mt-1 text-xs text-ink-2">
-                            운영 {option.open_time}~{option.close_time} · 공백 커버{' '}
-                            <span className="font-semibold text-green">{s.startTime}~{s.endTime}</span>
-                          </p>
-                          {option.address && <p className="mt-1 text-xs text-ink-2">{option.address}</p>}
-                          <p className="mt-0.5 text-xs text-ink-2">
-                            {days} · 시간당 {option.cost_per_hour === 0 ? '무료' : `${option.cost_per_hour.toLocaleString()}원`}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="mt-1 text-xs text-ink-2">{days} · {s.startTime}~{s.endTime}</p>
-                      )}
-                    </div>
-                  )
-                })}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-bold text-ink">반복 일정 캘린더</p>
+              <div className="inline-flex rounded-xl border border-line bg-ivory-deep-2 p-1">
+                {(['mom', 'dad'] as const).map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setTarget({ type: 'parent', parentLabel: label })}
+                    className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      target.type === 'parent' && target.parentLabel === label ? 'bg-ivory text-ink' : 'text-ink-2'
+                    }`}
+                  >
+                    {label === 'mom' ? '엄마 근무' : '아빠 근무'}
+                  </button>
+                ))}
+                {children.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setTarget({ type: 'child', childId: c.id })}
+                    className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      target.type === 'child' && target.childId === c.id ? 'bg-ivory text-ink' : 'text-ink-2'
+                    }`}
+                  >
+                    {c.name} 학교
+                  </button>
+                ))}
               </div>
             </div>
-          )
-        })()}
 
-      </div>
-      </>
+            {/* 저장 / 되돌리기 */}
+            <div className="flex items-center gap-3">
+              <Button onClick={handleSave} disabled={!isDirty || saving}>
+                {saving ? '저장 중...' : '저장'}
+              </Button>
+              {isDirty && (
+                <button
+                  type="button"
+                  onClick={handleDiscard}
+                  className="focus-ring text-xs font-semibold text-ink-2"
+                >
+                  되돌리기
+                </button>
+              )}
+              {isDirty && (
+                <span className="text-xs text-warn">저장되지 않은 변경사항이 있어요</span>
+              )}
+            </div>
+
+            {children.length === 0 && (
+              <p className="text-xs text-ink-2">
+                지금은 "부모 근무"만 등록할 수 있어요. 아이 학교 일정을 넣으려면 위에서 아이를 먼저 등록해주세요.
+              </p>
+            )}
+            {isTouchDevice && (
+              <ScheduleAddForm
+                targetLabel={
+                  target.type === 'parent'
+                    ? (target.parentLabel === 'mom' ? '엄마 근무' : '아빠 근무')
+                    : `${children.find((c) => c.id === target.childId)?.name ?? '아이'} 학교`
+                }
+                onCreate={onCreate}
+              />
+            )}
+            <WeekScheduleGrid
+              schedules={activeSchedules}
+              kids={children}
+              target={target}
+              onCreate={onCreate}
+              onEdit={setEditingId}
+              onDelete={(id) => {
+                const s = schedules.find((x) => x.id === id)
+                if (s?.type === 'care') removeSchedule(id)
+                else draftRemove(id)
+              }}
+              onPunch={onPunch}
+              onMove={onMove}
+              onSelectionChange={setMultiSelIds}
+            />
+            {editingId && (() => {
+              const schedule = schedules.find((s) => s.id === editingId)
+              if (!schedule) return null
+              return (
+                <ScheduleEditForm
+                  key={editingId}
+                  schedule={schedule}
+                  onClose={() => setEditingId(null)}
+                  onSave={(id, data) => {
+                    const s = schedules.find((x) => x.id === id)
+                    if (s?.type === 'care') {
+                      updateSchedule(id, data)
+                    } else {
+                      draftUpdate(id, data)
+                    }
+                    // Multi-selected blocks follow only a color change
+                    if (multiSelIds.length > 1 && data.color !== schedule.color) {
+                      multiSelIds.filter((sid) => sid !== id).forEach((sid) => {
+                        const ms = schedules.find((x) => x.id === sid)
+                        if (ms && ms.color !== data.color) {
+                          const { id: _msId, ...msRest } = ms
+                          if (ms.type === 'care') updateSchedule(sid, { ...msRest, color: data.color })
+                          else draftUpdate(sid, { ...msRest, color: data.color })
+                        }
+                      })
+                    }
+                  }}
+                  onRemove={(id) => {
+                    const s = schedules.find((x) => x.id === id)
+                    if (s?.type === 'care') removeSchedule(id)
+                    else draftRemove(id)
+                  }}
+                />
+              )
+            })()}
+
+            {/* 아이 탭: 선택된 돌봄 센터 목록 */}
+            {target.type === 'child' && (() => {
+              const careList = schedules.filter(
+                (s) => s.type === 'care' && s.childId === childId,
+              )
+              if (careList.length === 0) return null
+              return (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold text-ink-2">선택된 돌봄</p>
+                  <div className="flex flex-col gap-2">
+                    {careList.map((s) => {
+                      const option = careOptions?.find((o) => o.id === s.careOptionId)
+                      const days = [...s.daysOfWeek].sort((a, b) => a - b).map((d) => WEEKDAY_LABELS[d]).join('')
+                      return (
+                        <div key={s.id} className="rounded-xl border border-green bg-green-soft/20 px-3 py-3">
+                          <p className="text-sm font-bold text-ink">
+                            {s.careOptionId ? (
+                              <Link to={`/find/${s.careOptionId}`} className="hover:underline">
+                                {s.title ?? option?.name ?? '돌봄(선택)'}
+                              </Link>
+                            ) : (s.title ?? '돌봄(선택)')}
+                            {option && <span className="ml-1 text-xs font-normal text-ink-2">· {careTypeLabels[option.type]}</span>}
+                          </p>
+                          {option ? (
+                            <>
+                              <p className="mt-1 text-xs text-ink-2">
+                                운영 {option.open_time}~{option.close_time} · 공백 커버{' '}
+                                <span className="font-semibold text-green">{s.startTime}~{s.endTime}</span>
+                              </p>
+                              {option.address && <p className="mt-1 text-xs text-ink-2">{option.address}</p>}
+                              <p className="mt-0.5 text-xs text-ink-2">
+                                {days} · 시간당 {option.cost_per_hour === 0 ? '무료' : `${option.cost_per_hour.toLocaleString()}원`}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="mt-1 text-xs text-ink-2">{days} · {s.startTime}~{s.endTime}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* 프리셋: 현재 일정을 이름 붙여 저장하고 나중에 불러오기 */}
+            <PresetSection
+              draft={draft}
+              kids={children}
+              onLoad={(items) => {
+                if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
+                setDraft(presetItemsToDraft(items, children, tmpId))
+                setIsDirty(true)
+              }}
+            />
+          </div>
+        </>
       )}
     </div>
   )
