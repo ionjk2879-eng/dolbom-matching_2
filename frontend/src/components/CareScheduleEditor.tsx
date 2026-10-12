@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from './Button'
 import { WeekScheduleGrid, type Target } from './WeekScheduleGrid'
 import { isTouchDevice } from '../data/device'
@@ -7,11 +8,11 @@ import { GapCalendarTab } from './GapCalendarTab'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { blockLabel } from '../data/scheduleLabel'
 import { useMatchStore } from '../store/matchStore'
-import { REGIONS } from '../data/careMatch'
+import { REGIONS, careTypeLabels } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
 import { ChildManager } from './ChildManager'
 import { WEEKDAY_LABELS, toISO } from '../data/date'
-import type { RecurringSchedule } from '../data/types'
+import type { CareOption, RecurringSchedule } from '../data/types'
 
 
 // 드래프트 방식이므로 store 대신 콜백으로 저장/삭제를 받음
@@ -176,7 +177,7 @@ function ScheduleAddForm({ targetLabel, onCreate }: {
 }
 
 // 아이 등록 + 부모/아이 반복 일정 캘린더. GapSetup 페이지와 Home 메인페이지에서 공용으로 쓴다.
-export function CareScheduleEditor() {
+export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[] } = {}) {
   const { children, schedules: allSchedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
   // The week grids show the repeating pattern; one-time schedules appear only on the gap calendar tab
   const schedules = allSchedules.filter((s) => !s.date)
@@ -383,15 +384,37 @@ export function CareScheduleEditor() {
           return (
             <div className="flex flex-col gap-2">
               <p className="text-xs font-semibold text-ink-2">선택된 돌봄</p>
-              <div className="flex flex-col gap-1.5">
-                {careList.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between gap-2 rounded-xl border border-line bg-ivory-card px-3 py-2 text-xs">
-                    <span className="font-semibold text-ink">{s.title ?? '돌봄(선택)'}</span>
-                    <span className="text-ink-2">
-                      {[...s.daysOfWeek].sort((a, b) => a - b).map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
-                    </span>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-2">
+                {careList.map((s) => {
+                  const option = careOptions?.find((o) => o.id === s.careOptionId)
+                  const days = [...s.daysOfWeek].sort((a, b) => a - b).map((d) => WEEKDAY_LABELS[d]).join('')
+                  return (
+                    <div key={s.id} className="rounded-xl border border-green bg-green-soft/20 px-3 py-3">
+                      <p className="text-sm font-bold text-ink">
+                        {s.careOptionId ? (
+                          <Link to={`/find/${s.careOptionId}`} className="hover:underline">
+                            {s.title ?? option?.name ?? '돌봄(선택)'}
+                          </Link>
+                        ) : (s.title ?? '돌봄(선택)')}
+                        {option && <span className="ml-1 text-xs font-normal text-ink-2">· {careTypeLabels[option.type]}</span>}
+                      </p>
+                      {option ? (
+                        <>
+                          <p className="mt-1 text-xs text-ink-2">
+                            운영 {option.open_time}~{option.close_time} · 공백 커버{' '}
+                            <span className="font-semibold text-green">{s.startTime}~{s.endTime}</span>
+                          </p>
+                          {option.address && <p className="mt-1 text-xs text-ink-2">{option.address}</p>}
+                          <p className="mt-0.5 text-xs text-ink-2">
+                            {days} · 시간당 {option.cost_per_hour === 0 ? '무료' : `${option.cost_per_hour.toLocaleString()}원`}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-xs text-ink-2">{days} · {s.startTime}~{s.endTime}</p>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )

@@ -130,7 +130,7 @@ export function Home() {
             <p className="mt-1 text-sm text-ink-2">부모 근무·아이 학교 시간을 캘린더에 등록하면 돌봄 공백을 자동 계산해요</p>
             {user ? (
               <Card className="mt-5">
-                <CareScheduleEditor />
+                <CareScheduleEditor careOptions={careOptions} />
               </Card>
             ) : (
               <Card className="mt-5 flex flex-col items-center gap-3 py-8 text-center">
