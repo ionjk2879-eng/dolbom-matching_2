@@ -1,11 +1,7 @@
 import type { Child, RecurringSchedule } from '../data/types'
 
-export const START_HOUR = 0
-export const END_HOUR = 24
-// Hour the grid is scrolled to when it opens (the rest is reached by scrolling)
-export const INITIAL_SCROLL_HOUR = 6
-// Hours visible at once inside the scroll box
-export const VISIBLE_HOURS = 16
+export const START_HOUR = 6
+export const END_HOUR = 22
 export const SLOT_MINUTES = 30
 export const SLOTS_PER_DAY = ((END_HOUR - START_HOUR) * 60) / SLOT_MINUTES
 export const ROW_HEIGHT = 22
