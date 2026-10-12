@@ -429,7 +429,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   }
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-5">
       {/* 최상위 탭: 일정 등록 / 공백 패턴 / 공백 캘린더 */}
       <div className="inline-flex self-start rounded-xl border border-line bg-ivory-deep-2 p-1">
         {(['schedule', 'gap', 'calendar'] as const).map((v) => (
@@ -450,12 +450,12 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
         <GapCalendarTab selectedDate={selectedDate} onSelectDate={setSelectedDate} />
       ) : (
         <>
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
             <p className="text-sm font-bold text-ink">아이 등록</p>
             <ChildManager />
           </div>
 
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
             <p className="text-sm font-bold text-ink">거주지</p>
             <div className="flex flex-wrap gap-2">
               <select
