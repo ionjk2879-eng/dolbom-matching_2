@@ -5,6 +5,7 @@ import { Card } from '../components/Card'
 import { formatDayLabel, toISO } from '../data/date'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { typeLabel } from '../data/scheduleLabel'
+import { occursOn } from '../data/gaps'
 import { useScheduleStore } from '../store/scheduleStore'
 import { useCareScheduleLoading, useCareScheduleStore } from '../store/careScheduleStore'
 
@@ -16,13 +17,12 @@ export function Schedule() {
 
   const [selected, setSelected] = useState(() => toISO(new Date()))
 
-  const weekdayOf = (iso: string) => new Date(`${iso}T00:00:00`).getDay()
   // One exception per schedule per date (cancel or time change, same as computeGaps)
   const exceptionOn = (scheduleId: string, iso: string) =>
     exceptions.find((e) => e.scheduleId === scheduleId && e.date === iso)
   // Skip schedules cancelled for that date ("이 날만 취소" on /gaps)
   const schedulesOn = (iso: string) =>
-    schedules.filter((s) => s.daysOfWeek.includes(weekdayOf(iso)) && !exceptionOn(s.id, iso)?.isCancelled)
+    schedules.filter((s) => occursOn(s, iso) &&!exceptionOn(s.id, iso)?.isCancelled)
   // Apply "이 날만 시간 변경" so the list matches the gap calendar
   const dayItems = schedulesOn(selected)
     .map((s) => ({ s, override: exceptionOn(s.id, selected) }))
@@ -76,6 +76,7 @@ export function Schedule() {
                 {s.startTime}~{s.endTime}
                 {override && <b className="text-ink"> → 이 날만 {override.startTime}~{override.endTime}</b>}
                 {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}
+                {s.date ? ' · 이번 한 번만' : ' · 매주 반복'}
               </p>
               {s.memo && <p className="mt-1.5 whitespace-pre-line text-xs text-ink-2">{s.memo}</p>}
               <div className="mt-2 flex justify-end gap-3 text-xs font-semibold">

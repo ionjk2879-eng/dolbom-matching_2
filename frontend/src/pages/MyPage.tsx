@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
-import { WEEKDAY_LABELS, toISO } from '../data/date'
+import { WEEKDAY_LABELS, formatDayLabel, toISO } from '../data/date'
 import { typeLabel } from '../data/scheduleLabel'
 import { useAuthStore } from '../store/authStore'
 import type { AuthUser } from '../api/auth'
@@ -108,7 +108,7 @@ export function MyPage() {
             >
               <p className="text-sm font-bold text-ink">{s.title || typeLabel(s)}</p>
               <p className="mt-1 text-xs text-ink-2">
-                {s.daysOfWeek.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
+                {s.date ? `${formatDayLabel(s.date)}만` : s.daysOfWeek.map((d) => WEEKDAY_LABELS[d]).join('')} · {s.startTime}~{s.endTime}
                 {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}
               </p>
             </Link>

@@ -29,6 +29,7 @@ function toRecurring(row: {
   days_of_week: number[]
   start_time: string
   end_time: string
+  schedule_date?: string | null
 }): RecurringSchedule {
   return {
     id: row.id,
@@ -37,8 +38,24 @@ function toRecurring(row: {
     daysOfWeek: row.days_of_week,
     startTime: hhmm(row.start_time),
     endTime: hhmm(row.end_time),
+    // DATE가 ISO 타임스탬프로 직렬화돼 올 수 있음
+    ...(row.schedule_date ? { date: row.schedule_date.slice(0, 10) } : {}),
   }
 }
+
+function toPayload(sch: Omit<RecurringSchedule, 'id'>): NewSchedule {
+  return {
+    child_id: sch.childId,
+    type: sch.type,
+    days_of_week: sch.daysOfWeek,
+    start_time: sch.startTime,
+    end_time: sch.endTime,
+    schedule_date: sch.date ?? null,
+  }
+}
+
+// A backend without schedule_date drops it and would keep the schedule repeating every week
+const ONE_TIME_UNSUPPORTED = '서버가 아직 "이번 한 번만" 일정을 지원하지 않아요. 매주 반복으로 등록해 주세요.'
 
 function toException(row: ApiScheduleException): ScheduleException {
   return {
@@ -189,14 +206,11 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
 
     addSchedule: (sch) =>
       attempt(async () => {
-        const payload: NewSchedule = {
-          child_id: sch.childId,
-          type: sch.type,
-          days_of_week: sch.daysOfWeek,
-          start_time: sch.startTime,
-          end_time: sch.endTime,
+        const row = await createSchedule(toPayload(sch))
+        if (sch.date && !row.schedule_date) {
+          await deleteSchedule(row.id)
+          throw new Error(ONE_TIME_UNSUPPORTED)
         }
-        const row = await createSchedule(payload)
         if (sch.careOptionId) {
           const tags = useCareOptionTags.getState().careOptionIdBySchedule
           useCareOptionTags.setState({ careOptionIdBySchedule: { ...tags, [row.id]: sch.careOptionId } })
@@ -214,14 +228,13 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
 
     updateSchedule: (id, sch) =>
       attempt(async () => {
-        const payload: NewSchedule = {
-          child_id: sch.childId,
-          type: sch.type,
-          days_of_week: sch.daysOfWeek,
-          start_time: sch.startTime,
-          end_time: sch.endTime,
+        const row = await apiUpdateSchedule(id, toPayload(sch))
+        if (sch.date && !row.schedule_date) {
+          // Put the old days/times back so the schedule isn't left on a single weekday
+          const prev = get().schedules.find((x) => x.id === id)
+          if (prev) await apiUpdateSchedule(id, toPayload(prev))
+          throw new Error(ONE_TIME_UNSUPPORTED)
         }
-        const row = await apiUpdateSchedule(id, payload)
         const tags = { ...useCareOptionTags.getState().careOptionIdBySchedule }
         if (sch.careOptionId) tags[id] = sch.careOptionId
         else delete tags[id]

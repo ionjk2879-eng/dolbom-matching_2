@@ -13,6 +13,12 @@ export function toTime(mins: number): string {
   return `${h}:${m}`
 }
 
+// A one-time schedule (date set) happens only on that date; others repeat on their weekdays
+export function occursOn(schedule: RecurringSchedule, date: string): boolean {
+  if (schedule.date) return schedule.date === date
+  return schedule.daysOfWeek.includes(new Date(`${date}T00:00:00`).getDay())
+}
+
 // Resolves one schedule's interval for a specific date, applying exceptions.
 // Returns null if the schedule doesn't apply that day (wrong weekday, cancelled).
 function resolveInterval(
@@ -20,10 +26,9 @@ function resolveInterval(
   date: string,
   exceptions: ScheduleException[],
 ): Interval | null {
-  const dow = new Date(`${date}T00:00:00`).getDay()
   const exception = exceptions.find((e) => e.scheduleId === schedule.id && e.date === date)
   if (exception?.isCancelled) return null
-  if (!exception && !schedule.daysOfWeek.includes(dow)) return null
+  if (!exception && !occursOn(schedule, date)) return null
   const start = exception?.startTime ?? schedule.startTime
   const end = exception?.endTime ?? schedule.endTime
   return { start: toMinutes(start), end: toMinutes(end) }
@@ -96,8 +101,9 @@ export function computeGaps(
   // 맞벌이(엄마+아빠 둘 다 등록): 동시에 근무하는 시간만 공백 후보.
   // 등록 여부는 그날이 아니라 가족 기준으로 본다 — 아빠가 쉬는 날이면 엄마만 근무해도 공백 없음 (GapMatchPanel과 같은 기준)
   // 누구 것인지 모르는 근무(태그는 localStorage라 다른 기기/예전 일정은 태그 없음)는 놓치지 않게 항상 포함
+  // One-time work doesn't make a family dual-income (it would hide gaps on every other day)
   const isWork = (s: RecurringSchedule, label: 'mom' | 'dad') =>
-    s.type === 'parent_work' && s.parentLabel === label && s.childId === null
+    s.type === 'parent_work' && s.parentLabel === label && s.childId === null && !s.date
   const dualIncome = schedules.some((s) => isWork(s, 'mom')) && schedules.some((s) => isWork(s, 'dad'))
   const parentBusy: Interval[] = dualIncome
     ? [...intersect(momWork, dadWork), ...untaggedWork]

@@ -20,7 +20,9 @@ export function GapMatchPanel({
   options: CareOption[]
   className?: string
 }) {
-  const { schedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
+  const { schedules: allSchedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
+  // Picks here are weekly, so match them against the repeating schedules only
+  const schedules = allSchedules.filter((s) => !s.date)
   const [sortBy, setSortBy] = useState<'coverage' | 'distance'>('coverage')
   const [here, setHere] = useState<LatLng | null>(null)
   const [locationError, setLocationError] = useState('')
