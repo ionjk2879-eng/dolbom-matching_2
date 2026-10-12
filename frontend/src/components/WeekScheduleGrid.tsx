@@ -6,7 +6,8 @@ import { isPendingSchedule } from '../store/careScheduleStore'
 // On touch the grid's drag/right-click/Ctrl don't work: a tap on a block opens its edit form,
 // and new blocks come from the editor's add form instead
 import { isTouchDevice } from '../data/device'
-import { START_HOUR, END_HOUR, SLOTS_PER_DAY, ROW_HEIGHT, slotToTime, timeToSlot, fitsWindow, childColors, blockColor, layoutLanes } from './weekGridLayout'
+import { SLOTS_PER_DAY, ROW_HEIGHT, slotToTime, timeToSlot, fitsWindow, blockColor, layoutLanes } from './weekGridLayout'
+import { WeekGridLegend, WeekGridTimeAxis, BlockMenu } from './WeekGridParts'
 
 // Height (px) of the edge strip for a block lying wholly outside the grid window
 const OUTSIDE_STRIP = 6
@@ -205,38 +206,11 @@ export function WeekScheduleGrid({
 
   return (
     <div className="select-none overflow-x-auto">
-      <div className="mb-2 flex flex-wrap gap-3 text-xs text-ink-2">
-        <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink" /> 엄마 근무</span>
-        <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-warn" /> 아빠 근무</span>
-        {schedules.some((s) => s.type === 'parent_work' && !s.parentLabel) && (
-          <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink-2" /> 부모 근무(미지정 · {isTouchDevice ? '탭' : '우클릭 → 수정'}해서 지정)</span>
-        )}
-        {kids.map((c, i) => (
-          <span key={c.id} className="flex items-center gap-1">
-            <span className={`h-3 w-3 rounded ${childColors[i % childColors.length].split(' ')[0]}`} /> {c.name} 학교
-          </span>
-        ))}
-        <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-line-2" /> 돌봄(선택)</span>
-      </div>
+      <WeekGridLegend schedules={schedules} kids={kids} />
 
       <div className="overflow-x-auto">
       <div className="flex min-w-[640px] pb-2">
-        <div className="w-14 shrink-0">
-          <div style={{ height: ROW_HEIGHT }} />
-          <div className="relative" style={{ height: ROW_HEIGHT * SLOTS_PER_DAY }}>
-            {Array.from({ length: SLOTS_PER_DAY / 2 + 1 }, (_, i) => (
-              START_HOUR + i <= END_HOUR && (
-                <div
-                  key={i}
-                  className="absolute right-1.5 -translate-y-1/2 text-xs leading-none text-ink-2"
-                  style={{ top: i * 2 * ROW_HEIGHT }}
-                >
-                  {String(START_HOUR + i).padStart(2, '0')}:00
-                </div>
-              )
-            ))}
-          </div>
-        </div>
+        <WeekGridTimeAxis />
 
         {WEEKDAY_LABELS.map((label, day) => (
           <div key={day} className="flex-1 border-l border-line">
@@ -459,42 +433,15 @@ export function WeekScheduleGrid({
       </p>
 
       {menu && (
-        <div
-          ref={menuRef}
-          className="fixed z-50 overflow-hidden rounded-lg border border-line bg-white shadow-lg"
-          style={{ top: menu.y, left: menu.x }}
-        >
-          <button
-            type="button"
-            className="block w-full px-4 py-2 text-left text-sm hover:bg-ivory"
-            onClick={() => { onEdit(menu.id); setMenu(null) }}
-          >
-            수정
-          </button>
-          <button
-            type="button"
-            className="block w-full px-4 py-2 text-left text-sm text-error hover:bg-ivory"
-            onClick={() => { onPunch(menu.id, slotToTime(menu.slot), slotToTime(menu.slot + 1)); setMenu(null); setSel(null) }}
-          >
-            이 시간만 삭제 ({slotToTime(menu.slot)}~{slotToTime(menu.slot + 1)})
-          </button>
-          {multiSel.size > 1 && multiSel.has(menu.id) && (
-            <button
-              type="button"
-              className="block w-full px-4 py-2 text-left text-sm text-error hover:bg-ivory font-semibold"
-              onClick={() => { multiSel.forEach((id) => onDelete(id)); setMultiSel(new Set()); setMenu(null) }}
-            >
-              선택 {multiSel.size}개 모두 삭제
-            </button>
-          )}
-          <button
-            type="button"
-            className="block w-full px-4 py-2 text-left text-sm text-error hover:bg-ivory opacity-60"
-            onClick={() => { onDelete(menu.id); setMenu(null) }}
-          >
-            전체 삭제
-          </button>
-        </div>
+        <BlockMenu
+          menu={menu}
+          menuRef={menuRef}
+          bulkCount={multiSel.size > 1 && multiSel.has(menu.id) ? multiSel.size : 0}
+          onEdit={() => { onEdit(menu.id); setMenu(null) }}
+          onPunch={() => { onPunch(menu.id, slotToTime(menu.slot), slotToTime(menu.slot + 1)); setMenu(null); setSel(null) }}
+          onDeleteSelected={() => { multiSel.forEach((id) => onDelete(id)); setMultiSel(new Set()); setMenu(null) }}
+          onDeleteAll={() => { onDelete(menu.id); setMenu(null) }}
+        />
       )}
     </div>
   )
