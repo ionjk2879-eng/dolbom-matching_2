@@ -485,53 +485,48 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
           </div>
 
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-bold text-ink">반복 일정 캘린더</p>
-              <div className="inline-flex rounded-xl border border-line bg-ivory-deep-2 p-1">
-                {(['mom', 'dad'] as const).map((label) => (
+              <div className="flex items-center gap-2">
+                <Button onClick={handleSave} disabled={!isDirty || saving}>
+                  {saving ? '저장 중...' : '저장'}
+                </Button>
+                {isDirty && (
                   <button
-                    key={label}
                     type="button"
-                    onClick={() => setTarget({ type: 'parent', parentLabel: label })}
-                    className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                      target.type === 'parent' && target.parentLabel === label ? 'bg-ivory text-ink' : 'text-ink-2'
-                    }`}
+                    onClick={handleDiscard}
+                    className="focus-ring text-xs font-semibold text-ink-2"
                   >
-                    {label === 'mom' ? '엄마 근무' : '아빠 근무'}
+                    되돌리기
                   </button>
-                ))}
-                {children.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setTarget({ type: 'child', childId: c.id })}
-                    className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                      target.type === 'child' && target.childId === c.id ? 'bg-ivory text-ink' : 'text-ink-2'
-                    }`}
-                  >
-                    {c.name} 학교
-                  </button>
-                ))}
+                )}
+                <div className="inline-flex rounded-xl border border-line bg-ivory-deep-2 p-1">
+                  {(['mom', 'dad'] as const).map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setTarget({ type: 'parent', parentLabel: label })}
+                      className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                        target.type === 'parent' && target.parentLabel === label ? 'bg-ivory text-ink' : 'text-ink-2'
+                      }`}
+                    >
+                      {label === 'mom' ? '엄마 근무' : '아빠 근무'}
+                    </button>
+                  ))}
+                  {children.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setTarget({ type: 'child', childId: c.id })}
+                      className={`focus-ring tap-target rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                        target.type === 'child' && target.childId === c.id ? 'bg-ivory text-ink' : 'text-ink-2'
+                      }`}
+                    >
+                      {c.name} 학교
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            {/* 저장 / 되돌리기 */}
-            <div className="flex items-center gap-3">
-              <Button onClick={handleSave} disabled={!isDirty || saving}>
-                {saving ? '저장 중...' : '저장'}
-              </Button>
-              {isDirty && (
-                <button
-                  type="button"
-                  onClick={handleDiscard}
-                  className="focus-ring text-xs font-semibold text-ink-2"
-                >
-                  되돌리기
-                </button>
-              )}
-              {isDirty && (
-                <span className="text-xs text-warn">저장되지 않은 변경사항이 있어요</span>
-              )}
             </div>
 
             {children.length === 0 && (
