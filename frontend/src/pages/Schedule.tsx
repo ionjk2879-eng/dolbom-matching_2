@@ -76,7 +76,7 @@ export function Schedule() {
                 {s.startTime}~{s.endTime}
                 {override && <b className="text-ink"> → 이 날만 {override.startTime}~{override.endTime}</b>}
                 {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}
-                {s.date ? ' · 이번 한 번만' : ' · 매주 반복'}
+                {s.date && ' · 이번 한 번만'}
               </p>
               {s.memo && <p className="mt-1.5 whitespace-pre-line text-xs text-ink-2">{s.memo}</p>}
               <div className="mt-2 flex justify-end gap-3 text-xs font-semibold">

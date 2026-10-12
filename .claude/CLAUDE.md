@@ -8,7 +8,6 @@
 
 1. `docs/backend-request-oauth-return-url.md` — **우선순위 높음.** 로그인 후 항상 `FRONTEND_URL`로 돌아가서 로컬 프론트에서 로그인이 안 됨. `return_to`(허용 목록 정확히 일치 + 서명된 state) 요청. 허용 목록 검사가 빠지면 토큰 탈취(open redirect)가 생기니 주의.
 2. `docs/backend-request-exceptions-batch.md` — 예외 일정을 일정별로 N번 조회 → `GET /schedules/exceptions` 일괄 조회 요청.
-3. `docs/backend-request-one-time-schedule.md` — "이번 한 번만" 일정. `schedules.schedule_date DATE NULL` 컬럼 + POST/PATCH/GET 반영. 프론트는 이미 보내고 있고, 반영 전에는 반복 끄기로 저장하면 오류가 납니다.
 
 처리가 끝나면 이 목록에서 해당 항목을 지워 주세요.
 

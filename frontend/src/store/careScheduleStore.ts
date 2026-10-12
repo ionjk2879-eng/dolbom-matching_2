@@ -57,6 +57,11 @@ function toPayload(sch: Omit<RecurringSchedule, 'id'>): NewSchedule {
 // A backend without schedule_date drops it and would keep the schedule repeating every week
 const ONE_TIME_UNSUPPORTED = '서버가 아직 "이번 한 번만" 일정을 지원하지 않아요. 매주 반복으로 등록해 주세요.'
 
+// A schedule added optimistically keeps this id until the server answers. The server can't
+// resolve it, so edits, deletes and exceptions on it are ignored until the real id arrives.
+const PENDING_PREFIX = 'temp_'
+export const isPendingSchedule = (id: string) => id.startsWith(PENDING_PREFIX)
+
 function toException(row: ApiScheduleException): ScheduleException {
   return {
     id: row.id,
@@ -205,7 +210,7 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
       }),
 
     addSchedule: (sch) => {
-      const tempId = `temp_${Math.random().toString(36).slice(2)}`
+      const tempId = `${PENDING_PREFIX}${Math.random().toString(36).slice(2)}`
       set((s) => ({
         schedules: [...s.schedules, { id: tempId, childId: sch.childId, type: sch.type, daysOfWeek: sch.daysOfWeek, date: sch.date, startTime: sch.startTime, endTime: sch.endTime, parentLabel: sch.parentLabel, color: sch.color, title: sch.title, memo: sch.memo, careOptionId: sch.careOptionId }],
       }))
@@ -239,6 +244,7 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
     },
 
     updateSchedule: (id, sch) => {
+      if (isPendingSchedule(id)) return Promise.resolve(false)
       const snapshot = get().schedules.find((x) => x.id === id)
       set((s) => ({
         schedules: s.schedules.map((x) =>
@@ -276,6 +282,7 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
     },
 
     removeSchedule: (id) => {
+      if (isPendingSchedule(id)) return Promise.resolve(false)
       const snapshot = get().schedules.find((x) => x.id === id)
       const snapshotExceptions = get().exceptions.filter((x) => x.scheduleId === id)
       set((s) => ({
@@ -294,7 +301,7 @@ export const useCareScheduleStore = create<CareScheduleState>()((set, get) => {
     },
 
     addException: (e) =>
-      attempt(async () => {
+      isPendingSchedule(e.scheduleId) ? Promise.resolve(false) : attempt(async () => {
         const row = await createException(e.scheduleId, {
           exception_date: e.date,
           start_time: e.startTime,
