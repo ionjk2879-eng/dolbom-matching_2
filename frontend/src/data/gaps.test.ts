@@ -138,6 +138,14 @@ describe('computeGaps', () => {
       expect(computeGaps(noCommute, MON, schedules, exceptions)).toEqual([{ start: '13:00', end: '15:00' }])
       expect(computeGaps(noCommute, TUE, schedules, exceptions)).toEqual([{ start: '13:00', end: '18:00' }])
     })
+
+    it('ignores a leftover time change after the schedule moved to another weekday', () => {
+      // A Monday "이 날만 시간 변경" stays in the DB when the work is later moved to Tuesday only
+      const w = work('09:00', '18:00', { parentLabel: 'mom', daysOfWeek: [2] })
+      const schedules = [w, school('09:00', '13:00')]
+      const exceptions = [exception(w.id, { startTime: '09:00', endTime: '15:00' })]
+      expect(computeGaps(noCommute, MON, schedules, exceptions)).toEqual([])
+    })
   })
 
   it('counts a one-time schedule only on its date', () => {

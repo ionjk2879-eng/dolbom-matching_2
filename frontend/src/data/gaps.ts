@@ -26,9 +26,11 @@ function resolveInterval(
   date: string,
   exceptions: ScheduleException[],
 ): Interval | null {
+  // An exception only adjusts a day the schedule runs on. One left over after the schedule moved
+  // to other weekdays (or another date) must not bring it back on its old day.
+  if (!occursOn(schedule, date)) return null
   const exception = exceptions.find((e) => e.scheduleId === schedule.id && e.date === date)
   if (exception?.isCancelled) return null
-  if (!exception && !occursOn(schedule, date)) return null
   const start = exception?.startTime ?? schedule.startTime
   const end = exception?.endTime ?? schedule.endTime
   return { start: toMinutes(start), end: toMinutes(end) }
