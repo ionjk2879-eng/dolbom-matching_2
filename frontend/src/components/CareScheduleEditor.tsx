@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, useRef, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from './Button'
 import { WeekScheduleGrid, type Target } from './WeekScheduleGrid'
@@ -34,17 +34,26 @@ function ScheduleEditForm({
   onClose,
   onSave,
   onRemove,
+  onColorPreview,
 }: {
   schedule: RecurringSchedule
   onClose: () => void
   onSave: (id: string, data: Omit<RecurringSchedule, 'id'>) => void
   onRemove: (id: string) => void
+  onColorPreview: (id: string, color: string | undefined) => void
 }) {
   const { children } = useCareScheduleStore()
   const [startTime, setStartTime] = useState(schedule.startTime)
   const [endTime, setEndTime] = useState(schedule.endTime)
   const [color, setColor] = useState(schedule.color ?? '')
   const [error, setError] = useState('')
+  // stable ref so cancel always knows the color at form-open time
+  const originalColor = useRef(schedule.color ?? '')
+
+  const handleColorChange = (hex: string) => {
+    setColor(hex)
+    onColorPreview(schedule.id, hex || undefined)
+  }
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -54,8 +63,19 @@ function ScheduleEditForm({
     onClose()
   }
 
+  const handleCancel = () => {
+    onColorPreview(schedule.id, originalColor.current || undefined)
+    onClose()
+  }
+
+  const handleColorReset = () => {
+    setColor('')
+    onColorPreview(schedule.id, undefined)
+  }
+
   const handleRemove = () => {
     if (!window.confirm(`'${blockLabel(schedule, children)}' 일정을 삭제할까요?`)) return
+    onColorPreview(schedule.id, undefined)
     onRemove(schedule.id)
     onClose()
   }
@@ -91,30 +111,33 @@ function ScheduleEditForm({
       <div>
         <p id="edit-color" className="text-xs font-semibold text-ink-2">색상</p>
         <div role="group" aria-labelledby="edit-color" className="mt-1 flex flex-wrap gap-1.5">
-          {[{ hex: '', name: '기본' }, ...SCHEDULE_PALETTE].map(({ hex, name }) => (
+          {SCHEDULE_PALETTE.map(({ hex, name }) => (
             <button
               key={name}
               type="button"
-              onClick={() => setColor(hex)}
+              onClick={() => handleColorChange(hex)}
               aria-label={name}
               aria-pressed={color === hex}
               title={name}
               className="focus-ring tap-target flex items-center justify-center rounded-full"
             >
               <span
-                className={`block h-6 w-6 rounded-full border-2 ${color === hex ? 'border-ink' : hex ? 'border-transparent' : 'border-line'} ${hex ? '' : 'bg-ivory-card'}`}
-                style={hex ? { backgroundColor: hex } : undefined}
+                className={`block h-6 w-6 rounded-full border-2 ${color === hex ? 'border-ink' : 'border-transparent'}`}
+                style={{ backgroundColor: hex }}
               />
             </button>
           ))}
         </div>
       </div>
       <Button type="submit">저장</Button>
-      <button type="button" onClick={handleRemove} className="focus-ring text-xs font-semibold text-error">
+      <button type="button" onClick={handleColorReset} className="focus-ring text-xs font-semibold text-ink-2">
         삭제
       </button>
-      <button type="button" onClick={onClose} className="focus-ring tap-target text-xs font-semibold text-ink-2">
+      <button type="button" onClick={handleCancel} className="focus-ring tap-target text-xs font-semibold text-ink-2">
         취소
+      </button>
+      <button type="button" onClick={handleRemove} className="focus-ring tap-target text-xs text-error">
+        일정 삭제
       </button>
       {error && <p className="w-full text-xs text-error">{error}</p>}
     </form>
@@ -568,6 +591,9 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                   key={editingId}
                   schedule={schedule}
                   onClose={() => setEditingId(null)}
+                  onColorPreview={(id, color) => {
+                    setDraft((prev) => prev.map((s) => (s.id === id ? { ...s, color } : s)))
+                  }}
                   onSave={(id, data) => {
                     const s = schedules.find((x) => x.id === id)
                     if (s?.type === 'care') {
