@@ -8,6 +8,7 @@ import { WEEKDAY_LABELS } from '../data/date'
 import type { CareOption, Child } from '../data/types'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { usePaged } from '../hooks/usePaged'
+import { useFavoritesStore } from '../store/favoritesStore'
 
 export function GapMatchPanel({
   child,
@@ -21,6 +22,7 @@ export function GapMatchPanel({
   className?: string
 }) {
   const { schedules: allSchedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
+  const favorites = useFavoritesStore()
   // Picks here are weekly, so match them against the repeating schedules only
   const schedules = allSchedules.filter((s) => !s.date)
   const [sortBy, setSortBy] = useState<'coverage' | 'distance'>('coverage')
@@ -294,6 +296,14 @@ export function GapMatchPanel({
                     {distance != null && ` · ${formatDistance(distance)}`}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); favorites.toggle(option.id) }}
+                  aria-label={favorites.has(option.id) ? '즐겨찾기 해제' : '즐겨찾기'}
+                  className="focus-ring tap-target shrink-0 self-start text-lg leading-none"
+                >
+                  {favorites.has(option.id) ? '❤️' : '🤍'}
+                </button>
               </label>
 
               {isSelecting && (

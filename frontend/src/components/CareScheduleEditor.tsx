@@ -9,6 +9,7 @@ import { GapCalendarTab } from './GapCalendarTab'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { blockLabel } from '../data/scheduleLabel'
 import { useMatchStore } from '../store/matchStore'
+import { useFavoritesStore } from '../store/favoritesStore'
 import { REGIONS, careTypeLabels } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
 import { ChildManager } from './ChildManager'
@@ -323,6 +324,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const schedules = [...draft, ...careSchedules]
 
   const match = useMatchStore()
+  const favorites = useFavoritesStore()
   const [view, setView] = useState<'schedule' | 'gap' | 'calendar'>('schedule')
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -729,6 +731,41 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 setIsDirty(true)
               }}
             />
+
+            {/* 즐겨찾기 센터 */}
+            {favorites.ids.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <p className="text-xs font-semibold text-ink-2">즐겨찾기 센터</p>
+                <div className="flex flex-col gap-1.5">
+                  {favorites.ids.map((fid) => {
+                    const opt = careOptions?.find((o) => o.id === fid)
+                    const name = opt?.name ?? fid
+                    const sub = opt ? `${opt.open_time}~${opt.close_time}` : ''
+                    return (
+                      <div key={fid} className="flex items-center gap-2 rounded-xl border border-line bg-ivory-card px-3 py-2">
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            to={`/find/${fid}`}
+                            className="focus-ring text-sm font-semibold text-ink hover:underline"
+                          >
+                            {name}
+                          </Link>
+                          {sub && <p className="text-xs text-ink-2">{sub}</p>}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => favorites.toggle(fid)}
+                          aria-label="즐겨찾기 해제"
+                          className="focus-ring tap-target shrink-0 text-lg leading-none"
+                        >
+                          ❤️
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

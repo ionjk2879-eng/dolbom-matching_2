@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useFavoritesStore } from '../store/favoritesStore'
 import { Link, useParams } from 'react-router-dom'
 import { PageHero } from '../components/PageHero'
 import { Card } from '../components/Card'
@@ -66,6 +67,8 @@ export function CareOptionDetail() {
     ['전화', option.phone ?? '정보 없음'],
   ]
 
+  const favorites = useFavoritesStore()
+
   return (
     <div>
       <PageHero
@@ -76,6 +79,17 @@ export function CareOptionDetail() {
       <DemoNotice options={[option]} className="mx-auto mt-6 max-w-6xl" />
       <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 md:grid-cols-[360px_1fr]">
         <Card className="flex flex-col gap-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-bold text-ink">{option.name}</p>
+            <button
+              type="button"
+              onClick={() => favorites.toggle(option.id)}
+              aria-label={favorites.has(option.id) ? '즐겨찾기 해제' : '즐겨찾기'}
+              className="focus-ring tap-target shrink-0 text-2xl leading-none"
+            >
+              {favorites.has(option.id) ? '❤️' : '🤍'}
+            </button>
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {facts.map(([label, value]) => (
               <div key={label} className="rounded-xl bg-ivory-deep px-3 py-2.5">

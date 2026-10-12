@@ -15,6 +15,7 @@ import { DISTRICTS } from '../data/districts'
 import { computeGaps, overlapWithGap } from '../data/gaps'
 import { toISO } from '../data/date'
 import type { CareOption, CareProviderType } from '../data/types'
+import { useFavoritesStore } from '../store/favoritesStore'
 
 type SortKey = 'name' | 'cost'
 
@@ -23,6 +24,7 @@ const allTypes: CareProviderType[] = ['school_care', 'community_care', 'child_ca
 export function Find() {
   const match = useMatchStore()
   const navigate = useNavigate()
+  const favorites = useFavoritesStore()
   const [options, setOptions] = useState<CareOption[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -244,7 +246,17 @@ export function Find() {
         {/* On phones the card sits under the map so it doesn't cover it */}
         {selectedOption && (
           <div className="mt-2 rounded-2xl sm:absolute sm:bottom-3 sm:right-3 sm:mt-0 sm:w-64 border border-line bg-ivory-card p-3 shadow-[0_24px_40px_-28px_rgba(60,50,30,.45)]">
-            <p className="text-sm font-bold leading-tight text-ink">{selectedOption.name}</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-bold leading-tight text-ink">{selectedOption.name}</p>
+              <button
+                type="button"
+                onClick={() => favorites.toggle(selectedOption.id)}
+                aria-label={favorites.has(selectedOption.id) ? '즐겨찾기 해제' : '즐겨찾기'}
+                className="focus-ring tap-target shrink-0 text-lg leading-none"
+              >
+                {favorites.has(selectedOption.id) ? '❤️' : '🤍'}
+              </button>
+            </div>
             <p className="mt-0.5 text-xs text-ink-2">{selectedOption.address}</p>
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {selectedOption.phone && (
@@ -307,13 +319,22 @@ export function Find() {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    {/* A real button so keyboard users can do what a card click does; the click bubbles to the card */}
                     <button type="button" className="focus-ring rounded text-left text-sm font-bold text-ink">
                       {c.name}
                     </button>
-                    {c.cost_per_hour === 0 && (
-                      <span className="shrink-0 rounded-full bg-green-soft px-2 py-0.5 text-xs font-bold text-green">무료</span>
-                    )}
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {c.cost_per_hour === 0 && (
+                        <span className="rounded-full bg-green-soft px-2 py-0.5 text-xs font-bold text-green">무료</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); favorites.toggle(c.id) }}
+                        aria-label={favorites.has(c.id) ? '즐겨찾기 해제' : '즐겨찾기'}
+                        className="focus-ring tap-target text-lg leading-none"
+                      >
+                        {favorites.has(c.id) ? '❤️' : '🤍'}
+                      </button>
+                    </div>
                   </div>
                   <p className="mt-1 text-xs text-ink-2">
                     {careTypeLabels[c.type]} · {c.address}
