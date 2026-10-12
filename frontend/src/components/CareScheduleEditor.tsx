@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Button } from './Button'
 import { WeekScheduleGrid, type Target } from './WeekScheduleGrid'
@@ -325,7 +326,23 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const [view, setView] = useState<'schedule' | 'gap' | 'calendar'>('schedule')
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })
   const [editingId, setEditingId] = useState<string | null>(null)
+  const editOriginalColorRef = useRef<string | undefined>(undefined)
   const [multiSelIds, setMultiSelIds] = useState<string[]>([])
+
+  const cancelEdit = () => {
+    if (editingId) {
+      setDraft((prev) => prev.map((s) => s.id === editingId ? { ...s, color: editOriginalColorRef.current } : s))
+    }
+    setEditingId(null)
+  }
+
+  useEffect(() => {
+    if (!editingId) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') cancelEdit() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId])
   const [selectedDate, setSelectedDate] = useState(() => toISO(new Date()))
 
   const type = target.type === 'parent' ? 'parent_work' as const : 'child_school' as const
@@ -573,7 +590,10 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
               kids={children}
               target={target}
               onCreate={onCreate}
-              onEdit={setEditingId}
+              onEdit={(id) => {
+                editOriginalColorRef.current = schedules.find((s) => s.id === id)?.color
+                setEditingId(id)
+              }}
               onDelete={(id) => {
                 const s = schedules.find((x) => x.id === id)
                 if (s?.type === 'care') removeSchedule(id)
@@ -586,39 +606,49 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
             {editingId && (() => {
               const schedule = schedules.find((s) => s.id === editingId)
               if (!schedule) return null
-              return (
-                <ScheduleEditForm
-                  key={editingId}
-                  schedule={schedule}
-                  onClose={() => setEditingId(null)}
-                  onColorPreview={(id, color) => {
-                    setDraft((prev) => prev.map((s) => (s.id === id ? { ...s, color } : s)))
-                  }}
-                  onSave={(id, data) => {
-                    const s = schedules.find((x) => x.id === id)
-                    if (s?.type === 'care') {
-                      updateSchedule(id, data)
-                    } else {
-                      draftUpdate(id, data)
-                    }
-                    // Multi-selected blocks follow only a color change
-                    if (multiSelIds.length > 1 && data.color !== schedule.color) {
-                      multiSelIds.filter((sid) => sid !== id).forEach((sid) => {
-                        const ms = schedules.find((x) => x.id === sid)
-                        if (ms && ms.color !== data.color) {
-                          const { id: _msId, ...msRest } = ms
-                          if (ms.type === 'care') updateSchedule(sid, { ...msRest, color: data.color })
-                          else draftUpdate(sid, { ...msRest, color: data.color })
+              return createPortal(
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                  onClick={cancelEdit}
+                >
+                  <div
+                    className="mx-4 w-full max-w-sm rounded-2xl bg-ivory-card p-4 shadow-xl"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ScheduleEditForm
+                      key={editingId}
+                      schedule={schedule}
+                      onClose={() => setEditingId(null)}
+                      onColorPreview={(id, color) => {
+                        setDraft((prev) => prev.map((s) => (s.id === id ? { ...s, color } : s)))
+                      }}
+                      onSave={(id, data) => {
+                        const s = schedules.find((x) => x.id === id)
+                        if (s?.type === 'care') {
+                          updateSchedule(id, data)
+                        } else {
+                          draftUpdate(id, data)
                         }
-                      })
-                    }
-                  }}
-                  onRemove={(id) => {
-                    const s = schedules.find((x) => x.id === id)
-                    if (s?.type === 'care') removeSchedule(id)
-                    else draftRemove(id)
-                  }}
-                />
+                        if (multiSelIds.length > 1 && data.color !== schedule.color) {
+                          multiSelIds.filter((sid) => sid !== id).forEach((sid) => {
+                            const ms = schedules.find((x) => x.id === sid)
+                            if (ms && ms.color !== data.color) {
+                              const { id: _msId, ...msRest } = ms
+                              if (ms.type === 'care') updateSchedule(sid, { ...msRest, color: data.color })
+                              else draftUpdate(sid, { ...msRest, color: data.color })
+                            }
+                          })
+                        }
+                      }}
+                      onRemove={(id) => {
+                        const s = schedules.find((x) => x.id === id)
+                        if (s?.type === 'care') removeSchedule(id)
+                        else draftRemove(id)
+                      }}
+                    />
+                  </div>
+                </div>,
+                document.body
               )
             })()}
 
