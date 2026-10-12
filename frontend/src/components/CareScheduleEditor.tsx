@@ -593,11 +593,9 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
               )
             })()}
 
-            {/* 아이 탭: 선택된 돌봄 센터 목록 */}
-            {target.type === 'child' && (() => {
-              const careList = schedules.filter(
-                (s) => s.type === 'care' && s.childId === childId,
-              )
+            {/* 선택된 돌봄 센터 목록 — 모든 탭에서 표시 */}
+            {(() => {
+              const careList = schedules.filter((s) => s.type === 'care')
               if (careList.length === 0) return null
               return (
                 <div className="flex flex-col gap-2">
@@ -605,6 +603,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                   <div className="flex flex-col gap-2">
                     {careList.map((s) => {
                       const option = careOptions?.find((o) => o.id === s.careOptionId)
+                      const careChild = children.find((c) => c.id === s.childId)
                       const days = [...s.daysOfWeek].sort((a, b) => a - b).map((d) => WEEKDAY_LABELS[d]).join('')
                       return (
                         <div key={s.id} className="rounded-xl border border-green bg-green-soft/20 px-3 py-3">
@@ -615,6 +614,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                               </Link>
                             ) : (s.title ?? '돌봄(선택)')}
                             {option && <span className="ml-1 text-xs font-normal text-ink-2">· {careTypeLabels[option.type]}</span>}
+                            {careChild && <span className="ml-1 text-xs font-normal text-ink-2">· {careChild.name}</span>}
                           </p>
                           {option ? (
                             <>
