@@ -105,7 +105,7 @@ export function CareOptionDetail() {
 
         {pins.length > 0 ? (
           // One column on phones has no row height to stretch into, so give the map its own
-          <div className="h-[360px] md:h-auto">
+          <div className="h-[480px] md:min-h-[520px]">
             <MapView pins={pins} selected={option.id} onSelect={noop} />
           </div>
         ) : (
