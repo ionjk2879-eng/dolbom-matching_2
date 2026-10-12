@@ -1,13 +1,18 @@
 import type { Child, RecurringSchedule } from '../data/types'
 
-export const START_HOUR = 6
-export const END_HOUR = 22
+export const START_HOUR = 0
+export const END_HOUR = 24
+// Hour the grid is scrolled to when it opens (the rest is reached by scrolling)
+export const INITIAL_SCROLL_HOUR = 6
+// Hours visible at once inside the scroll box
+export const VISIBLE_HOURS = 16
 export const SLOT_MINUTES = 30
 export const SLOTS_PER_DAY = ((END_HOUR - START_HOUR) * 60) / SLOT_MINUTES
 export const ROW_HEIGHT = 22
 
 export function slotToTime(slot: number): string {
-  const mins = START_HOUR * 60 + slot * SLOT_MINUTES
+  // The last slot ends at midnight; '24:00' can't be shown by <input type="time">, so stop at 23:59
+  const mins = Math.min(START_HOUR * 60 + slot * SLOT_MINUTES, 24 * 60 - 1)
   const h = Math.floor(mins / 60).toString().padStart(2, '0')
   const m = (mins % 60).toString().padStart(2, '0')
   return `${h}:${m}`
@@ -18,7 +23,7 @@ export function timeToSlot(time: string): number {
   return (h * 60 + m - START_HOUR * 60) / SLOT_MINUTES
 }
 
-// Blocks reaching outside 06–22 are drawn clipped and can't be dragged: a drag would clamp
+// Blocks reaching outside START_HOUR–END_HOUR are drawn clipped and can't be dragged: a drag would clamp
 // their real times into the window. Edit those through the time form instead.
 export function fitsWindow(s: { startTime: string; endTime: string }): boolean {
   return timeToSlot(s.startTime) >= 0 && timeToSlot(s.endTime) <= SLOTS_PER_DAY

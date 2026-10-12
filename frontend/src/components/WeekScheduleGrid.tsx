@@ -5,9 +5,9 @@ import { blockLabel } from '../data/scheduleLabel'
 // On touch the grid's drag/right-click/Ctrl don't work: a tap on a block opens its edit form,
 // and new blocks come from the editor's add form instead
 import { isTouchDevice } from '../data/device'
-import { START_HOUR, END_HOUR, SLOTS_PER_DAY, ROW_HEIGHT, slotToTime, timeToSlot, fitsWindow, childColors, blockColor, layoutLanes } from './weekGridLayout'
+import { START_HOUR, END_HOUR, INITIAL_SCROLL_HOUR, VISIBLE_HOURS, SLOTS_PER_DAY, ROW_HEIGHT, slotToTime, timeToSlot, fitsWindow, childColors, blockColor, layoutLanes } from './weekGridLayout'
 
-// Height (px) of the edge strip for a block lying wholly outside 06–22
+// Height (px) of the edge strip for a block lying wholly outside the grid window
 const OUTSIDE_STRIP = 6
 
 type Cell = { day: number; slot: number }
@@ -81,6 +81,12 @@ export function WeekScheduleGrid({
   const [menu, setMenu] = useState<{ id: string; x: number; y: number; slot: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const colRefs = useRef<(HTMLDivElement | null)[]>([])
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Open at the usual daytime view; earlier/later hours are a scroll away
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = (INITIAL_SCROLL_HOUR - START_HOUR) * 2 * ROW_HEIGHT
+  }, [])
 
   useEffect(() => {
     if (!menu) return
@@ -218,12 +224,15 @@ export function WeekScheduleGrid({
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-line-2" /> 돌봄(선택)</span>
       </div>
 
-      <div className="flex min-w-[640px]">
+      {/* Whole day scrolls inside this box; weekday header stays pinned */}
+      <div ref={scrollRef} className="overflow-auto" style={{ maxHeight: ROW_HEIGHT * (VISIBLE_HOURS * 2 + 1) }}>
+      <div className="flex min-w-[640px] pb-2">
         <div className="w-14 shrink-0">
-          <div style={{ height: ROW_HEIGHT }} />
+          <div style={{ height: ROW_HEIGHT }} className="sticky top-0 z-30 bg-ivory-card" />
           <div className="relative" style={{ height: ROW_HEIGHT * SLOTS_PER_DAY }}>
+            {/* 01:00 ~ 24:00 — the top 00:00 label would sit under the pinned header */}
             {Array.from({ length: SLOTS_PER_DAY / 2 + 1 }, (_, i) => (
-              START_HOUR + i <= END_HOUR && (
+              i > 0 && START_HOUR + i <= END_HOUR && (
                 <div
                   key={i}
                   className="absolute right-1.5 -translate-y-1/2 text-xs leading-none text-ink-2"
@@ -238,7 +247,7 @@ export function WeekScheduleGrid({
 
         {WEEKDAY_LABELS.map((label, day) => (
           <div key={day} className="flex-1 border-l border-line">
-            <div style={{ height: ROW_HEIGHT }} className="text-center text-xs font-semibold text-ink-2">{label}</div>
+            <div style={{ height: ROW_HEIGHT }} className="sticky top-0 z-30 bg-ivory-card text-center text-xs font-semibold text-ink-2">{label}</div>
             <div
               ref={(el) => { colRefs.current[day] = el }}
               className="relative border-t border-line"
@@ -328,7 +337,7 @@ export function WeekScheduleGrid({
                         }}
                         className={`absolute overflow-hidden rounded text-[10px] font-semibold ${blockColor(s, kids)} ${isMoving ? 'opacity-30' : ''} ${isMultiSel ? 'ring-2 ring-blue-400' : ''}`}
                         style={{
-                          // Clipped to the 06–22 window so early/late blocks don't spill over the day header
+                          // Clipped to the grid window so early/late blocks don't spill over the day header
                           top: blockTop,
                           height: outside ? OUTSIDE_STRIP : (bottom - top) * ROW_HEIGHT,
                           left: `calc(${(lane / totalLanes) * 100}% + 2px)`,
@@ -436,6 +445,7 @@ export function WeekScheduleGrid({
             </div>
           </div>
         ))}
+      </div>
       </div>
 
       {multiSel.size > 1 && (
