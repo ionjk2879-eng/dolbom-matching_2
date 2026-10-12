@@ -17,14 +17,18 @@ export function Schedule() {
   const [selected, setSelected] = useState(() => toISO(new Date()))
 
   const weekdayOf = (iso: string) => new Date(`${iso}T00:00:00`).getDay()
+  // One exception per schedule per date (cancel or time change, same as computeGaps)
+  const exceptionOn = (scheduleId: string, iso: string) =>
+    exceptions.find((e) => e.scheduleId === scheduleId && e.date === iso)
   // Skip schedules cancelled for that date ("이 날만 취소" on /gaps)
   const schedulesOn = (iso: string) =>
-    schedules.filter(
-      (s) =>
-        s.daysOfWeek.includes(weekdayOf(iso)) &&
-        !exceptions.some((e) => e.scheduleId === s.id && e.date === iso && e.isCancelled),
+    schedules.filter((s) => s.daysOfWeek.includes(weekdayOf(iso)) && !exceptionOn(s.id, iso)?.isCancelled)
+  // Apply "이 날만 시간 변경" so the list matches the gap calendar
+  const dayItems = schedulesOn(selected)
+    .map((s) => ({ s, override: exceptionOn(s.id, selected) }))
+    .sort((a, b) =>
+      (a.override?.startTime ?? a.s.startTime).localeCompare(b.override?.startTime ?? b.s.startTime),
     )
-  const dayItems = schedulesOn(selected).sort((a, b) => a.startTime.localeCompare(b.startTime))
 
   return (
     <div>
@@ -64,12 +68,13 @@ export function Schedule() {
           </div>
           {loading && <p className="text-sm text-ink-2">불러오는 중...</p>}
           {!loading && dayItems.length === 0 && <p className="text-sm text-ink-2">등록된 일정이 없어요</p>}
-          {dayItems.map((s) => (
+          {dayItems.map(({ s, override }) => (
             <div key={s.id} className="rounded-xl border border-line p-3">
               <p className="text-sm font-bold text-ink">{s.title || typeLabel(s)}</p>
               <p className="mt-1 text-xs text-ink-2">
                 {s.title && `${typeLabel(s)} · `}
                 {s.startTime}~{s.endTime}
+                {override && <b className="text-ink"> → 이 날만 {override.startTime}~{override.endTime}</b>}
                 {s.childId && ` · ${childName(s.childId) ?? '알 수 없는 아이'}`}
               </p>
               {s.memo && <p className="mt-1.5 whitespace-pre-line text-xs text-ink-2">{s.memo}</p>}
