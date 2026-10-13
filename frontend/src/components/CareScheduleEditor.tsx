@@ -18,36 +18,18 @@ import { toISO } from '../data/date'
 import type { CareOption, RecurringSchedule } from '../data/types'
 import { presetItemsToDraft, draftToPresetItems, loadPresets, upsertPreset, deletePreset, type Preset } from '../data/presets'
 
-// Temporary IDs for draft-only schedules (never sent to server until save)
-const tmpId = () => `__${Math.random().toString(36).slice(2, 9)}`
-const isTemp = (id: string) => id.startsWith('__')
-
 // 아이 등록 + 부모/아이 반복 일정 캘린더. GapSetup 페이지와 Home 메인페이지에서 공용으로 쓴다.
 export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[] } = {}) {
-  const { children, schedules: allSchedules, addSchedule, removeSchedule, updateSchedule, loaded } = useCareScheduleStore()
+  const { children, schedules: allSchedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
 
-  // Server non-care repeating schedules (source of truth for diff on save)
   const serverSchedules = allSchedules.filter((s) => !s.date && s.type !== 'care')
-  // Care schedules always come from server (GapMatchPanel manages them, not draft)
   const careSchedules = allSchedules.filter((s) => s.type === 'care' && !s.date)
 
-  // Draft state: user's pending changes (not yet sent to server)
-  const [draft, setDraft] = useState<RecurringSchedule[]>([])
-  const [isDirty, setIsDirty] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [initialized, setInitialized] = useState(false)
-
-  // Sync server → draft once on initial load; never overwrite user's in-progress edits
-  useEffect(() => {
-    if (loaded && !initialized) {
-      setDraft(serverSchedules)
-      setInitialized(true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded])
-
-  // What the grid sees: user's draft + server-managed care schedules
-  const schedules = [...draft, ...careSchedules]
+  // Color preview while editing (local only — not sent to server until form save)
+  const [colorOverrides, setColorOverrides] = useState<Map<string, string | undefined>>(new Map())
+  const schedules = [...serverSchedules, ...careSchedules].map((s) =>
+    colorOverrides.has(s.id) ? { ...s, color: colorOverrides.get(s.id) } : s
+  )
 
   const match = useMatchStore()
   const [view, setView] = useState<'schedule' | 'gap' | 'calendar'>('schedule')
@@ -60,30 +42,14 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const [activePresetName, setActivePresetName] = useState<string | null>(null)
   const editOriginalColorsRef = useRef<Map<string, string | undefined>>(new Map())
   const [multiSelIds, setMultiSelIds] = useState<string[]>([])
+  const [selectedDate, setSelectedDate] = useState(() => toISO(new Date()))
 
-  const handleSavePreset = () => {
-    if (!saveName.trim()) return
-    const p: Preset = {
-      id: Math.random().toString(36).slice(2),
-      name: saveName.trim(),
-      createdAt: new Date().toISOString(),
-      items: draftToPresetItems(draft, children),
-      region: match.region || undefined,
-      district: match.district || undefined,
-    }
-    upsertPreset(p)
-    setPresets(loadPresets())
-    setSaveName('')
-    setShowSaveInput(false)
-  }
+  const cancelEdit = () => setEditingId(null)
 
-  const cancelEdit = () => {
-    if (editingId) {
-      const orig = editOriginalColorsRef.current
-      setDraft((prev) => prev.map((s) => orig.has(s.id) ? { ...s, color: orig.get(s.id) } : s))
-    }
-    setEditingId(null)
-  }
+  // Clear color overrides whenever edit form closes
+  useEffect(() => {
+    if (!editingId) setColorOverrides(new Map())
+  }, [editingId])
 
   useEffect(() => {
     if (!editingId) return
@@ -92,7 +58,6 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     return () => window.removeEventListener('keydown', handler)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId])
-  const [selectedDate, setSelectedDate] = useState(() => toISO(new Date()))
 
   const type = target.type === 'parent' ? 'parent_work' as const : 'child_school' as const
   const childId = target.type === 'child' ? target.childId : null
@@ -104,125 +69,95 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
       : (s.type === 'child_school' || s.type === 'care') && s.childId === target.childId
   )
 
-  // Draft mutation helpers
-  const draftUpdate = (id: string, sch: Omit<RecurringSchedule, 'id'>) => {
-    setDraft((prev) => prev.map((s) => (s.id === id ? { ...sch, id } : s)))
-    setIsDirty(true)
-    setActivePresetName(null)
-  }
-  const draftRemove = (id: string) => {
-    setDraft((prev) => prev.filter((s) => s.id !== id))
-    setIsDirty(true)
-    setActivePresetName(null)
-  }
-
-  // Save draft to server: diff draft vs server, apply changes
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      const serverIds = new Set(serverSchedules.map((s) => s.id))
-      const draftServerIds = new Set(draft.filter((s) => !isTemp(s.id)).map((s) => s.id))
-      const toDelete = serverSchedules.filter((s) => !draftServerIds.has(s.id))
-      const toAdd = draft.filter((s) => isTemp(s.id))
-      const toUpdate = draft
-        .filter((s) => !isTemp(s.id) && serverIds.has(s.id))
-        .filter((s) => {
-          const orig = serverSchedules.find((x) => x.id === s.id)!
-          return (
-            s.daysOfWeek.join() !== orig.daysOfWeek.join() ||
-            s.startTime !== orig.startTime ||
-            s.endTime !== orig.endTime ||
-            s.parentLabel !== orig.parentLabel ||
-            s.color !== orig.color ||
-            s.title !== orig.title ||
-            s.memo !== orig.memo
-          )
-        })
-      await Promise.all([
-        ...toDelete.map((s) => removeSchedule(s.id)),
-        ...toUpdate.map((s) => { const { id, ...rest } = s; return updateSchedule(id, rest) }),
-        ...toAdd.map((s) => { const { id: _id, ...rest } = s; return addSchedule(rest) }),
-      ])
-    } finally {
-      const final = useCareScheduleStore.getState().schedules.filter((s) => !s.date && s.type !== 'care')
-      setDraft(final)
-      setIsDirty(false)
-      setSaving(false)
+  const handleSavePreset = () => {
+    if (!saveName.trim()) return
+    const p: Preset = {
+      id: Math.random().toString(36).slice(2),
+      name: saveName.trim(),
+      createdAt: new Date().toISOString(),
+      items: draftToPresetItems(serverSchedules, children),
+      region: match.region || undefined,
+      district: match.district || undefined,
     }
+    upsertPreset(p)
+    setPresets(loadPresets())
+    setSaveName('')
+    setShowSaveInput(false)
   }
 
-  const handleDiscard = () => {
-    setDraft(serverSchedules)
-    setIsDirty(false)
-    setActivePresetName(null)
+  const handleLoadPreset = async (preset: Preset) => {
+    const careToRemove = allSchedules.filter((s) => s.type === 'care' && !s.date)
+    const recurringToRemove = allSchedules.filter((s) => !s.date && s.type !== 'care')
+    const needsConfirm = recurringToRemove.length > 0 || careToRemove.length > 0
+    if (needsConfirm && !window.confirm('현재 일정(맞춤센터 포함)을 초기화하고 프리셋을 불러올까요?')) return
+    await Promise.all([
+      ...careToRemove.map((s) => removeSchedule(s.id)),
+      ...recurringToRemove.map((s) => removeSchedule(s.id)),
+    ])
+    const newItems = presetItemsToDraft(preset.items, children, () => Math.random().toString(36).slice(2))
+    await Promise.all(newItems.map((s) => { const { id: _id, ...rest } = s; return addSchedule(rest) }))
+    match.setRegion(preset.region ?? '')
+    match.setDistrict(preset.district ?? '')
+    setActivePresetName(preset.name)
+    setPresetOpen(false)
   }
 
-  // Grid callbacks operate on draft state
+  // Grid callbacks — all write directly to server
+
   const onCreate = (daysOfWeek: number[], startTime: string, endTime: string) => {
-    setDraft((prev) => {
-      const overlapIds = new Set(
-        prev
-          .filter(
-            (s) =>
-              s.type === type &&
-              s.childId === childId &&
-              (type === 'parent_work' ? s.parentLabel === parentLabel : true) &&
-              s.daysOfWeek.some((d) => daysOfWeek.includes(d)) &&
-              s.startTime < endTime &&
-              s.endTime > startTime,
-          )
-          .map((s) => s.id),
-      )
-      const overlapping = prev.filter((s) => overlapIds.has(s.id))
-      const remnants = overlapping.flatMap((s) =>
-        s.daysOfWeek
-          .filter((d) => !daysOfWeek.includes(d))
-          .map((d) => ({ ...s, id: tmpId(), daysOfWeek: [d] })),
-      )
-      const newBlocks = daysOfWeek.map(
-        (day) =>
-          ({
-            id: tmpId(),
-            type,
-            childId,
-            daysOfWeek: [day],
-            startTime,
-            endTime,
-            parentLabel,
-          }) as RecurringSchedule,
-      )
-      return [...prev.filter((s) => !overlapIds.has(s.id)), ...remnants, ...newBlocks]
-    })
-    setIsDirty(true)
+    const overlapIds = new Set(
+      serverSchedules
+        .filter(
+          (s) =>
+            s.type === type &&
+            s.childId === childId &&
+            (type === 'parent_work' ? s.parentLabel === parentLabel : true) &&
+            s.daysOfWeek.some((d) => daysOfWeek.includes(d)) &&
+            s.startTime < endTime &&
+            s.endTime > startTime,
+        )
+        .map((s) => s.id),
+    )
+    const overlapping = serverSchedules.filter((s) => overlapIds.has(s.id))
+    const remnants = overlapping.flatMap((s) =>
+      s.daysOfWeek
+        .filter((d) => !daysOfWeek.includes(d))
+        .map((d) => { const { id: _id, ...rest } = s; return { ...rest, daysOfWeek: [d] } }),
+    )
+    const newBlocks = daysOfWeek.map(
+      (day) =>
+        ({
+          type,
+          childId,
+          daysOfWeek: [day],
+          startTime,
+          endTime,
+          parentLabel,
+        }) as Omit<RecurringSchedule, 'id'>,
+    )
+    void Promise.all(overlapping.map((s) => removeSchedule(s.id)))
+      .then(() => Promise.all([...remnants.map((r) => addSchedule(r)), ...newBlocks.map((b) => addSchedule(b))]))
     setActivePresetName(null)
   }
 
   const onPunch = (id: string, punchStart: string, punchEnd: string) => {
     const s = schedules.find((x) => x.id === id)
     if (!s) return
-    if (s.type === 'care') { removeSchedule(id); return }
-    setDraft((prev) => {
-      const found = prev.find((x) => x.id === id)
-      if (!found) return prev
-      const rem: RecurringSchedule[] = []
-      if (found.startTime < punchStart) rem.push({ ...found, id: tmpId(), endTime: punchStart })
-      if (found.endTime > punchEnd) rem.push({ ...found, id: tmpId(), startTime: punchEnd })
-      return [...prev.filter((x) => x.id !== id), ...rem]
-    })
-    setIsDirty(true)
+    if (s.type === 'care') { void removeSchedule(id); return }
+    const { id: _id, ...rest } = s
+    const rem: Omit<RecurringSchedule, 'id'>[] = []
+    if (s.startTime < punchStart) rem.push({ ...rest, endTime: punchStart })
+    if (s.endTime > punchEnd) rem.push({ ...rest, startTime: punchEnd })
+    void removeSchedule(id).then(() => Promise.all(rem.map((r) => addSchedule(r))))
     setActivePresetName(null)
   }
 
   const onMove = (id: string, daysOfWeek: number[], startTime: string, endTime: string) => {
     const s = schedules.find((x) => x.id === id)
     if (!s) return
-    if (s.type === 'care') {
-      const { id: _id, ...rest } = s
-      updateSchedule(id, { ...rest, daysOfWeek, startTime, endTime })
-      return
-    }
     const { id: _id, ...rest } = s
-    draftUpdate(id, { ...rest, daysOfWeek, startTime, endTime })
+    void updateSchedule(id, { ...rest, daysOfWeek, startTime, endTime })
+    setActivePresetName(null)
   }
 
   return (
@@ -260,7 +195,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="시/도"
                   value={match.region}
-                  onChange={(e) => { match.setRegion(e.target.value); setIsDirty(true); setActivePresetName(null) }}
+                  onChange={(e) => { match.setRegion(e.target.value); setActivePresetName(null) }}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
                 >
                   <option value="">시/도 선택</option>
@@ -271,7 +206,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="구/군"
                   value={match.district}
-                  onChange={(e) => { match.setDistrict(e.target.value); setIsDirty(true); setActivePresetName(null) }}
+                  onChange={(e) => { match.setDistrict(e.target.value); setActivePresetName(null) }}
                   disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
                 >
@@ -306,17 +241,9 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                     <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-xl border border-line bg-ivory-card p-3 shadow-lg">
                       <PresetSection
                         presets={presets}
-                        draft={draft}
+                        draft={serverSchedules}
                         kids={children}
-                        onLoad={(preset) => {
-                          if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
-                          setDraft(presetItemsToDraft(preset.items, children, tmpId))
-                          match.setRegion(preset.region ?? '')
-                          match.setDistrict(preset.district ?? '')
-                          setIsDirty(true)
-                          setActivePresetName(preset.name)
-                          setPresetOpen(false)
-                        }}
+                        onLoad={handleLoadPreset}
                         onUpdate={(p) => { upsertPreset(p); setPresets(loadPresets()) }}
                         onDelete={(id) => { deletePreset(id); setPresets(loadPresets()) }}
                       />
@@ -350,18 +277,6 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
           <div className="flex flex-col gap-3">
             <p className="text-sm font-bold text-ink">반복 일정 캘린더</p>
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" onClick={handleSave} disabled={!isDirty || saving}>
-                {saving ? '저장 중...' : '저장'}
-              </Button>
-              {isDirty && (
-                <button
-                  type="button"
-                  onClick={handleDiscard}
-                  className="focus-ring text-xs font-semibold text-ink-2"
-                >
-                  되돌리기
-                </button>
-              )}
               <div className="inline-flex rounded-xl border border-line bg-ivory-deep-2 p-1">
                 {(['mom', 'dad'] as const).map((label) => (
                   <button
@@ -415,11 +330,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 editOriginalColorsRef.current = new Map(ids.map((sid) => [sid, schedules.find((s) => s.id === sid)?.color]))
                 setEditingId(id)
               }}
-              onDelete={(id) => {
-                const s = schedules.find((x) => x.id === id)
-                if (s?.type === 'care') removeSchedule(id)
-                else draftRemove(id)
-              }}
+              onDelete={(id) => void removeSchedule(id)}
               onPunch={onPunch}
               onMove={onMove}
               onSelectionChange={setMultiSelIds}
@@ -442,26 +353,19 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                       onClose={() => setEditingId(null)}
                       onColorPreview={(id, color) => {
                         const ids = multiSelIds.length > 1 ? multiSelIds : [id]
-                        setDraft((prev) => prev.map((s) => ids.includes(s.id) ? { ...s, color } : s))
+                        setColorOverrides((prev) => {
+                          const next = new Map(prev)
+                          ids.forEach((sid) => next.set(sid, color))
+                          return next
+                        })
                       }}
                       onSave={(id, data) => {
-                        // Non-temp (existing server) schedules auto-save immediately
                         const saveOne = (sid: string, sdata: Omit<RecurringSchedule, 'id'>) => {
-                          const existing = schedules.find((x) => x.id === sid)
-                          if (!existing) return
-                          if (existing.type === 'care' || !isTemp(sid)) {
-                            updateSchedule(sid, sdata)
-                            if (existing.type !== 'care') {
-                              setDraft((prev) => prev.map((d) => d.id === sid ? { ...sdata, id: sid } : d))
-                              setIsDirty(true)
-                              setActivePresetName(null)
-                            }
-                          } else {
-                            draftUpdate(sid, sdata)
-                          }
+                          if (!schedules.find((x) => x.id === sid)) return
+                          void updateSchedule(sid, sdata)
+                          setActivePresetName(null)
                         }
                         saveOne(id, data)
-                        // Multi-select: propagate color change to all selected
                         const origColor = editOriginalColorsRef.current.get(id)
                         if (multiSelIds.length > 1 && data.color !== origColor) {
                           multiSelIds.filter((sid) => sid !== id).forEach((sid) => {
@@ -472,11 +376,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                           })
                         }
                       }}
-                      onRemove={(id) => {
-                        const s = schedules.find((x) => x.id === id)
-                        if (s?.type === 'care') removeSchedule(id)
-                        else draftRemove(id)
-                      }}
+                      onRemove={(id) => { void removeSchedule(id); setEditingId(null) }}
                     />
                   </div>
                 </div>,
