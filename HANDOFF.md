@@ -1,6 +1,6 @@
 # 인수인계 문서
 
-> 마지막 업데이트: 2026-10-08
+> 마지막 업데이트: 2026-10-13
 
 ## 현재 브랜치
 - 작업 브랜치: `main`
@@ -48,13 +48,15 @@ backend/src/
 │   ├── users.ts          # upsertUser, findUserById
 │   ├── children.ts       # children CRUD
 │   ├── schedules.ts      # schedules CRUD + getActiveSchedulesForDate
-│   └── care_providers.ts # findCareProviders, findAllCareProviders, findCareProviderById
+│   ├── care_providers.ts # findCareProviders, findAllCareProviders, findCareProviderById
+│   └── migrations/
+│       └── add_schedule_date_to_schedules.sql  # schedule_date 컬럼 추가 마이그레이션
 ├── middleware/
 │   └── auth.ts           # requireAuth (JWT Bearer 검증)
 ├── routes/
 │   ├── auth.ts           # OAuth + ID/PW + /me + /logout
 │   ├── children.ts       # /children
-│   ├── schedules.ts      # /schedules
+│   ├── schedules.ts      # /schedules (schedule_date 지원)
 │   └── gaps.ts           # /gaps + /care-options (인증 불필요)
 ├── index.ts              # 앱 진입점, 라우트 등록
 └── types.ts              # Env, User 타입
@@ -63,9 +65,11 @@ backend/src/
 ### DB 스키마 (`backend/src/db/schema.sql`)
 - `users` — OAuth/로컬 계정 (provider: kakao/naver/local, login_id, password_hash)
 - `children` — 아이 정보 (user_id FK, grade 1-6, commute_minutes)
-- `schedules` — 반복 주간 패턴 (type: child_school/parent_work/care, days_of_week int[])
+- `schedules` — 주간 패턴 (type: child_school/parent_work/care, days_of_week int[], **schedule_date DATE NULL** — null이면 매주반복, 값이 있으면 하루만)
 - `schedule_exceptions` — 특정 날짜 예외
 - `care_providers` — 돌봄 기관 정보 (**실데이터 2,237건 적재 완료**)
+
+> **운영 DB 주의**: `schedule_date` 컬럼 마이그레이션 (`migrations/add_schedule_date_to_schedules.sql`) 운영 DB에 아직 미적용일 수 있음 — 배포 전 확인 필요.
 
 ---
 
@@ -77,27 +81,35 @@ frontend/src/
 ├── api/
 │   ├── careOptions.ts     # fetchCareOptions() → /care-options
 │   ├── children.ts        # /children CRUD
-│   ├── schedules.ts       # /schedules CRUD
+│   ├── schedules.ts       # /schedules CRUD (schedule_date 포함)
 │   └── client.ts          # apiFetch 베이스 클라이언트
 ├── components/
 │   ├── CareScheduleEditor.tsx  # 아이 등록 + 일정 등록 + 공백 패턴 + 공백 캘린더 (3탭)
-│   ├── WeekScheduleGrid.tsx    # 드래그 인터랙티브 주간 캘린더
-│   ├── GapWeekGrid.tsx         # 공백 패턴 읽기 전용 주간 뷰
-│   ├── GapMatchPanel.tsx       # 공백 기반 돌봄 옵션 체크박스 패널
+│   ├── ChildManager.tsx        # 아이 CRUD 폼 (CareScheduleEditor에서 분리)
+│   ├── GapCalendarTab.tsx      # 공백 캘린더 탭 전체 (CareScheduleEditor에서 분리)
+│   ├── WeekScheduleGrid.tsx    # 드래그 인터랙티브 주간 캘린더 (Ctrl/Shift 다중선택, 색상 팔레트, 모달 편집)
+│   ├── GapWeekGrid.tsx         # 공백 패턴 읽기 전용 주간 뷰 (선택 돌봄 초록 블록 포함)
+│   ├── GapMatchPanel.tsx       # 공백 기반 돌봄 옵션 체크박스 패널 + 즐겨찾기 섹션
+│   ├── HeartButton.tsx         # 즐겨찾기 하트 버튼 (SVG, favoritesStore 사용)
 │   ├── MonthCalendar.tsx       # 월간 달력 (공백 캘린더 탭에 사용)
-│   └── MapView.tsx             # 네이버 지도 (핀 클릭 → 팝업, h-full 기반 크기 제어)
+│   ├── MapView.tsx             # 네이버 지도 (핀 클릭 → 팝업, h-full 기반 크기 제어)
+│   └── weekGridLayout.ts       # 주간 그리드 레이아웃 헬퍼 (분리)
 ├── data/
-│   ├── gaps.ts            # computeGaps 로컬 계산 (교집합 기반 맞벌이 지원)
+│   ├── gaps.ts            # computeGaps 로컬 계산 (교집합 기반, occursOn()은 schedule_date 반영)
 │   ├── careMatch.ts       # 필터링 함수 + REGIONS 상수
 │   ├── districts.ts       # 시/도 → 구/군 목록 (전국 17개 시/도)
+│   ├── presets.ts         # 일정 프리셋 CRUD (localStorage `schedule-presets`, 지역/구 포함)
 │   ├── scheduleLabel.ts   # blockLabel() — 일정 블록 표시 이름 (parentLabel 반영)
-│   └── types.ts           # RecurringSchedule, Child, CareOption 등
+│   └── types.ts           # RecurringSchedule (date, color 필드 추가), Child, CareOption 등
+├── hooks/
+│   └── useAutoRegion.ts   # 방문자 지역 자동 감지 → matchStore 초기화
 ├── pages/
-│   ├── Home.tsx           # 메인 (일정 등록 + 맞춤 매칭)
+│   ├── Home.tsx           # 메인 (일정 등록 + 맞춤 매칭 + 즐겨찾기 섹션)
 │   ├── Find.tsx           # 돌봄 찾기 (sticky 필터 + 360px 지도 + 카드 목록)
-│   └── CareOptionDetail.tsx  # /find/:id 돌봄 기관 상세
+│   └── CareOptionDetail.tsx  # /find/:id 돌봄 기관 상세 (지도 확대됨)
 └── store/
-    ├── careScheduleStore.ts  # 아이/일정 상태 (API 연동, useParentTags 포함)
+    ├── careScheduleStore.ts  # 아이/일정 상태 (API 연동, useParentTags 포함, schedule_date)
+    ├── favoritesStore.ts     # 즐겨찾기 상태 (localStorage `care-favorites`)
     └── matchStore.ts         # 매칭 필터 상태 (grade/time/region/district/costFilter)
 ```
 
@@ -116,16 +128,23 @@ frontend/src/
   title?: string           // 사용자 지정 이름 (localStorage)
   memo?: string            // 메모 (localStorage)
   parentLabel?: 'mom' | 'dad'  // parent_work 일 때 엄마/아빠 구분 (localStorage)
+  color?: string           // 사용자 지정 색상 hex (localStorage)
+  date?: string            // 'YYYY-MM-DD'. 있으면 매주 반복이 아닌 하루만 일정 (DB schedule_date)
 }
 ```
 
-**주의**: `careOptionId`, `title`, `memo`, `parentLabel` 모두 DB에 없는 필드.  
+**주의**: `careOptionId`, `title`, `memo`, `parentLabel`, `color` 모두 DB에 없는 필드.  
 각각 localStorage persist 스토어에 보관:
 - `useParentTags` (`parent-tags` 키)
 - `useScheduleNotes` (`schedule-notes` 키)  
 - `useCareOptionTags` (`care-option-tags` 키)
 
 업데이트/삭제 시 반드시 이 필드들을 함께 유지해야 함 (parentLabel 버그 전례 있음).
+
+**`date` 필드 (일회성 일정)**:
+- DB의 `schedule_date` 컬럼과 동기화됨 (백엔드 구현 완료, 마이그레이션 파일 있음)
+- `occursOn(schedule, date)` 함수가 이 필드를 보고 공백 계산에 반영
+- 주간 그리드·공백 패턴·돌봄 매칭 화면에는 반복 일정만 표시 (`date`가 없는 것만)
 
 ### 공백 계산 로직 (`data/gaps.ts`)
 - 한 부모: `gap = parent_work - child_covered`
@@ -142,37 +161,45 @@ frontend/src/
 
 ---
 
-## 기능 현황 (2026-10-07 기준)
+## 기능 현황 (2026-10-13 기준)
 
 ### 완료된 기능
 
 | 기능 | 위치 | 설명 |
 |------|------|------|
-| 아이 등록/수정/삭제 | CareScheduleEditor | 이름·학년·통학시간, 인라인 수정 폼 |
+| 아이 등록/수정/삭제 | ChildManager | 이름·학년·통학시간, 인라인 수정 폼 |
 | 엄마/아빠 근무 분리 | CareScheduleEditor | 각 탭 독립 저장, 서로 다른 색상 |
 | 아이 학교 일정 | CareScheduleEditor | 아이별 탭, care 타입도 함께 표시 |
-| 공백 패턴 뷰 | CareScheduleEditor > 공백 패턴 탭 | 주간 공백 시각화 |
-| **공백 캘린더 탭** | CareScheduleEditor > 공백 캘린더 탭 | 월간 달력 + 날짜 선택 + 이 날만 취소/시간 변경 (MonthCalendar 사용). `/gaps`·`/gaps/setup`은 `/`로 리다이렉트 |
+| 공백 패턴 뷰 | CareScheduleEditor > 공백 패턴 탭 | 주간 공백 + 선택 돌봄 초록 블록 시각화 |
+| **공백 캘린더 탭** | GapCalendarTab | 월간 달력 + 날짜 선택 + 이 날만 취소/시간 변경. `/gaps`·`/gaps/setup`은 `/`로 리다이렉트 |
 | 거주지 입력 | CareScheduleEditor | 시/도 + 구/군, matchStore에 저장 |
 | 저장 버튼 항상 표시 | CareScheduleEditor | 변경 없을 때 disabled, 변경 시 활성화 |
+| **드래프트 모드 + 프리셋** | CareScheduleEditor | localStorage `schedule-presets`에 저장. 지역/구 포함. 로드/삭제 확인 다이얼로그 |
+| **일정 편집 모달** | WeekScheduleGrid | 블록 편집 폼이 팝업 모달로 변경 |
+| **사용자 지정 색상** | WeekScheduleGrid | 색상 팔레트 + 실시간 미리보기 + Ctrl/Shift 다중선택 일괄 변경 + 자동 저장 |
+| **일회성 일정** | ScheduleNew | 매주 반복/하루만 switch, schedule_date로 저장 (백엔드 완료) |
 | 맞춤 매칭 (체크박스) | Home.tsx + GapMatchPanel | 공백별 돌봄 옵션 선택, progress bar |
-| **돌봄 센터 요일 편집** | GapMatchPanel | 이미 체크된 센터 클릭 → 즉시 삭제 대신 요일 피커 열기. 삭제 버튼 별도 추가 |
-| **센터 상세 연결** | GapMatchPanel | 센터 이름 클릭 → `/find/:id` 상세 페이지 이동 |
+| 돌봄 센터 요일 편집 | GapMatchPanel | 체크된 센터 클릭 → 요일 피커(수정 모드). 삭제 버튼 별도 |
+| 센터 상세 연결 | GapMatchPanel | 센터 이름 클릭 → `/find/:id` 상세 이동 |
+| **선택 돌봄 상세 표시** | GapMatchPanel | 운영시간·주소·비용 인라인 표시. 모든 탭(엄마/아빠/아이)에 공통 노출 |
+| **즐겨찾기 (하트)** | GapMatchPanel + HeartButton | SVG 하트 토글, localStorage `care-favorites`. 즐겨찾기 섹션은 Home 매칭 패널에 표시 |
+| **care 카드 클릭 → 아이 탭** | GapMatchPanel | 선택한 돌봄 카드 클릭 시 해당 아이 일정 탭으로 이동 |
 | 돌봄 찾기 (지도) | Find.tsx + MapView | 네이버 지도 핀, 양방향 카드↔지도 이동 |
-| 위치 기반 필터링 | Home + Find | 시/도 + 구/군, 전국 17개 시/도 |
+| 위치 기반 필터링 | Home + Find | 시/도 + 구/군, useAutoRegion으로 방문자 지역 자동 감지 |
 | 유료/무료 필터 | Home + Find | 전체/무료/유료 칩 필터 |
 | 실 데이터 연동 | Find.tsx | care_providers 2,237건 표시 |
+| CareOptionDetail 지도 확대 | CareOptionDetail | 상세 페이지 지도 더 크게 표시 |
 
 ### 미완료 / 추가 필요
 
 | 항목 | 설명 |
 |------|------|
 | 네이버 지도 핀 좌표 | care_providers에 lat/lng 없는 항목이 많음 → 지도 핀 부족 |
-| 운영 DB 스키마 동기화 | 운영 PostgreSQL에 최신 schema.sql 반영 확인 필요 |
+| 운영 DB 스키마 동기화 | 운영 PostgreSQL에 최신 schema.sql + `schedule_date` 마이그레이션 적용 확인 필요 |
 | 맞벌이 공백 UX 설명 | 교집합 계산 방식 사용자 안내 없음 |
 | 동 레벨 필터 | 현재 구/군까지만, 동 레벨 미구현 |
-| 이 날만 시간 변경 배포 확인 | 공백 캘린더 탭에서 저장 → 공백 재계산 → 되돌리기 실제 화면 확인 필요 (계산 로직은 검증됨, PR #20) |
-| 로컬 OAuth 로그인 | 콜백이 항상 `FRONTEND_URL`(배포 주소)로 돌아가서 localhost에선 로그인 불가 — 백엔드에서 돌아갈 주소 선택 필요 |
+| 로컬 OAuth 로그인 | 콜백이 항상 `FRONTEND_URL`(배포 주소)로 돌아가서 localhost에선 로그인 불가 — `docs/backend-request-oauth-return-url.md` 요청 대기 중 |
+| schedule_exceptions 일괄 조회 | `GET /schedules/exceptions` 미구현 — `docs/backend-request-exceptions-batch.md` 요청 대기 중 |
 
 ---
 
@@ -239,11 +266,32 @@ npx wrangler dev   # 포트 8787
 - **GapMatchPanel 요일 피커**: `selectingOption.existingId` 유무로 신규/수정 모드 구분.  
   수정 모드에서 `takenDays`는 자기 자신(`existing.id`)을 제외하고 계산함.
 - `care_providers` 좌표(lat/lng) 없는 기관 많음 → 지도 핀 적게 표시됨
-- localStorage 키: `match` (matchStore), `parent-tags`, `care-option-tags`, `schedule-notes`
+- localStorage 키: `match` (matchStore), `parent-tags`, `care-option-tags`, `schedule-notes`, `care-favorites` (favoritesStore), `schedule-presets` (프리셋)
 - 재로그인 필요 상황: JWT_SECRET 변경 시 기존 토큰 무효
 - **schedule_exceptions 예외는 일정·날짜당 1개**: `computeGaps`가 첫 번째만 씀. 시간 변경은 예외 없는 일정에서만 열리고, 되돌리기로 지운 뒤 다시 설정.
 - **로컬 로그인 우회**: localhost에서 로그인 → 배포 주소의 `/auth/callback?token=...`으로 넘어가면 같은 탭에서 도메인만 `http://localhost:5173`으로 바꿔 열기 (`AuthCallbackPage`는 로그인 버튼을 누른 탭에서만 토큰 수락).
 - 포트 충돌 시: `Get-Process -Name "node" | Stop-Process -Force` 후 재실행
+
+---
+
+## 2026-10-13 변경 이력
+
+| 항목 | 내용 |
+|------|------|
+| 즐겨찾기 (Favorites) | `HeartButton.tsx` + `favoritesStore.ts` (localStorage `care-favorites`). 즐겨찾기 섹션 → Home 매칭 패널 |
+| 일회성 일정 | `schedule_date DATE` 컬럼 추가 (백엔드 완료, 마이그레이션 파일 있음). 매주 반복/하루만 switch |
+| 일정 편집 모달 | 블록 편집 폼 → 팝업 모달로 변경 |
+| 사용자 지정 색상 | 색상 팔레트 + 실시간 미리보기 + Ctrl/Shift 다중선택 일괄 변경 + 자동 저장 |
+| 드래프트 모드 + 프리셋 | `presets.ts` (localStorage `schedule-presets`). 지역/구 포함. 로드/삭제 확인 다이얼로그 |
+| 선택 돌봄 상세 표시 | GapMatchPanel: 운영시간·주소·비용 인라인. 모든 탭 공통 표시 |
+| 공백 패턴 선택 돌봄 표시 | GapWeekGrid: 돌봄 채우면 공백 사라지고 초록 블록으로 확인 |
+| care 카드 클릭 → 아이 탭 | GapMatchPanel 카드 클릭 시 해당 아이 일정 탭으로 이동 |
+| 컴포넌트 분리 리팩터링 | `GapCalendarTab.tsx`, `ChildManager.tsx`, `weekGridLayout.ts` 분리 |
+| useAutoRegion | 방문자 지역 자동 감지 → matchStore 초기화 |
+| AGENTS.md 추가 | 비-Claude 에이전트용 가이드 (`AGENTS.md` 루트) |
+| stale exception 버그 수정 | 해당 요일에 더 이상 실행되지 않는 일정의 예외는 무시 |
+| 오늘 표시 자정 이후 이동 | MonthCalendar의 "오늘" 마크를 자정 이후에 다음 날로 이동 |
+| CareOptionDetail 지도 확대 | 상세 페이지 지도 크기 확대 |
 
 ---
 
