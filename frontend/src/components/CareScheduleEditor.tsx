@@ -254,7 +254,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="시/도"
                   value={match.region}
-                  onChange={(e) => match.setRegion(e.target.value)}
+                  onChange={(e) => { match.setRegion(e.target.value); setIsDirty(true) }}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
                 >
                   <option value="">시/도 선택</option>
@@ -265,7 +265,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="구/군"
                   value={match.district}
-                  onChange={(e) => match.setDistrict(e.target.value)}
+                  onChange={(e) => { match.setDistrict(e.target.value); setIsDirty(true) }}
                   disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
                 >
@@ -440,8 +440,8 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                           if (existing.type === 'care' || !isTemp(sid)) {
                             updateSchedule(sid, sdata)
                             if (existing.type !== 'care') {
-                              // sync draft silently (no isDirty) so handleSave diff stays clean
                               setDraft((prev) => prev.map((d) => d.id === sid ? { ...sdata, id: sid } : d))
+                              setIsDirty(true)
                             }
                           } else {
                             draftUpdate(sid, sdata)
