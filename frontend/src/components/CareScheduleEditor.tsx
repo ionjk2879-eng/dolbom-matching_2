@@ -258,28 +258,35 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
               </div>
             </div>
 
-            {/* 프리셋 */}
+            {/* 프리셋 — absolute 드롭다운으로 아래 레이아웃을 밀지 않음 */}
             <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => setPresetOpen((v) => !v)}
-                className="focus-ring self-start text-sm font-bold text-ink"
-              >
-                프리셋 {presetOpen ? '▲' : '▼'}
-              </button>
-              {presetOpen && (
-                <PresetSection
-                  draft={draft}
-                  kids={children}
-                  onLoad={(preset) => {
-                    if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
-                    setDraft(presetItemsToDraft(preset.items, children, tmpId))
-                    match.setRegion(preset.region ?? '')
-                    match.setDistrict(preset.district ?? '')
-                    setIsDirty(true)
-                  }}
-                />
-              )}
+              <p className="text-sm font-bold text-ink">프리셋</p>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setPresetOpen((v) => !v)}
+                  className="focus-ring flex items-center gap-2 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm text-ink-2"
+                >
+                  프리셋 선택
+                  <span className="text-xs">{presetOpen ? '▲' : '▼'}</span>
+                </button>
+                {presetOpen && (
+                  <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-xl border border-line bg-ivory-card p-3 shadow-lg">
+                    <PresetSection
+                      draft={draft}
+                      kids={children}
+                      onLoad={(preset) => {
+                        if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
+                        setDraft(presetItemsToDraft(preset.items, children, tmpId))
+                        match.setRegion(preset.region ?? '')
+                        match.setDistrict(preset.district ?? '')
+                        setIsDirty(true)
+                        setPresetOpen(false)
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
