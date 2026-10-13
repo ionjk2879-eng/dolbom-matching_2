@@ -173,7 +173,7 @@ export function Find() {
             aria-label="시/도"
             value={match.region}
             onChange={(e) => match.setRegion(e.target.value)}
-            className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-2 py-1.5 text-xs"
+            className="select-field focus-ring rounded-lg border border-line-2 bg-ivory-card px-2 py-1.5 text-xs"
           >
             <option value="">시/도 전체</option>
             {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -183,7 +183,7 @@ export function Find() {
             value={match.district}
             onChange={(e) => match.setDistrict(e.target.value)}
             disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
-            className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-2 py-1.5 text-xs disabled:opacity-40"
+            className="select-field focus-ring rounded-lg border border-line-2 bg-ivory-card px-2 py-1.5 text-xs disabled:opacity-40"
           >
             <option value="">구/군 전체</option>
             {(DISTRICTS[match.region] ?? []).map((d) => <option key={d} value={d}>{d}</option>)}
@@ -192,7 +192,7 @@ export function Find() {
             aria-label="정렬"
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="focus-ring ml-auto rounded-lg border border-line-2 bg-ivory-card px-2 py-1.5 text-xs"
+            className="select-field focus-ring ml-auto rounded-lg border border-line-2 bg-ivory-card px-2 py-1.5 text-xs"
           >
             <option value="name">이름순</option>
             <option value="cost">비용낮은순</option>

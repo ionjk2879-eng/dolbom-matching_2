@@ -450,7 +450,7 @@ export function Home() {
                       aria-label="시/도"
                       value={match.region}
                       onChange={(e) => match.setRegion(e.target.value)}
-                      className="focus-ring min-h-11 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+                      className="select-field focus-ring min-h-11 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
                     >
                       <option value="">시/도 전체</option>
                       {REGIONS.map((r) => (
@@ -463,7 +463,7 @@ export function Home() {
                       value={match.district}
                       onChange={(e) => match.setDistrict(e.target.value)}
                       disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
-                      className="focus-ring min-h-11 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-60"
+                      className="select-field focus-ring min-h-11 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-60"
                     >
                       <option value="">{match.region ? '구/군 전체' : '시/도 먼저 선택'}</option>
                       {(DISTRICTS[match.region] ?? []).map((d) => (
