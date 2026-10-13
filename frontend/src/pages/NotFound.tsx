@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 export function NotFound() {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-24 text-center">
+    <div className="mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-4 py-24 text-center">
       <title>페이지를 찾을 수 없어요 | After School</title>
       <p className="text-5xl font-extrabold tracking-[-0.03em] text-green">404</p>
       <h1 className="mt-4 text-xl font-extrabold text-ink">페이지를 찾을 수 없어요</h1>

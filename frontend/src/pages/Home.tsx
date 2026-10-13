@@ -209,7 +209,7 @@ export function Home() {
           </p>
           <ol className="mx-auto mt-8 grid max-w-3xl gap-3 text-left sm:grid-cols-3">
             {steps.map((step, i) => (
-              <li key={step.title} className="flex gap-3 rounded-2xl border border-line bg-ivory-card p-4">
+              <li key={step.title} className="flex gap-3 rounded-2xl border border-line bg-ivory-card p-4 shadow-[0_24px_40px_-28px_rgba(60,50,30,.45)]">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green text-xs font-bold text-white">
                   {i + 1}
                 </span>
@@ -235,7 +235,7 @@ export function Home() {
                 <CareScheduleEditor careOptions={careOptions} />
               </Card>
             ) : (
-              <Card className="mt-5 flex flex-col items-center gap-3 py-8 text-center">
+              <Card highlight className="mt-5 flex flex-col items-center gap-3 py-8 text-center">
                 <p className="text-sm text-ink-2">로그인하면 반복 일정을 등록하고 돌봄 공백을 계산할 수 있어요</p>
                 <Link
                   to="/login"

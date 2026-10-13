@@ -17,7 +17,7 @@ export function Login() {
   }, [user, from, navigate])
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col-reverse gap-10 px-4 py-14 md:flex-row-reverse md:items-center">
+    <div className="mx-auto flex min-h-[70vh] max-w-5xl flex-col-reverse items-center justify-center gap-10 px-4 py-14 md:flex-row-reverse">
       <title>로그인 | After School</title>
       <div className="flex-1">
         <p className="mb-6 text-sm text-ink-2">카카오·네이버 계정으로 바로 시작해요. 최초 로그인 시 자동으로 가입돼요.</p>

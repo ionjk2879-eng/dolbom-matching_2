@@ -13,7 +13,7 @@ export function Consult() {
   return (
     <div>
       <PageHero title="상담" desc="센터에 궁금한 점을 묻고 상담 일정을 잡을 수 있어요" />
-      <div className="mx-auto max-w-3xl px-4 py-10">
+      <div className="mx-auto flex min-h-[50vh] max-w-3xl flex-col justify-center px-4 py-10">
         <Card className="text-center">
           <span className="inline-block rounded-full bg-warn-bg px-3 py-1 text-xs font-bold text-warn">준비 중</span>
           <p className="mt-3 text-lg font-extrabold text-ink">온라인 상담 신청을 준비하고 있어요</p>
