@@ -13,9 +13,28 @@ export type MapPin = {
 const NAVER_CLIENT_ID = 'ujztcsarfi'
 const DEFAULT_CENTER = { lat: 36.5, lng: 127.9 }
 const DEFAULT_ZOOM = 8
-// Each marker is a DOM node; drawing all ~2,200 at once froze phones for seconds.
-// Only pins inside the visible map are drawn, and at most this many when zoomed far out
 const MAX_MARKERS = 200
+
+// zoom < 11: cluster bubbles, 11–13: small dots, 14+: name labels
+type MarkerMode = 'cluster' | 'dot' | 'label'
+function getMode(zoom: number): MarkerMode {
+  if (zoom < 11) return 'cluster'
+  if (zoom < 14) return 'dot'
+  return 'label'
+}
+
+// Grid-based O(n) clustering — each cell collapses into one cluster marker
+function computeClusters(map: any, pins: MapPin[], gridPx = 80): MapPin[][] {
+  const proj = map.getProjection()
+  const cells = new Map<string, MapPin[]>()
+  for (const pin of pins) {
+    const pt = proj.fromCoordToOffset(new naver.maps.LatLng(pin.lat, pin.lng))
+    const key = `${Math.floor(pt.x / gridPx)},${Math.floor(pt.y / gridPx)}`
+    if (!cells.has(key)) cells.set(key, [])
+    cells.get(key)!.push(pin)
+  }
+  return [...cells.values()]
+}
 
 function loadNaverMapsScript(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -33,6 +52,39 @@ function loadNaverMapsScript(): Promise<void> {
     script.onerror = reject
     document.head.appendChild(script)
   })
+}
+
+function clusterIcon(count: number) {
+  const size = count >= 100 ? 46 : count >= 10 ? 40 : 34
+  return {
+    content: `<div style="
+      display:flex;align-items:center;justify-content:center;
+      width:${size}px;height:${size}px;
+      background:#3f6b4e;color:#fff;
+      border:2.5px solid #fff;
+      border-radius:50%;
+      font-size:${count >= 100 ? 11 : 13}px;font-weight:700;
+      box-shadow:0 2px 10px rgba(0,0,0,.28);
+      cursor:pointer;
+      transform:translate(-50%,-50%);
+    ">${count > 999 ? '999+' : count}</div>`,
+    anchor: new naver.maps.Point(0, 0),
+  }
+}
+
+function dotIcon(isSel: boolean) {
+  return {
+    content: `<div style="
+      width:${isSel ? 14 : 10}px;height:${isSel ? 14 : 10}px;
+      background:${isSel ? '#3f6b4e' : '#a0916e'};
+      border:2px solid #fff;
+      border-radius:50%;
+      box-shadow:0 1px 4px rgba(0,0,0,.28);
+      cursor:pointer;
+      transform:translate(-50%,-50%);
+    "></div>`,
+    anchor: new naver.maps.Point(0, 0),
+  }
 }
 
 function markerIcon(name: string, isSel: boolean) {
@@ -65,24 +117,20 @@ export function MapView({
   const mapRef = useRef<any>(null)
   const markersRef = useRef<Map<string, any>>(new Map())
   const prevSelectedRef = useRef<string | null>(null)
+  const prevModeRef = useRef<MarkerMode>('cluster')
   const myLocationMarkerRef = useRef<any>(null)
   const [ready, setReady] = useState(typeof naver !== 'undefined')
   const [mapError, setMapError] = useState('')
   const [geoState, setGeoState] = useState<GeoState>('idle')
-  // Pins in view that weren't drawn because of MAX_MARKERS (shown as a "zoom in" hint)
   const [hiddenCount, setHiddenCount] = useState(0)
 
-  // 키/도메인 인증 실패는 예외가 아니라 이 전역 콜백으로만 알려준다
   useEffect(() => {
     ;(window as any).navermap_authFailure = () => {
-      // The SDK sets naver.maps to null on auth failure; drop the map so the marker/pan effects
-      // (which run on every pins/selection change) bail out instead of crashing the whole app
       mapRef.current = null
       setMapError('네이버 지도 인증 실패: Client ID 또는 콘솔에 등록된 서비스 URL을 확인하세요')
     }
   }, [])
 
-  // 스크립트 로드
   useEffect(() => {
     if (ready) return
     loadNaverMapsScript()
@@ -90,7 +138,6 @@ export function MapView({
       .catch((e) => setMapError(`SDK 로드 실패: ${e}`))
   }, [ready])
 
-  // 지도 초기화 (스크립트 로드 후 1회)
   useEffect(() => {
     if (!ready || !containerRef.current || mapRef.current) return
     try {
@@ -106,51 +153,85 @@ export function MapView({
     }
   }, [ready])
 
-  // Latest pins/onSelect for the map's idle listener and the pan effect below
   const pinsRef = useRef(pins)
   const onSelectRef = useRef(onSelect)
 
-  // Draw markers for the pins in view (capped), reusing ones already on the map
-  // Reads only refs, so one stable function serves the idle listener and the pins effect
   const syncMarkers = useCallback(() => {
     const map = mapRef.current
     if (!map) return
     const bounds = map.getBounds()
+    const zoom = map.getZoom()
+    const mode = getMode(zoom)
     const sel = prevSelectedRef.current
-    const inView = pinsRef.current.filter((p) => bounds.hasLatLng(new naver.maps.LatLng(p.lat, p.lng)))
-    const shown = inView.slice(0, MAX_MARKERS)
-    // The selected pin is always drawn, even before the map has moved onto it
-    const selPin = pinsRef.current.find((p) => p.id === sel)
-    if (selPin && !shown.includes(selPin)) shown.push(selPin)
-    const keep = new Set(shown.map((p) => p.id))
 
-    markersRef.current.forEach((m, id) => {
-      if (!keep.has(id)) { m.setMap(null); markersRef.current.delete(id) }
-    })
-    for (const pin of shown) {
-      if (markersRef.current.has(pin.id)) continue
-      const isSel = pin.id === sel
-      const marker = new naver.maps.Marker({
-        position: new naver.maps.LatLng(pin.lat, pin.lng),
-        map,
-        zIndex: isSel ? 1000 : 0,
-        icon: markerIcon(pin.name, isSel),
-      })
-      naver.maps.Event.addListener(marker, 'click', () => onSelectRef.current(pin.id))
-      markersRef.current.set(pin.id, marker)
+    // On mode change, wipe all markers and start fresh
+    if (mode !== prevModeRef.current) {
+      markersRef.current.forEach((m) => m.setMap(null))
+      markersRef.current.clear()
+      prevModeRef.current = mode
     }
-    setHiddenCount(inView.length - markersRef.current.size)
+
+    const inView = pinsRef.current.filter((p) => bounds.hasLatLng(new naver.maps.LatLng(p.lat, p.lng)))
+
+    if (mode === 'cluster') {
+      // Always recompute clusters on pan/zoom — positions shift with every move
+      markersRef.current.forEach((m) => m.setMap(null))
+      markersRef.current.clear()
+
+      const groups = computeClusters(map, inView)
+      groups.forEach((group, idx) => {
+        const lat = group.reduce((s, p) => s + p.lat, 0) / group.length
+        const lng = group.reduce((s, p) => s + p.lng, 0) / group.length
+        const isSingle = group.length === 1
+        const marker = new naver.maps.Marker({
+          position: new naver.maps.LatLng(lat, lng),
+          map,
+          zIndex: isSingle ? 0 : 500,
+          icon: isSingle ? dotIcon(group[0].id === sel) : clusterIcon(group.length),
+        })
+        if (isSingle) {
+          naver.maps.Event.addListener(marker, 'click', () => onSelectRef.current(group[0].id))
+        } else {
+          naver.maps.Event.addListener(marker, 'click', () => {
+            map.setZoom(map.getZoom() + 2)
+            map.panTo(new naver.maps.LatLng(lat, lng))
+          })
+        }
+        markersRef.current.set(`__c${idx}`, marker)
+      })
+      setHiddenCount(0)
+    } else {
+      // dot or label mode: viewport-capped individual markers
+      const shown = inView.slice(0, MAX_MARKERS)
+      const selPin = pinsRef.current.find((p) => p.id === sel)
+      if (selPin && !shown.includes(selPin)) shown.push(selPin)
+      const keep = new Set(shown.map((p) => p.id))
+
+      markersRef.current.forEach((m, id) => {
+        if (!keep.has(id)) { m.setMap(null); markersRef.current.delete(id) }
+      })
+      for (const pin of shown) {
+        if (markersRef.current.has(pin.id)) continue
+        const isSel = pin.id === sel
+        const marker = new naver.maps.Marker({
+          position: new naver.maps.LatLng(pin.lat, pin.lng),
+          map,
+          zIndex: isSel ? 1000 : 0,
+          icon: mode === 'dot' ? dotIcon(isSel) : markerIcon(pin.name, isSel),
+        })
+        naver.maps.Event.addListener(marker, 'click', () => onSelectRef.current(pin.id))
+        markersRef.current.set(pin.id, marker)
+      }
+      setHiddenCount(inView.length - shown.length)
+    }
   }, [])
 
-  // Re-draw whenever the map settles after a pan/zoom
   useEffect(() => {
     if (!ready || !mapRef.current) return
     const listener = naver.maps.Event.addListener(mapRef.current, 'idle', syncMarkers)
-    // naver.maps is null after an auth failure; leaving the page then must not crash the app
     return () => naver.maps?.Event.removeListener(listener)
   }, [ready, syncMarkers])
 
-  // New result list (filter/sort): drop markers that left it, draw what's now in view
   useEffect(() => {
     pinsRef.current = pins
     onSelectRef.current = onSelect
@@ -162,34 +243,45 @@ export function MapView({
     syncMarkers()
   }, [pins, onSelect, ready, syncMarkers])
 
-  // 선택 상태 변경 — 이전/새 핀 아이콘 2개만 교체 (전체 재생성 없음)
+  // 선택 상태 변경 — cluster mode는 전체 재동기화, dot/label은 아이콘 2개만 교체
   useEffect(() => {
     if (!mapRef.current) return
+    const mode = getMode(mapRef.current.getZoom())
 
     const prev = prevSelectedRef.current
     prevSelectedRef.current = selected
 
+    if (mode === 'cluster') {
+      // Clusters don't track per-pin selection; full redraw handles it
+      syncMarkers()
+      return
+    }
+
     if (prev) {
       const m = markersRef.current.get(prev)
       const p = pinsRef.current.find((x) => x.id === prev)
-      if (m && p) { m.setIcon(markerIcon(p.name, false)); m.setZIndex(0) }
+      if (m && p) {
+        m.setIcon(mode === 'dot' ? dotIcon(false) : markerIcon(p.name, false))
+        m.setZIndex(0)
+      }
     }
     if (selected) {
       const m = markersRef.current.get(selected)
       const p = pinsRef.current.find((x) => x.id === selected)
-      if (m && p) { m.setIcon(markerIcon(p.name, true)); m.setZIndex(1000) }
-      else syncMarkers() // not drawn yet (off-screen): draw it now
+      if (m && p) {
+        m.setIcon(mode === 'dot' ? dotIcon(true) : markerIcon(p.name, true))
+        m.setZIndex(1000)
+      } else syncMarkers()
     }
   }, [selected, ready, syncMarkers])
 
-  // Move the map only when the selection changes; zoom in if currently zoomed far out
+  // 선택 시 지도 이동 — 멀리 있으면 label mode(14)까지 줌인
   useEffect(() => {
     if (!mapRef.current || !selected) return
     const pin = pinsRef.current.find((p) => p.id === selected)
     if (!pin) return
-    if (mapRef.current.getZoom() < 12) mapRef.current.setZoom(13)
+    if (mapRef.current.getZoom() < 14) mapRef.current.setZoom(14)
     mapRef.current.panTo(new naver.maps.LatLng(pin.lat, pin.lng))
-    // A long jump doesn't always fire 'idle', so redraw the pins around the new spot once it lands
     const timer = setTimeout(syncMarkers, 800)
     return () => clearTimeout(timer)
   }, [selected, ready, syncMarkers])
