@@ -24,6 +24,30 @@
   --font-mono: ui-monospace, 'SFMono-Regular', Consolas, monospace;
 }
 
+/* All color utilities (bg-ivory, text-ink, ...) resolve to these vars, so
+   overriding them here re-themes the whole app without touching components.
+   ponytail: raw bg-white/text-black spots (menus, map) stay light — fine for now. */
+html.dark {
+  --color-ivory: #1f1d19;
+  --color-ivory-card: #262320;
+  --color-ivory-deep: #141311;
+  --color-ivory-deep-2: #171512;
+  --color-line: #3a362f;
+  --color-line-2: #423d35;
+  --color-line-3: #332f29;
+  --color-ink: #ece6d8;
+  --color-ink-2: #b8b0a0;
+  --color-ink-2b: #a39a89;
+  --color-ink-3: #847c6c;
+  --color-green: #6fa77f;
+  --color-green-soft: #24362a;
+  --color-sand: #8a7646;
+  --color-warn-bg: #3a2c1c;
+  --color-warn: #d98a4f;
+  --color-error: #d97757;
+  --color-error-border: #a4462a;
+}
+
 body {
   margin: 0;
   background: var(--color-ivory);

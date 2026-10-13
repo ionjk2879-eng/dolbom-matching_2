@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useDarkMode } from '../hooks/useDarkMode'
 import logo from '../assets/logo.webp'
 
 export function Header() {
@@ -7,6 +8,7 @@ export function Header() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const navigate = useNavigate()
+  const { dark, toggle: toggleDark } = useDarkMode()
   const navItems = [
     { to: '/find', label: '돌봄 찾기' },
     { to: '/consult', label: '상담' },
@@ -45,6 +47,23 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleDark}
+            aria-label={dark ? '라이트 모드로 전환' : '다크 모드로 전환'}
+            className="focus-ring tap-target flex items-center justify-center rounded-xl border border-line-2 p-2 text-ink-2 hover:text-ink"
+          >
+            {dark ? (
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+                <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1Z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-5 w-5">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+              </svg>
+            )}
+          </button>
           {user ? (
             <>
               <Link to="/mypage" className="focus-ring tap-link whitespace-nowrap text-sm font-semibold text-ink-2 hover:text-ink">
