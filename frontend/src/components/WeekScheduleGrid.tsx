@@ -252,7 +252,7 @@ export function WeekScheduleGrid({
               {(() => {
                 const dayBlocks = schedules.filter((s) => s.daysOfWeek.includes(day))
                 // 돌봄 블록은 layoutLanes에서 제외 — 항상 전체 너비로 표시
-                const { laneOf, lanes } = layoutLanes(dayBlocks.filter((s) => s.type !== 'care'))
+                const { laneOf, totalLanesOf } = layoutLanes(dayBlocks.filter((s) => s.type !== 'care'))
                 return dayBlocks
                   .sort((a, b) => (timeToSlot(b.endTime) - timeToSlot(b.startTime)) - (timeToSlot(a.endTime) - timeToSlot(a.startTime)))
                   .map((s) => {
@@ -272,7 +272,7 @@ export function WeekScheduleGrid({
                     const selSlot = sel?.id === s.id && sel?.day === day ? sel.slot : null
                     const isMultiSel = multiSel.has(s.id)
                     const lane = s.type === 'care' ? 0 : (laneOf.get(s.id) ?? 0)
-                    const totalLanes = s.type === 'care' ? 1 : lanes
+                    const totalLanes = s.type === 'care' ? 1 : (totalLanesOf.get(s.id) ?? 1)
                     return (
                       <div
                         key={s.id}

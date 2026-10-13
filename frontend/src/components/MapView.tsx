@@ -11,8 +11,8 @@ export type MapPin = {
 }
 
 const NAVER_CLIENT_ID = 'ujztcsarfi'
-const DEFAULT_CENTER = { lat: 36.351, lng: 127.385 }
-const DEFAULT_ZOOM = 14
+const DEFAULT_CENTER = { lat: 36.5, lng: 127.9 }
+const DEFAULT_ZOOM = 8
 // Each marker is a DOM node; drawing all ~2,200 at once froze phones for seconds.
 // Only pins inside the visible map are drawn, and at most this many when zoomed far out
 const MAX_MARKERS = 200
@@ -190,11 +190,12 @@ export function MapView({
     }
   }, [selected, ready, syncMarkers])
 
-  // Move the map only when the selection changes
+  // Move the map only when the selection changes; zoom in if currently zoomed far out
   useEffect(() => {
     if (!mapRef.current || !selected) return
     const pin = pinsRef.current.find((p) => p.id === selected)
     if (!pin) return
+    if (mapRef.current.getZoom() < 12) mapRef.current.setZoom(13)
     mapRef.current.panTo(new naver.maps.LatLng(pin.lat, pin.lng))
     // A long jump doesn't always fire 'idle', so redraw the pins around the new spot once it lands
     const timer = setTimeout(syncMarkers, 800)

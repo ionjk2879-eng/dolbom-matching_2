@@ -31,6 +31,7 @@ export function Find() {
   const [error, setError] = useState('')
   const [sort, setSort] = useState<SortKey>('name')
   const [selected, setSelected] = useState<string | null>(null)
+  const autoCenteredRef = useRef(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<CareProviderType | ''>('')
@@ -75,6 +76,13 @@ export function Find() {
       .finally(() => setLoading(false))
   }, [])
   useAutoRegion(options)
+
+  // 결과가 처음 로드될 때 첫 번째 핀으로 지도 자동 이동
+  useEffect(() => {
+    if (autoCenteredRef.current || pins.length === 0) return
+    autoCenteredRef.current = true
+    setSelected(pins[0].id)
+  }, [pins])
 
   const results = useMemo(() => {
     const q = query.trim()

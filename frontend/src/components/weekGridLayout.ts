@@ -38,7 +38,8 @@ export function blockColor(s: RecurringSchedule, kids: Child[]): string {
   return childColors[Math.max(idx, 0) % childColors.length]
 }
 
-// Splits a day's blocks into side-by-side lanes so overlapping ones (e.g. school inside work hours) stay visible
+// Splits a day's blocks into side-by-side lanes so overlapping ones (e.g. school inside work hours) stay visible.
+// Each block's totalLanes is scoped to its overlap cluster, so non-overlapping blocks stay full-width.
 export function layoutLanes(items: RecurringSchedule[]) {
   const laneEnds: string[] = []
   const laneOf = new Map<string, number>()
@@ -48,5 +49,34 @@ export function layoutLanes(items: RecurringSchedule[]) {
     else laneEnds[lane] = s.endTime
     laneOf.set(s.id, lane)
   }
-  return { laneOf, lanes: Math.max(laneEnds.length, 1) }
+
+  // Union-Find: group transitively-overlapping blocks into clusters
+  const parent = new Map<string, string>()
+  const find = (id: string): string => {
+    if (!parent.has(id)) return id
+    const root = find(parent.get(id)!)
+    parent.set(id, root)
+    return root
+  }
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      if (items[i].startTime < items[j].endTime && items[j].startTime < items[i].endTime) {
+        const ri = find(items[i].id), rj = find(items[j].id)
+        if (ri !== rj) parent.set(ri, rj)
+      }
+    }
+  }
+
+  // Per-cluster max concurrent count → each block uses its cluster's lane count
+  const clusterLanes = new Map<string, number>()
+  for (const item of items) {
+    const concurrent = items.filter((o) => o.startTime < item.endTime && o.endTime > item.startTime).length
+    const root = find(item.id)
+    clusterLanes.set(root, Math.max(clusterLanes.get(root) ?? 1, concurrent))
+  }
+
+  const totalLanesOf = new Map<string, number>()
+  for (const item of items) totalLanesOf.set(item.id, clusterLanes.get(find(item.id)) ?? 1)
+
+  return { laneOf, totalLanesOf }
 }
