@@ -227,55 +227,60 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
             <ChildManager />
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-start gap-x-8 gap-y-3">
+            {/* 거주지 */}
+            <div className="flex flex-col gap-3">
               <p className="text-sm font-bold text-ink">거주지</p>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  aria-label="시/도"
+                  value={match.region}
+                  onChange={(e) => match.setRegion(e.target.value)}
+                  className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
+                >
+                  <option value="">시/도 선택</option>
+                  {REGIONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                <select
+                  aria-label="구/군"
+                  value={match.district}
+                  onChange={(e) => match.setDistrict(e.target.value)}
+                  disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
+                  className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
+                >
+                  <option value="">구/군 전체</option>
+                  {(DISTRICTS[match.region] ?? []).map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 프리셋 */}
+            <div className="flex flex-col gap-3">
               <button
                 type="button"
                 onClick={() => setPresetOpen((v) => !v)}
-                className="focus-ring text-xs font-semibold text-green"
+                className="focus-ring self-start text-sm font-bold text-ink"
               >
                 프리셋 {presetOpen ? '▲' : '▼'}
               </button>
+              {presetOpen && (
+                <PresetSection
+                  draft={draft}
+                  kids={children}
+                  onLoad={(preset) => {
+                    if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
+                    setDraft(presetItemsToDraft(preset.items, children, tmpId))
+                    match.setRegion(preset.region ?? '')
+                    match.setDistrict(preset.district ?? '')
+                    setIsDirty(true)
+                  }}
+                />
+              )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              <select
-                aria-label="시/도"
-                value={match.region}
-                onChange={(e) => match.setRegion(e.target.value)}
-                className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
-              >
-                <option value="">시/도 선택</option>
-                {REGIONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-              <select
-                aria-label="구/군"
-                value={match.district}
-                onChange={(e) => match.setDistrict(e.target.value)}
-                disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
-                className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
-              >
-                <option value="">구/군 전체</option>
-                {(DISTRICTS[match.region] ?? []).map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-            {presetOpen && (
-              <PresetSection
-                draft={draft}
-                kids={children}
-                onLoad={(preset) => {
-                  if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
-                  setDraft(presetItemsToDraft(preset.items, children, tmpId))
-                  match.setRegion(preset.region ?? '')
-                  match.setDistrict(preset.district ?? '')
-                  setIsDirty(true)
-                }}
-              />
-            )}
           </div>
 
           <div className="flex flex-col gap-3">
