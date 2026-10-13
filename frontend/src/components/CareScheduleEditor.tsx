@@ -16,7 +16,7 @@ import { DISTRICTS } from '../data/districts'
 import { ChildManager } from './ChildManager'
 import { toISO } from '../data/date'
 import type { CareOption, RecurringSchedule } from '../data/types'
-import { presetItemsToDraft } from '../data/presets'
+import { presetItemsToDraft, draftToPresetItems, loadPresets, upsertPreset, deletePreset, type Preset } from '../data/presets'
 
 // Temporary IDs for draft-only schedules (never sent to server until save)
 const tmpId = () => `__${Math.random().toString(36).slice(2, 9)}`
@@ -54,8 +54,27 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })
   const [editingId, setEditingId] = useState<string | null>(null)
   const [presetOpen, setPresetOpen] = useState(false)
+  const [presets, setPresets] = useState<Preset[]>(() => loadPresets())
+  const [showSaveInput, setShowSaveInput] = useState(false)
+  const [saveName, setSaveName] = useState('')
   const editOriginalColorsRef = useRef<Map<string, string | undefined>>(new Map())
   const [multiSelIds, setMultiSelIds] = useState<string[]>([])
+
+  const handleSavePreset = () => {
+    if (!saveName.trim()) return
+    const p: Preset = {
+      id: Math.random().toString(36).slice(2),
+      name: saveName.trim(),
+      createdAt: new Date().toISOString(),
+      items: draftToPresetItems(draft, children),
+      region: match.region || undefined,
+      district: match.district || undefined,
+    }
+    upsertPreset(p)
+    setPresets(loadPresets())
+    setSaveName('')
+    setShowSaveInput(false)
+  }
 
   const cancelEdit = () => {
     if (editingId) {
@@ -258,33 +277,59 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
               </div>
             </div>
 
-            {/* 프리셋 — absolute 드롭다운으로 아래 레이아웃을 밀지 않음 */}
+            {/* 프리셋 — 드롭다운 + 저장 버튼 나란히 */}
             <div className="flex flex-col gap-3">
               <p className="text-sm font-bold text-ink">프리셋</p>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setPresetOpen((v) => !v)}
-                  className="focus-ring flex items-center gap-2 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm text-ink-2"
-                >
-                  프리셋 선택
-                  <span className="text-xs">{presetOpen ? '▲' : '▼'}</span>
-                </button>
-                {presetOpen && (
-                  <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-xl border border-line bg-ivory-card p-3 shadow-lg">
-                    <PresetSection
-                      draft={draft}
-                      kids={children}
-                      onLoad={(preset) => {
-                        if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
-                        setDraft(presetItemsToDraft(preset.items, children, tmpId))
-                        match.setRegion(preset.region ?? '')
-                        match.setDistrict(preset.district ?? '')
-                        setIsDirty(true)
-                        setPresetOpen(false)
-                      }}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* 선택 드롭다운 */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setPresetOpen((v) => !v)}
+                    className="focus-ring flex items-center gap-2 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm text-ink-2"
+                  >
+                    프리셋 선택
+                    <span className="text-xs">{presetOpen ? '▲' : '▼'}</span>
+                  </button>
+                  {presetOpen && (
+                    <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-xl border border-line bg-ivory-card p-3 shadow-lg">
+                      <PresetSection
+                        presets={presets}
+                        draft={draft}
+                        kids={children}
+                        onLoad={(preset) => {
+                          if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
+                          setDraft(presetItemsToDraft(preset.items, children, tmpId))
+                          match.setRegion(preset.region ?? '')
+                          match.setDistrict(preset.district ?? '')
+                          setIsDirty(true)
+                          setPresetOpen(false)
+                        }}
+                        onUpdate={(p) => { upsertPreset(p); setPresets(loadPresets()) }}
+                        onDelete={(id) => { deletePreset(id); setPresets(loadPresets()) }}
+                      />
+                    </div>
+                  )}
+                </div>
+                {/* 저장 — 드롭다운 옆 */}
+                {showSaveInput ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="프리셋 이름"
+                      value={saveName}
+                      onChange={(e) => setSaveName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+                      autoFocus
+                      className="focus-ring w-36 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
                     />
+                    <Button onClick={handleSavePreset} disabled={!saveName.trim()}>저장</Button>
+                    <button type="button" onClick={() => { setShowSaveInput(false); setSaveName('') }} className="focus-ring text-xs font-semibold text-ink-2">취소</button>
                   </div>
+                ) : (
+                  <button type="button" onClick={() => setShowSaveInput(true)} className="focus-ring text-xs font-semibold text-green">
+                    + 현재 일정을 프리셋으로 저장
+                  </button>
                 )}
               </div>
             </div>
