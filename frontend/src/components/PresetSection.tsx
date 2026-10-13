@@ -29,7 +29,7 @@ export function PresetSection({
         <div key={p.id} className="flex items-center gap-2 rounded-lg bg-ivory-deep-2 px-3 py-2 text-sm">
           <button
             type="button"
-            onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 불러올까요?`)) onLoad(p) }}
+            onClick={() => onLoad(p)}
             className="focus-ring flex-1 text-left font-semibold text-ink hover:text-green"
           >
             {p.name}

@@ -260,6 +260,7 @@ export function Find() {
               <HeartButton
                 active={favorites.has(selectedOption.id)}
                 onToggle={(e) => { e.stopPropagation(); favorites.toggle(selectedOption.id) }}
+                className="shrink-0 self-start"
               />
             </div>
             <p className="mt-0.5 text-xs text-ink-2">{selectedOption.address}</p>
@@ -324,18 +325,19 @@ export function Find() {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <button type="button" className="focus-ring rounded text-left text-sm font-bold text-ink">
-                      {c.name}
-                    </button>
-                    <div className="flex shrink-0 items-center gap-1.5">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <button type="button" className="focus-ring rounded text-left text-sm font-bold text-ink">
+                        {c.name}
+                      </button>
                       {c.cost_per_hour === 0 && (
                         <span className="rounded-full bg-green-soft px-2 py-0.5 text-xs font-bold text-green">무료</span>
                       )}
-                      <HeartButton
-                        active={favorites.has(c.id)}
-                        onToggle={(e) => { e.stopPropagation(); favorites.toggle(c.id) }}
-                      />
                     </div>
+                    <HeartButton
+                      active={favorites.has(c.id)}
+                      onToggle={(e) => { e.stopPropagation(); favorites.toggle(c.id) }}
+                      className="shrink-0 self-start"
+                    />
                   </div>
                   <p className="mt-1 text-xs text-ink-2">
                     {careTypeLabels[c.type]} · {c.address}

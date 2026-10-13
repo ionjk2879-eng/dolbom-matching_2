@@ -57,6 +57,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const [presets, setPresets] = useState<Preset[]>(() => loadPresets())
   const [showSaveInput, setShowSaveInput] = useState(false)
   const [saveName, setSaveName] = useState('')
+  const [activePresetName, setActivePresetName] = useState<string | null>(null)
   const editOriginalColorsRef = useRef<Map<string, string | undefined>>(new Map())
   const [multiSelIds, setMultiSelIds] = useState<string[]>([])
 
@@ -107,10 +108,12 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const draftUpdate = (id: string, sch: Omit<RecurringSchedule, 'id'>) => {
     setDraft((prev) => prev.map((s) => (s.id === id ? { ...sch, id } : s)))
     setIsDirty(true)
+    setActivePresetName(null)
   }
   const draftRemove = (id: string) => {
     setDraft((prev) => prev.filter((s) => s.id !== id))
     setIsDirty(true)
+    setActivePresetName(null)
   }
 
   // Save draft to server: diff draft vs server, apply changes
@@ -151,6 +154,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const handleDiscard = () => {
     setDraft(serverSchedules)
     setIsDirty(false)
+    setActivePresetName(null)
   }
 
   // Grid callbacks operate on draft state
@@ -190,6 +194,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
       return [...prev.filter((s) => !overlapIds.has(s.id)), ...remnants, ...newBlocks]
     })
     setIsDirty(true)
+    setActivePresetName(null)
   }
 
   const onPunch = (id: string, punchStart: string, punchEnd: string) => {
@@ -205,6 +210,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
       return [...prev.filter((x) => x.id !== id), ...rem]
     })
     setIsDirty(true)
+    setActivePresetName(null)
   }
 
   const onMove = (id: string, daysOfWeek: number[], startTime: string, endTime: string) => {
@@ -254,7 +260,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="시/도"
                   value={match.region}
-                  onChange={(e) => { match.setRegion(e.target.value); setIsDirty(true) }}
+                  onChange={(e) => { match.setRegion(e.target.value); setIsDirty(true); setActivePresetName(null) }}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
                 >
                   <option value="">시/도 선택</option>
@@ -265,7 +271,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="구/군"
                   value={match.district}
-                  onChange={(e) => { match.setDistrict(e.target.value); setIsDirty(true) }}
+                  onChange={(e) => { match.setDistrict(e.target.value); setIsDirty(true); setActivePresetName(null) }}
                   disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
                 >
@@ -279,7 +285,12 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
 
             {/* 프리셋 — 드롭다운 + 저장 버튼 나란히 */}
             <div className="flex flex-col gap-3">
-              <p className="text-sm font-bold text-ink">프리셋</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-bold text-ink">프리셋</p>
+                {activePresetName && (
+                  <span className="rounded-full bg-green-soft px-2 py-0.5 text-xs font-semibold text-green">{activePresetName}</span>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 {/* 선택 드롭다운 */}
                 <div className="relative">
@@ -303,6 +314,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                           match.setRegion(preset.region ?? '')
                           match.setDistrict(preset.district ?? '')
                           setIsDirty(true)
+                          setActivePresetName(preset.name)
                           setPresetOpen(false)
                         }}
                         onUpdate={(p) => { upsertPreset(p); setPresets(loadPresets()) }}
@@ -442,6 +454,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                             if (existing.type !== 'care') {
                               setDraft((prev) => prev.map((d) => d.id === sid ? { ...sdata, id: sid } : d))
                               setIsDirty(true)
+                              setActivePresetName(null)
                             }
                           } else {
                             draftUpdate(sid, sdata)
