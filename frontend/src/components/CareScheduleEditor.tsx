@@ -39,7 +39,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const [presets, setPresets] = useState<Preset[]>(() => loadPresets())
   const [showSaveInput, setShowSaveInput] = useState(false)
   const [saveName, setSaveName] = useState('')
-  const [activePresetName, setActivePresetName] = useState<string | null>(null)
+  const [activePreset, setActivePreset] = useState<Preset | null>(null)
   const editOriginalColorsRef = useRef<Map<string, string | undefined>>(new Map())
   const [multiSelIds, setMultiSelIds] = useState<string[]>([])
   const [selectedDate, setSelectedDate] = useState(() => toISO(new Date()))
@@ -89,7 +89,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     const careToRemove = allSchedules.filter((s) => s.type === 'care' && !s.date)
     const recurringToRemove = allSchedules.filter((s) => !s.date && s.type !== 'care')
     const needsConfirm = recurringToRemove.length > 0 || careToRemove.length > 0
-    if (needsConfirm && !window.confirm('현재 일정(맞춤센터 포함)을 초기화하고 프리셋을 불러올까요?')) return
+    if (needsConfirm && !window.confirm('현재 일정(맞춤센터 포함)을 초기화하고 모드를 불러올까요?')) return
     await Promise.all([
       ...careToRemove.map((s) => removeSchedule(s.id)),
       ...recurringToRemove.map((s) => removeSchedule(s.id)),
@@ -98,7 +98,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     await Promise.all(newItems.map((s) => { const { id: _id, ...rest } = s; return addSchedule(rest) }))
     match.setRegion(preset.region ?? '')
     match.setDistrict(preset.district ?? '')
-    setActivePresetName(preset.name)
+    setActivePreset(preset)
     setPresetOpen(false)
   }
 
@@ -137,7 +137,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     )
     void Promise.all(overlapping.map((s) => removeSchedule(s.id)))
       .then(() => Promise.all([...remnants.map((r) => addSchedule(r)), ...newBlocks.map((b) => addSchedule(b))]))
-    setActivePresetName(null)
+    setActivePreset(null)
   }
 
   const onPunch = (id: string, punchStart: string, punchEnd: string) => {
@@ -149,7 +149,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     if (s.startTime < punchStart) rem.push({ ...rest, endTime: punchStart })
     if (s.endTime > punchEnd) rem.push({ ...rest, startTime: punchEnd })
     void removeSchedule(id).then(() => Promise.all(rem.map((r) => addSchedule(r))))
-    setActivePresetName(null)
+    setActivePreset(null)
   }
 
   const onMove = (id: string, daysOfWeek: number[], startTime: string, endTime: string) => {
@@ -157,7 +157,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     if (!s) return
     const { id: _id, ...rest } = s
     void updateSchedule(id, { ...rest, daysOfWeek, startTime, endTime })
-    setActivePresetName(null)
+    setActivePreset(null)
   }
 
   return (
@@ -195,7 +195,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="시/도"
                   value={match.region}
-                  onChange={(e) => { match.setRegion(e.target.value); setActivePresetName(null) }}
+                  onChange={(e) => { match.setRegion(e.target.value); setActivePreset(null) }}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
                 >
                   <option value="">시/도 선택</option>
@@ -206,7 +206,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="구/군"
                   value={match.district}
-                  onChange={(e) => { match.setDistrict(e.target.value); setActivePresetName(null) }}
+                  onChange={(e) => { match.setDistrict(e.target.value); setActivePreset(null) }}
                   disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
                 >
@@ -218,12 +218,21 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
               </div>
             </div>
 
-            {/* 프리셋 — 드롭다운 + 저장 버튼 나란히 */}
+            {/* 모드 — 드롭다운 + 저장 버튼 나란히 */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-bold text-ink">프리셋</p>
-                {activePresetName && (
-                  <span className="rounded-full bg-green-soft px-2 py-0.5 text-xs font-semibold text-green">{activePresetName}</span>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-ink">모드</p>
+                {activePreset && (
+                  <>
+                    <span className="rounded-full bg-green-soft px-2 py-0.5 text-xs font-semibold text-green">{activePreset.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => void handleLoadPreset(activePreset)}
+                      className="focus-ring text-xs font-semibold text-ink-2 hover:text-ink"
+                    >
+                      복구
+                    </button>
+                  </>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -234,7 +243,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                     onClick={() => setPresetOpen((v) => !v)}
                     className="focus-ring flex items-center gap-2 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm text-ink-2"
                   >
-                    프리셋 선택
+                    모드 선택
                     <span className="text-xs">{presetOpen ? '▲' : '▼'}</span>
                   </button>
                   {presetOpen && (
@@ -255,7 +264,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      placeholder="프리셋 이름"
+                      placeholder="모드 이름"
                       value={saveName}
                       onChange={(e) => setSaveName(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSavePreset() } }}
@@ -267,7 +276,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowSaveInput(true)} className="focus-ring text-xs font-semibold text-green">
-                    + 현재 일정을 프리셋으로 저장
+                    + 현재 일정을 모드로 저장
                   </button>
                 )}
               </div>
@@ -363,7 +372,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                         const saveOne = (sid: string, sdata: Omit<RecurringSchedule, 'id'>) => {
                           if (!schedules.find((x) => x.id === sid)) return
                           void updateSchedule(sid, sdata)
-                          setActivePresetName(null)
+                          setActivePreset(null)
                         }
                         saveOne(id, data)
                         const origColor = editOriginalColorsRef.current.get(id)

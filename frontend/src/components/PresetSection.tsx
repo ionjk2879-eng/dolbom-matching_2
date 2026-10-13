@@ -20,7 +20,7 @@ export function PresetSection({
   const match = useMatchStore()
 
   if (presets.length === 0) {
-    return <p className="text-xs text-ink-2">저장된 프리셋이 없어요</p>
+    return <p className="text-xs text-ink-2">저장된 모드이 없어요</p>
   }
 
   return (
@@ -37,7 +37,7 @@ export function PresetSection({
           <button
             type="button"
             onClick={() => {
-              if (!window.confirm(`'${p.name}' 프리셋을 현재 일정으로 업데이트할까요?`)) return
+              if (!window.confirm(`'${p.name}' 모드을 현재 일정으로 업데이트할까요?`)) return
               onUpdate({ ...p, items: draftToPresetItems(draft, kids), region: match.region || undefined, district: match.district || undefined })
             }}
             className="focus-ring text-xs font-semibold text-ink-2"
@@ -46,7 +46,7 @@ export function PresetSection({
           </button>
           <button
             type="button"
-            onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 삭제할까요?`)) onDelete(p.id) }}
+            onClick={() => { if (window.confirm(`'${p.name}' 모드을 삭제할까요?`)) onDelete(p.id) }}
             className="focus-ring text-xs font-semibold text-error"
           >
             삭제
