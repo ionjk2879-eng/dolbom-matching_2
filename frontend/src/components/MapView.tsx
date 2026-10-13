@@ -37,24 +37,16 @@ function loadNaverMapsScript(): Promise<void> {
 
 function markerIcon(name: string, isSel: boolean) {
   const label = name.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`)
+  const bg = isSel ? '#3f6b4e' : '#fffdf7'
+  const fg = isSel ? '#fff' : '#2b2722'
+  const border = isSel ? '#2d5038' : '#c8bcaa'
+  // translate(-50%,-100%) centers the bubble horizontally and puts the triangle tip at the coordinate
   return {
-    content: `<div style="
-      background:${isSel ? '#3f6b4e' : '#fffdf7'};
-      color:${isSel ? '#fff' : '#2b2722'};
-      border:1.5px solid ${isSel ? '#3f6b4e' : '#e0d7c2'};
-      border-radius:999px;
-      padding:4px 12px;
-      font-size:12px;
-      font-weight:700;
-      white-space:nowrap;
-      max-width:140px;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      box-shadow:0 2px 8px rgba(0,0,0,.18);
-      cursor:pointer;
-      transform:translateY(-100%);
-    ">${label}</div>`,
-    anchor: new naver.maps.Point(24, 0),
+    content: `<div style="display:inline-flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);cursor:pointer;">
+      <div style="background:${bg};color:${fg};border:1.5px solid ${border};border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(0,0,0,.2);">${label}</div>
+      <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ${border};margin-top:-1px;"></div>
+    </div>`,
+    anchor: new naver.maps.Point(0, 0),
   }
 }
 
