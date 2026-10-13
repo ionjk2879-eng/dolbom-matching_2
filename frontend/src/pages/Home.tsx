@@ -150,7 +150,7 @@ export function Home() {
       toMinutes(s.startTime) < toMinutes(overlap.end) && toMinutes(s.endTime) > toMinutes(overlap.start)
     ).flatMap((s) => s.daysOfWeek))].sort((a, b) => a - b)
 
-  const openFavPicker = (fid: string, opt: CareOption, child: Child, overlap: Gap) => {
+  const openFavPicker = (fid: string, _opt: CareOption, child: Child, overlap: Gap) => {
     if (favPending.includes(fid)) return
     if (selectingFav?.fid === fid && selectingFav.childId === child.id) { setSelectingFav(null); return }
     const existing = favExisting(fid, child.id)

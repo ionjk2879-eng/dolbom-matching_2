@@ -77,13 +77,6 @@ export function Find() {
   }, [])
   useAutoRegion(options)
 
-  // 결과가 처음 로드될 때 첫 번째 핀으로 지도 자동 이동
-  useEffect(() => {
-    if (autoCenteredRef.current || pins.length === 0) return
-    autoCenteredRef.current = true
-    setSelected(pins[0].id)
-  }, [pins])
-
   const results = useMemo(() => {
     const q = query.trim()
     const filtered = options.filter((c) =>
@@ -112,6 +105,13 @@ export function Find() {
       ),
     [results],
   )
+
+  // 결과가 처음 로드될 때 첫 번째 핀으로 지도 자동 이동
+  useEffect(() => {
+    if (autoCenteredRef.current || pins.length === 0) return
+    autoCenteredRef.current = true
+    setSelected(pins[0].id)
+  }, [pins])
 
   // 지도 팝업 "목록에서 찾기 ↓" → 선택된 카드로 smooth scroll
   const scrollToCard = () => {
