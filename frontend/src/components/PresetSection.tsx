@@ -35,22 +35,44 @@ export function PresetSection({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <p className="text-xs font-semibold text-ink-2">프리셋</p>
-        <button
-          type="button"
-          onClick={() => setShowInput((v) => !v)}
-          className="focus-ring text-xs font-semibold text-green"
-        >
-          현재 일정을 프리셋으로 저장
-        </button>
-      </div>
-      {showInput && (
+    <div className="flex flex-col gap-1.5">
+      {presets.length === 0 && !showInput && (
+        <p className="text-xs text-ink-2">저장된 프리셋이 없어요</p>
+      )}
+      {presets.map((p) => (
+        <div key={p.id} className="flex items-center gap-2 rounded-lg bg-ivory-deep-2 px-3 py-2 text-sm">
+          <button
+            type="button"
+            onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 불러올까요?`)) onLoad(p) }}
+            className="focus-ring flex-1 text-left font-semibold text-ink hover:text-green"
+          >
+            {p.name}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!window.confirm(`'${p.name}' 프리셋을 현재 일정으로 업데이트할까요?`)) return
+              upsertPreset({ ...p, items: draftToPresetItems(draft, kids), region: match.region || undefined, district: match.district || undefined })
+              setPresets(loadPresets())
+            }}
+            className="focus-ring text-xs font-semibold text-ink-2"
+          >
+            업데이트
+          </button>
+          <button
+            type="button"
+            onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 삭제할까요?`)) { deletePreset(p.id); setPresets(loadPresets()) } }}
+            className="focus-ring text-xs font-semibold text-error"
+          >
+            삭제
+          </button>
+        </div>
+      ))}
+      {showInput ? (
         <div className="flex items-center gap-2">
           <input
             type="text"
-            placeholder="프리셋 이름을 입력해주세요"
+            placeholder="프리셋 이름"
             value={saveName}
             onChange={(e) => setSaveName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
@@ -58,48 +80,18 @@ export function PresetSection({
             className="focus-ring flex-1 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
           />
           <Button onClick={handleSavePreset} disabled={!saveName.trim()}>저장</Button>
-          <button
-            type="button"
-            onClick={() => { setShowInput(false); setSaveName('') }}
-            className="focus-ring text-xs font-semibold text-ink-2"
-          >
+          <button type="button" onClick={() => { setShowInput(false); setSaveName('') }} className="focus-ring text-xs font-semibold text-ink-2">
             취소
           </button>
         </div>
-      )}
-      {presets.length > 0 && (
-        <div className="flex flex-col gap-1">
-          {presets.map((p) => (
-            <div key={p.id} className="flex items-center gap-2 rounded-lg bg-ivory-deep-2 px-3 py-2 text-sm">
-              <span className="flex-1 text-ink">{p.name}</span>
-              <button
-                type="button"
-                onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 불러올까요?`)) onLoad(p) }}
-                className="focus-ring text-xs font-semibold text-green"
-              >
-                불러오기
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!window.confirm(`'${p.name}' 프리셋을 현재 일정으로 업데이트할까요?`)) return
-                  upsertPreset({ ...p, items: draftToPresetItems(draft, kids), region: match.region || undefined, district: match.district || undefined })
-                  setPresets(loadPresets())
-                }}
-                className="focus-ring text-xs font-semibold text-ink-2"
-              >
-                업데이트
-              </button>
-              <button
-                type="button"
-                onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 삭제할까요?`)) { deletePreset(p.id); setPresets(loadPresets()) } }}
-                className="focus-ring text-xs font-semibold text-error"
-              >
-                삭제
-              </button>
-            </div>
-          ))}
-        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowInput(true)}
+          className="focus-ring self-start text-xs font-semibold text-green"
+        >
+          + 현재 일정을 프리셋으로 저장
+        </button>
       )}
     </div>
   )

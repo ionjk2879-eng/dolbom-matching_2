@@ -53,6 +53,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const [view, setView] = useState<'schedule' | 'gap' | 'calendar'>('schedule')
   const [target, setTarget] = useState<Target>({ type: 'parent', parentLabel: 'mom' })
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [presetOpen, setPresetOpen] = useState(false)
   const editOriginalColorsRef = useRef<Map<string, string | undefined>>(new Map())
   const [multiSelIds, setMultiSelIds] = useState<string[]>([])
 
@@ -227,7 +228,16 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
           </div>
 
           <div className="flex flex-col gap-3">
-            <p className="text-sm font-bold text-ink">거주지</p>
+            <div className="flex items-center gap-3">
+              <p className="text-sm font-bold text-ink">거주지</p>
+              <button
+                type="button"
+                onClick={() => setPresetOpen((v) => !v)}
+                className="focus-ring text-xs font-semibold text-green"
+              >
+                프리셋 {presetOpen ? '▲' : '▼'}
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2">
               <select
                 aria-label="시/도"
@@ -253,6 +263,19 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 ))}
               </select>
             </div>
+            {presetOpen && (
+              <PresetSection
+                draft={draft}
+                kids={children}
+                onLoad={(preset) => {
+                  if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
+                  setDraft(presetItemsToDraft(preset.items, children, tmpId))
+                  match.setRegion(preset.region ?? '')
+                  match.setDistrict(preset.district ?? '')
+                  setIsDirty(true)
+                }}
+              />
+            )}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -398,18 +421,6 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
               onSelectChild={(id) => setTarget({ type: 'child', childId: id })}
             />
 
-            {/* 프리셋: 현재 일정을 이름 붙여 저장하고 나중에 불러오기 */}
-            <PresetSection
-              draft={draft}
-              kids={children}
-              onLoad={(preset) => {
-                if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
-                setDraft(presetItemsToDraft(preset.items, children, tmpId))
-                match.setRegion(preset.region ?? '')
-                match.setDistrict(preset.district ?? '')
-                setIsDirty(true)
-              }}
-            />
 
           </div>
         </>
