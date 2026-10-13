@@ -81,6 +81,17 @@ export function PresetSection({
               </button>
               <button
                 type="button"
+                onClick={() => {
+                  if (!window.confirm(`'${p.name}' 프리셋을 현재 일정으로 업데이트할까요?`)) return
+                  upsertPreset({ ...p, items: draftToPresetItems(draft, kids), region: match.region || undefined, district: match.district || undefined })
+                  setPresets(loadPresets())
+                }}
+                className="focus-ring text-xs font-semibold text-ink-2"
+              >
+                업데이트
+              </button>
+              <button
+                type="button"
                 onClick={() => { if (window.confirm(`'${p.name}' 프리셋을 삭제할까요?`)) { deletePreset(p.id); setPresets(loadPresets()) } }}
                 className="focus-ring text-xs font-semibold text-error"
               >

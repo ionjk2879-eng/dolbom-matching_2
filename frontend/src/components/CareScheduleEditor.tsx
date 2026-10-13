@@ -405,8 +405,8 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
               onLoad={(preset) => {
                 if (isDirty && !window.confirm('현재 변경사항을 버리고 프리셋을 불러올까요?')) return
                 setDraft(presetItemsToDraft(preset.items, children, tmpId))
-                if (preset.region !== undefined) match.setRegion(preset.region)
-                if (preset.district !== undefined) match.setDistrict(preset.district)
+                match.setRegion(preset.region ?? '')
+                match.setDistrict(preset.district ?? '')
                 setIsDirty(true)
               }}
             />
