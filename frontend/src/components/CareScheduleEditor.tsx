@@ -319,11 +319,11 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                       placeholder="프리셋 이름"
                       value={saveName}
                       onChange={(e) => setSaveName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSavePreset() } }}
                       autoFocus
                       className="focus-ring w-36 rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
                     />
-                    <Button onClick={handleSavePreset} disabled={!saveName.trim()}>저장</Button>
+                    <Button type="button" onClick={handleSavePreset} disabled={!saveName.trim()}>저장</Button>
                     <button type="button" onClick={() => { setShowSaveInput(false); setSaveName('') }} className="focus-ring text-xs font-semibold text-ink-2">취소</button>
                   </div>
                 ) : (
@@ -338,7 +338,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
           <div className="flex flex-col gap-3">
             <p className="text-sm font-bold text-ink">반복 일정 캘린더</p>
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={handleSave} disabled={!isDirty || saving}>
+              <Button type="button" onClick={handleSave} disabled={!isDirty || saving}>
                 {saving ? '저장 중...' : '저장'}
               </Button>
               {isDirty && (
