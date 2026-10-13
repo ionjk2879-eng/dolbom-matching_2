@@ -125,7 +125,7 @@ function ScheduleForm({ editing }: { editing: RecurringSchedule | undefined }) {
 
             {type === 'parent_work' && (
               <label className="text-sm font-semibold text-ink">
-                누구 근무
+                누구 근무인가요?
                 <select
                   value={owner}
                   onChange={(e) => setOwner(e.target.value as 'mom' | 'dad' | '')}
