@@ -13,6 +13,7 @@ import { fetchCareOptions } from '../api/careOptions'
 import { careTypeLabels, matchesCareOption, gradeBuckets, timeBuckets, REGIONS } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
 import { computeGaps, overlapWithGap } from '../data/gaps'
+import { naverMapUrl } from '../data/geo'
 import { toISO } from '../data/date'
 import type { CareOption, CareProviderType } from '../data/types'
 import { useFavoritesStore } from '../store/favoritesStore'
@@ -273,6 +274,24 @@ export function Find() {
                   전화 문의
                 </a>
               )}
+              <a
+                href={naverMapUrl(selectedOption.latitude, selectedOption.longitude, selectedOption.name, selectedOption.address)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="focus-ring tap-link flex-1 rounded-xl border border-line-2 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:bg-ivory-deep"
+              >
+                길찾기
+              </a>
+              {selectedOption.url && (
+                <a
+                  href={selectedOption.url.startsWith('http') ? selectedOption.url : `https://${selectedOption.url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="focus-ring tap-link flex-1 rounded-xl border border-line-2 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:bg-ivory-deep"
+                >
+                  홈페이지
+                </a>
+              )}
               <button
                 type="button"
                 onClick={scrollToCard}
@@ -346,7 +365,7 @@ export function Find() {
                     운영 {c.open_time}~{c.close_time}
                     {c.cost_per_hour > 0 && ` · 시간당 ${c.cost_per_hour.toLocaleString()}원`}
                   </p>
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {c.phone && (
                       <a
                         href={`tel:${c.phone}`}
@@ -354,6 +373,26 @@ export function Find() {
                         className="focus-ring tap-link rounded-xl border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
                       >
                         전화 문의
+                      </a>
+                    )}
+                    <a
+                      href={naverMapUrl(c.latitude, c.longitude, c.name, c.address)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="focus-ring tap-link rounded-xl border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
+                    >
+                      길찾기
+                    </a>
+                    {c.url && (
+                      <a
+                        href={c.url.startsWith('http') ? c.url : `https://${c.url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="focus-ring tap-link rounded-xl border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
+                      >
+                        홈페이지
                       </a>
                     )}
                     <button

@@ -12,3 +12,9 @@ export function distanceKm(a: LatLng, b: LatLng): number {
 export function formatDistance(km: number): string {
   return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`
 }
+
+export function naverMapUrl(lat: number | null, lng: number | null, name: string, address: string): string {
+  if (lat != null && lng != null)
+    return `https://map.naver.com/p/directions/-/-/${lng},${lat},${encodeURIComponent(name)}/car`
+  return `https://map.naver.com/p/search/${encodeURIComponent(name + ' ' + address)}`
+}
