@@ -83,7 +83,7 @@ export function Header() {
           ) : (
             <Link
               to="/login"
-              className="focus-ring tap-target whitespace-nowrap rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              className="focus-ring tap-target whitespace-nowrap rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-ivory-card hover:opacity-90"
             >
               로그인
             </Link>
