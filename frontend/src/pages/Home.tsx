@@ -186,6 +186,9 @@ export function Home() {
     setSelectingFav(null)
   }
 
+  const [matchChildIdx, setMatchChildIdx] = useState(0)
+  const activeChildGap = childGaps[Math.min(matchChildIdx, childGaps.length - 1)]
+
   const goMatch = () => navigate('/find')
 
   const locationFilteredOptions = careOptions.filter((c) =>
@@ -387,20 +390,37 @@ export function Home() {
 
             {user && childGaps.length > 0 ? (
               <div className="mt-5 flex flex-col gap-4">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {(['all', 'free', 'paid'] as const).map((v) => (
                     <Chip key={v} selected={match.costFilter === v} onClick={() => match.setCostFilter(v)}>
                       {v === 'all' ? '전체' : v === 'free' ? '무료' : '유료'}
                     </Chip>
                   ))}
+                  {childGaps.length > 1 && (
+                    <div className="ml-auto flex gap-1.5">
+                      {childGaps.map(({ child }, i) => (
+                        <button
+                          key={child.id}
+                          type="button"
+                          onClick={() => setMatchChildIdx(i)}
+                          className={`focus-ring rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                            i === Math.min(matchChildIdx, childGaps.length - 1)
+                              ? 'border-green bg-green text-white'
+                              : 'border-line-2 text-ink-2 hover:border-green/50'
+                          }`}
+                        >
+                          {child.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {!match.region && (
                   <p className="text-xs text-ink-2">일정 등록의 &lsquo;거주지&rsquo;를 선택하면 우리 동네 돌봄만 보여드려요.</p>
                 )}
-                {childGaps.map(({ child, gaps }) => {
-                  const selectedCare = schedules.filter(
-                    (s) => s.childId === child.id && s.type === 'care'
-                  )
+                {(() => {
+                  const { child, gaps } = activeChildGap
+                  const selectedCare = schedules.filter((s) => s.childId === child.id && s.type === 'care')
                   if (gaps.length > 0) {
                     return gaps.map((gap) => (
                       <GapMatchPanel
@@ -412,7 +432,7 @@ export function Home() {
                     ))
                   }
                   return (
-                    <Card key={child.id} className="flex flex-col gap-2">
+                    <Card className="flex flex-col gap-2">
                       <p className="text-sm font-bold text-ink">{child.name}</p>
                       <p className="text-xs text-ink-2">이번 주 돌봄 공백이 없어요.</p>
                       {selectedCare.length > 0 && (
@@ -439,7 +459,7 @@ export function Home() {
                       )}
                     </Card>
                   )
-                })}
+                })()}
               </div>
             ) : (
               <Card className="mt-5 flex flex-col justify-between gap-6">
