@@ -367,6 +367,11 @@ export function MapView({
           )}
         </button>
       )}
+      {geoState === 'error' && (
+        <p className="absolute bottom-3 left-14 z-10 whitespace-nowrap rounded-xl bg-ivory-card px-2.5 py-1.5 text-xs font-semibold text-error shadow-md">
+          위치 권한을 허용해 주세요
+        </p>
+      )}
       {hiddenCount > 0 && (
         <p className="pointer-events-none absolute left-1/2 top-3 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-ivory-card/95 px-3 py-1.5 text-xs font-semibold text-ink-2 shadow-md">
           지도를 확대하면 더 많은 센터가 보여요
