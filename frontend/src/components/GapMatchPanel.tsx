@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from './Card'
 import { distanceKm, formatDistance, type LatLng } from '../data/geo'
-import { matchPicks, overlapWithGap, remainingGap, toMinutes, type Gap } from '../data/gaps'
+import { matchPicks, overlapWithGap, remainingGap, toMinutes, computeGaps, type Gap } from '../data/gaps'
 import { careTypeLabels } from '../data/careMatch'
-import { WEEKDAY_LABELS } from '../data/date'
+import { WEEKDAY_LABELS, toISO } from '../data/date'
 import type { CareOption, Child } from '../data/types'
 import { useCareScheduleStore } from '../store/careScheduleStore'
 import { usePaged } from '../hooks/usePaged'
@@ -22,10 +22,26 @@ export function GapMatchPanel({
   options: CareOption[]
   className?: string
 }) {
-  const { schedules: allSchedules, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
+  const { schedules: allSchedules, exceptions, addSchedule, removeSchedule, updateSchedule } = useCareScheduleStore()
   const favorites = useFavoritesStore()
   // Picks here are weekly, so match them against the repeating schedules only
   const schedules = allSchedules.filter((s) => !s.date)
+
+  const gapDays = useMemo(() => {
+    const schedulesForGap = allSchedules.filter((s) => s.type !== 'care')
+    const result: number[] = []
+    const seen = new Set<number>()
+    for (let i = 0; i < 7; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() + i)
+      const dow = d.getDay()
+      if (seen.has(dow)) continue
+      seen.add(dow)
+      if (computeGaps(child, toISO(d), schedulesForGap, exceptions).some((g) => g.start === gap.start && g.end === gap.end))
+        result.push(dow)
+    }
+    return result.sort((a, b) => a - b)
+  }, [child, gap, allSchedules, exceptions])
   const [sortBy, setSortBy] = useState<'coverage' | 'distance'>('coverage')
   const [here, setHere] = useState<LatLng | null>(null)
   const [locationError, setLocationError] = useState('')
@@ -187,7 +203,8 @@ export function GapMatchPanel({
   return (
     <Card className={className}>
       <p className="text-sm text-ink">
-        <span className="font-bold">{child.name}</span>의 오늘 돌봄 공백{' '}
+        <span className="font-bold">{child.name}</span>의{' '}
+        {gapDays.length > 0 ? gapDays.map((d) => WEEKDAY_LABELS[d]).join('·') : '이번 주'} 돌봄 공백{' '}
         <span className="rounded-lg bg-warn-bg px-2 py-1 font-bold text-warn">
           {gap.start}~{gap.end}
         </span>

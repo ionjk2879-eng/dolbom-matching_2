@@ -39,10 +39,19 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
   const [presets, setPresets] = useState<Preset[]>(() => loadPresets())
   const [showSaveInput, setShowSaveInput] = useState(false)
   const [saveName, setSaveName] = useState('')
-  const [activePreset, setActivePreset] = useState<Preset | null>(null)
+  const [activePreset, setActivePreset] = useState<Preset | null>(() => {
+    const id = localStorage.getItem('active-preset-id')
+    if (!id) return null
+    return loadPresets().find((p) => p.id === id) ?? null
+  })
   const editOriginalColorsRef = useRef<Map<string, string | undefined>>(new Map())
   const [multiSelIds, setMultiSelIds] = useState<string[]>([])
   const [selectedDate, setSelectedDate] = useState(() => toISO(new Date()))
+
+  useEffect(() => {
+    if (activePreset) localStorage.setItem('active-preset-id', activePreset.id)
+    else localStorage.removeItem('active-preset-id')
+  }, [activePreset])
 
   const cancelEdit = () => setEditingId(null)
 
@@ -137,7 +146,6 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     )
     void Promise.all(overlapping.map((s) => removeSchedule(s.id)))
       .then(() => Promise.all([...remnants.map((r) => addSchedule(r)), ...newBlocks.map((b) => addSchedule(b))]))
-    setActivePreset(null)
   }
 
   const onPunch = (id: string, punchStart: string, punchEnd: string) => {
@@ -149,7 +157,6 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     if (s.startTime < punchStart) rem.push({ ...rest, endTime: punchStart })
     if (s.endTime > punchEnd) rem.push({ ...rest, startTime: punchEnd })
     void removeSchedule(id).then(() => Promise.all(rem.map((r) => addSchedule(r))))
-    setActivePreset(null)
   }
 
   const onMove = (id: string, daysOfWeek: number[], startTime: string, endTime: string) => {
@@ -157,7 +164,6 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     if (!s) return
     const { id: _id, ...rest } = s
     void updateSchedule(id, { ...rest, daysOfWeek, startTime, endTime })
-    setActivePreset(null)
   }
 
   return (
@@ -195,7 +201,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="시/도"
                   value={match.region}
-                  onChange={(e) => { match.setRegion(e.target.value); setActivePreset(null) }}
+                  onChange={(e) => { match.setRegion(e.target.value) }}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm"
                 >
                   <option value="">시/도 선택</option>
@@ -206,7 +212,7 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                 <select
                   aria-label="구/군"
                   value={match.district}
-                  onChange={(e) => { match.setDistrict(e.target.value); setActivePreset(null) }}
+                  onChange={(e) => { match.setDistrict(e.target.value) }}
                   disabled={!match.region || (DISTRICTS[match.region]?.length ?? 0) === 0}
                   className="focus-ring rounded-lg border border-line-2 bg-ivory-card px-3 py-2 text-sm disabled:opacity-40"
                 >
@@ -253,8 +259,16 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                         draft={serverSchedules}
                         kids={children}
                         onLoad={handleLoadPreset}
-                        onUpdate={(p) => { upsertPreset(p); setPresets(loadPresets()) }}
-                        onDelete={(id) => { deletePreset(id); setPresets(loadPresets()) }}
+                        onUpdate={(p) => {
+                          upsertPreset(p)
+                          setPresets(loadPresets())
+                          if (activePreset?.id === p.id) setActivePreset(p)
+                        }}
+                        onDelete={(id) => {
+                          deletePreset(id)
+                          setPresets(loadPresets())
+                          if (activePreset?.id === id) setActivePreset(null)
+                        }}
                       />
                     </div>
                   )}
@@ -374,14 +388,15 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                           void updateSchedule(sid, sdata)
                           setActivePreset(null)
                         }
-                        saveOne(id, data)
+                        if (!schedules.find((x) => x.id === id)) return
+                        void updateSchedule(id, data)
                         const origColor = editOriginalColorsRef.current.get(id)
                         if (multiSelIds.length > 1 && data.color !== origColor) {
                           multiSelIds.filter((sid) => sid !== id).forEach((sid) => {
                             const ms = schedules.find((x) => x.id === sid)
                             if (!ms) return
                             const { id: _msId, ...msRest } = ms
-                            saveOne(sid, { ...msRest, color: data.color })
+                            void updateSchedule(sid, { ...msRest, color: data.color })
                           })
                         }
                       }}

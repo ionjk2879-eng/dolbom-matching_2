@@ -414,7 +414,7 @@ export function Home() {
                   return (
                     <Card key={child.id} className="flex flex-col gap-2">
                       <p className="text-sm font-bold text-ink">{child.name}</p>
-                      <p className="text-xs text-ink-2">오늘은 돌봄 공백이 없어요.</p>
+                      <p className="text-xs text-ink-2">이번 주 돌봄 공백이 없어요.</p>
                       {selectedCare.length > 0 && (
                         <div className="mt-1 flex flex-col gap-1">
                           <p className="text-xs font-semibold text-ink-2">선택한 돌봄</p>
