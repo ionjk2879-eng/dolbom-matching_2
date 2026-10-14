@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Child, RecurringSchedule } from '../data/types'
 import { computeGaps } from '../data/gaps'
 import { WEEKDAY_LABELS } from '../data/date'
@@ -25,6 +26,13 @@ export function GapWeekGrid({
   kids: Child[]
   schedules: RecurringSchedule[]
 }) {
+  const [childIdx, setChildIdx] = useState(0)
+  const viewIdx = Math.min(childIdx, children.length - 1)
+  // When multiple children, show only the selected one
+  const viewChildren = children.length > 1 ? [children[viewIdx]] : children
+  // ci in viewChildren → ci in original children (for colors)
+  const origIdx = children.length > 1 ? viewIdx : 0
+
   const hasParentWork = schedules.some((s) => s.type === 'parent_work')
   const hasChildSchool = schedules.some((s) => s.type === 'child_school')
 
@@ -69,25 +77,39 @@ export function GapWeekGrid({
     })
   )
 
-  const n = children.length
-
   return (
     <div className="select-none">
+      {/* 자녀 선택 탭 — 자녀가 2명 이상일 때만 */}
+      {children.length > 1 && (
+        <div className="mb-3 flex gap-2">
+          {children.map((child, i) => (
+            <button
+              key={child.id}
+              type="button"
+              onClick={() => setChildIdx(i)}
+              className={`focus-ring rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                i === viewIdx
+                  ? 'border-green bg-green text-white'
+                  : 'border-line-2 text-ink-2 hover:border-green/50'
+              }`}
+            >
+              {child.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* 범례 */}
       <div className="mb-2 flex flex-wrap gap-3 text-xs text-ink-2">
         <span className="flex items-center gap-1">
           <span className="h-3 w-3 rounded bg-ink/20" /> 부모 근무
         </span>
-        {children.map((c, i) => (
-          <span key={`school-${c.id}`} className="flex items-center gap-1">
-            <span className={`h-3 w-3 rounded ${SCHOOL_BG[i % SCHOOL_BG.length]}`} /> {c.name} 학교
-          </span>
-        ))}
-        {children.map((c, i) => (
-          <span key={`gap-${c.id}`} className="flex items-center gap-1">
-            <span className={`h-3 w-3 rounded ${GAP_COLORS[i % GAP_COLORS.length].split(' ')[0]}`} /> {c.name} 돌봄 공백
-          </span>
-        ))}
+        <span className="flex items-center gap-1">
+          <span className={`h-3 w-3 rounded ${SCHOOL_BG[origIdx % SCHOOL_BG.length]}`} /> {viewChildren[0].name} 학교
+        </span>
+        <span className="flex items-center gap-1">
+          <span className={`h-3 w-3 rounded ${GAP_COLORS[origIdx % GAP_COLORS.length].split(' ')[0]}`} /> {viewChildren[0].name} 돌봄 공백
+        </span>
         <span className="flex items-center gap-1">
           <span className="h-3 w-3 rounded bg-green" /> 선택한 돌봄
         </span>
@@ -136,58 +158,51 @@ export function GapWeekGrid({
                 />
               ))}
 
-              {/* 아이 학교 참고 */}
-              {children.map((_child, ci) =>
-                schoolByChildDay[ci][day].map((b, i) => (
-                  <div
-                    key={`school-${ci}-${i}`}
-                    className={`pointer-events-none absolute inset-x-0.5 rounded ${SCHOOL_BG[ci % SCHOOL_BG.length]}`}
-                    style={{ top: b.start * ROW_HEIGHT, height: (b.end - b.start) * ROW_HEIGHT }}
-                  />
-                ))
-              )}
+              {/* 아이 학교 참고 — 선택된 자녀만 */}
+              {schoolByChildDay[origIdx][day].map((b, i) => (
+                <div
+                  key={`school-${i}`}
+                  className={`pointer-events-none absolute inset-x-0.5 rounded ${SCHOOL_BG[origIdx % SCHOOL_BG.length]}`}
+                  style={{ top: b.start * ROW_HEIGHT, height: (b.end - b.start) * ROW_HEIGHT }}
+                />
+              ))}
 
-              {/* 선택한 돌봄 */}
-              {children.map((_child, ci) =>
-                careByChildDay[ci][day].map((c, i) => (
+              {/* 선택한 돌봄 — 선택된 자녀만 */}
+              {careByChildDay[origIdx][day].map((c, i) => (
+                <div
+                  key={`care-${i}`}
+                  className="pointer-events-none absolute inset-x-0.5 overflow-hidden rounded bg-green text-xs font-semibold text-white"
+                  style={{ top: c.start * ROW_HEIGHT, height: (c.end - c.start) * ROW_HEIGHT }}
+                >
+                  <span className="block break-words px-1 pt-1 leading-tight">{c.title}</span>
+                  {(c.end - c.start) >= 2 && (
+                    <span className="block px-1 opacity-80">{c.startTime}~<wbr />{c.endTime}</span>
+                  )}
+                </div>
+              ))}
+
+              {/* 돌봄 공백 — 선택된 자녀만, 전체 너비 */}
+              {gapsByChildDay[origIdx][day].map((gap, gi) => {
+                const start = timeToSlot(gap.start)
+                const end = timeToSlot(gap.end)
+                return (
                   <div
-                    key={`care-${ci}-${i}`}
-                    className="pointer-events-none absolute inset-x-0.5 overflow-hidden rounded bg-green text-xs font-semibold text-white"
-                    style={{ top: c.start * ROW_HEIGHT, height: (c.end - c.start) * ROW_HEIGHT }}
+                    key={`gap-${gi}`}
+                    className={`pointer-events-none absolute overflow-hidden rounded text-xs font-semibold ${GAP_COLORS[origIdx % GAP_COLORS.length]}`}
+                    style={{
+                      top: start * ROW_HEIGHT,
+                      height: (end - start) * ROW_HEIGHT,
+                      left: '2px',
+                      right: '2px',
+                    }}
                   >
-                    <span className="block break-words px-1 pt-1 leading-tight">{c.title}</span>
-                    {(c.end - c.start) >= 2 && (
-                      <span className="block px-1 opacity-80">{c.startTime}~<wbr />{c.endTime}</span>
+                    <span className="block truncate px-1 pt-1">{viewChildren[0].name}</span>
+                    {(end - start) >= 2 && (
+                      <span className={`block px-1 opacity-80 ${(end - start) >= 3 ? '' : 'truncate'}`}>{gap.start}~<wbr />{gap.end}</span>
                     )}
                   </div>
-                ))
-              )}
-
-              {/* 돌봄 공백 — 아이가 여럿이면 나란히 */}
-              {children.map((child, ci) =>
-                gapsByChildDay[ci][day].map((gap, gi) => {
-                  const start = timeToSlot(gap.start)
-                  const end = timeToSlot(gap.end)
-                  const colW = 100 / n
-                  return (
-                    <div
-                      key={`gap-${ci}-${gi}`}
-                      className={`pointer-events-none absolute overflow-hidden rounded text-xs font-semibold ${GAP_COLORS[ci % GAP_COLORS.length]}`}
-                      style={{
-                        top: start * ROW_HEIGHT,
-                        height: (end - start) * ROW_HEIGHT,
-                        left: `calc(${ci * colW}% + 2px)`,
-                        width: `calc(${colW}% - 4px)`,
-                      }}
-                    >
-                      <span className="block truncate px-1 pt-1">{child.name}</span>
-                      {(end - start) >= 2 && (
-                        <span className={`block px-1 opacity-80 ${(end - start) >= 3 ? '' : 'truncate'}`}>{gap.start}~<wbr />{gap.end}</span>
-                      )}
-                    </div>
-                  )
-                })
-              )}
+                )
+              })}
             </div>
           </div>
         ))}

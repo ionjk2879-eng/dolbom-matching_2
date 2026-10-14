@@ -27,8 +27,25 @@ export function GapMatchPanel({
   // Picks here are weekly, so match them against the repeating schedules only
   const schedules = allSchedules.filter((s) => !s.date)
 
+  // patternDays: 이 공백 패턴이 존재하는 요일 (돌봄 제외 — 항상 표시)
+  const patternDays = useMemo(() => {
+    const nonCare = allSchedules.filter((s) => s.type !== 'care')
+    const result: number[] = []
+    const seen = new Set<number>()
+    for (let i = 0; i < 7; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() + i)
+      const dow = d.getDay()
+      if (seen.has(dow)) continue
+      seen.add(dow)
+      if (computeGaps(child, toISO(d), nonCare, exceptions).some((g) => g.start === gap.start && g.end === gap.end))
+        result.push(dow)
+    }
+    return result.sort((a, b) => a - b)
+  }, [child, gap, allSchedules, exceptions])
+
+  // gapDays: 아직 돌봄이 없는 요일 (돌봄 포함 계산)
   const gapDays = useMemo(() => {
-    // care 포함해서 계산 — 돌봄이 등록된 요일은 공백이 없으므로 결과에서 빠짐
     const result: number[] = []
     const seen = new Set<number>()
     for (let i = 0; i < 7; i++) {
@@ -204,8 +221,8 @@ export function GapMatchPanel({
     <Card className={className}>
       <p className="text-sm text-ink">
         <span className="font-bold">{child.name}</span>의{' '}
-        {gapDays.length > 0
-          ? <span className="font-bold text-green">{gapDays.map((d) => WEEKDAY_LABELS[d]).join('·')}</span>
+        {patternDays.length > 0
+          ? <span className="font-bold text-green">{patternDays.map((d) => WEEKDAY_LABELS[d]).join('·')}</span>
           : '이번 주'}{' '}돌봄 공백{' '}
         <span className="rounded-lg bg-warn-bg px-2 py-1 font-bold text-warn">
           {gap.start}~{gap.end}
