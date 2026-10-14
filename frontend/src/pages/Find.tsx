@@ -91,9 +91,10 @@ export function Find() {
     )
   }, [options, match.grade, match.time, match.region, match.district, match.costFilter, sort, fitsMine, todaysGaps, typeFilter, query])
 
-  // Until the user picks one (or when the pick is filtered out), the map follows the top of the list
+  // activeId: 지도 핀 하이라이트용 (선택 없으면 첫 항목 기본값)
   const activeId = results.some((c) => c.id === selected) ? selected : (results[0]?.id ?? null)
-  const selectedOption = results.find((c) => c.id === activeId) ?? null
+  // selectedOption: 팝업 표시용 — 명시적으로 선택한 경우에만
+  const selectedOption = selected ? (results.find((c) => c.id === selected) ?? null) : null
   const paged = usePaged(results)
   const conditionSummary = [match.region, match.district, match.grade, match.time].filter(Boolean).join(' · ')
 
@@ -258,11 +259,20 @@ export function Find() {
           <div className="mt-2 rounded-2xl sm:absolute sm:bottom-3 sm:right-3 sm:mt-0 sm:w-64 border border-line bg-ivory-card p-3 shadow-[0_24px_40px_-28px_rgba(60,50,30,.45)]">
             <div className="flex items-start justify-between gap-2">
               <p className="text-sm font-bold leading-tight text-ink">{selectedOption.name}</p>
-              <HeartButton
-                active={favorites.has(selectedOption.id)}
-                onToggle={(e) => { e.stopPropagation(); favorites.toggle(selectedOption.id) }}
-                className="shrink-0 self-start"
-              />
+              <div className="flex shrink-0 items-center gap-1">
+                <HeartButton
+                  active={favorites.has(selectedOption.id)}
+                  onToggle={(e) => { e.stopPropagation(); favorites.toggle(selectedOption.id) }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  aria-label="닫기"
+                  className="focus-ring flex h-6 w-6 items-center justify-center rounded-full text-ink-2 hover:bg-ivory-deep hover:text-ink"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             <p className="mt-0.5 text-xs text-ink-2">{selectedOption.address}</p>
             <div className="mt-2.5 flex flex-wrap gap-1.5">
