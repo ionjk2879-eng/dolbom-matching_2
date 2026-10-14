@@ -204,7 +204,9 @@ export function GapMatchPanel({
     <Card className={className}>
       <p className="text-sm text-ink">
         <span className="font-bold">{child.name}</span>의{' '}
-        {gapDays.length > 0 ? gapDays.map((d) => WEEKDAY_LABELS[d]).join('·') : '이번 주'} 돌봄 공백{' '}
+        {gapDays.length > 0
+          ? <span className="font-bold text-green">{gapDays.map((d) => WEEKDAY_LABELS[d]).join('·')}</span>
+          : '이번 주'}{' '}돌봄 공백{' '}
         <span className="rounded-lg bg-warn-bg px-2 py-1 font-bold text-warn">
           {gap.start}~{gap.end}
         </span>
@@ -234,7 +236,8 @@ export function GapMatchPanel({
           <span className="text-green">공백이 모두 커버됐어요</span>
         ) : (
           <span className="text-ink-2">
-            아직 돌봄이 없는 요일: {gapDays.map((d) => WEEKDAY_LABELS[d]).join('·')}
+            아직 돌봄이 없는 요일:{' '}
+            <span className="font-bold text-warn">{gapDays.map((d) => WEEKDAY_LABELS[d]).join('·')}</span>
           </span>
         )}
       </p>
