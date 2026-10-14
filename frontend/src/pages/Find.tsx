@@ -279,7 +279,7 @@ export function Find() {
               {selectedOption.phone && (
                 <a
                   href={`tel:${selectedOption.phone}`}
-                  className="focus-ring tap-link flex-1 rounded-xl border border-line-2 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:bg-ivory-deep"
+                  className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
                 >
                   전화 문의
                 </a>
@@ -288,7 +288,7 @@ export function Find() {
                 href={naverMapUrl(selectedOption.latitude, selectedOption.longitude, selectedOption.name, selectedOption.address)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="focus-ring tap-link flex-1 rounded-xl border border-line-2 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:bg-ivory-deep"
+                className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
               >
                 길찾기
               </a>
@@ -297,7 +297,7 @@ export function Find() {
                   href={selectedOption.url.startsWith('http') ? selectedOption.url : `https://${selectedOption.url}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="focus-ring tap-link flex-1 rounded-xl border border-line-2 px-2 py-1.5 text-center text-xs font-semibold text-ink hover:bg-ivory-deep"
+                  className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
                 >
                   홈페이지
                 </a>
@@ -305,13 +305,13 @@ export function Find() {
               <button
                 type="button"
                 onClick={scrollToCard}
-                className="focus-ring tap-target flex-1 rounded-xl border border-green px-2 py-1.5 text-center text-xs font-semibold text-green hover:bg-green-soft"
+                className="focus-ring tap-target flex flex-1 items-center justify-center rounded-xl border border-green px-2 py-1.5 text-xs font-semibold text-green hover:bg-green-soft"
               >
                 목록에서 찾기 ↓
               </button>
               <Link
                 to={`/find/${selectedOption.id}`}
-                className="focus-ring tap-link w-full rounded-xl bg-green px-2 py-1.5 text-center text-xs font-semibold text-white hover:opacity-90"
+                className="focus-ring tap-link flex w-full items-center justify-center rounded-xl bg-green px-2 py-1.5 text-xs font-semibold text-white hover:opacity-90"
               >
                 상세 보기
               </Link>
