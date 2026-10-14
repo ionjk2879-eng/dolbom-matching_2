@@ -275,35 +275,37 @@ export function Find() {
               </div>
             </div>
             <p className="mt-0.5 text-xs text-ink-2">{selectedOption.address}</p>
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {selectedOption.phone && (
+            <div className="mt-2.5 flex flex-col gap-1.5">
+              <div className="flex gap-1.5">
+                {selectedOption.phone && (
+                  <a
+                    href={`tel:${selectedOption.phone}`}
+                    className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
+                  >
+                    전화 문의
+                  </a>
+                )}
                 <a
-                  href={`tel:${selectedOption.phone}`}
+                  href={naverMapUrl(selectedOption.latitude, selectedOption.longitude, selectedOption.name, selectedOption.address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
                 >
-                  전화 문의
+                  길찾기
                 </a>
-              )}
-              <a
-                href={naverMapUrl(selectedOption.latitude, selectedOption.longitude, selectedOption.name, selectedOption.address)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
-              >
-                길찾기
-              </a>
-              <a
-                href={homepageUrl(selectedOption.url, selectedOption.name)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
-              >
-                홈페이지
-              </a>
+                <a
+                  href={homepageUrl(selectedOption.url, selectedOption.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
+                >
+                  홈페이지
+                </a>
+              </div>
               <button
                 type="button"
                 onClick={scrollToCard}
-                className="focus-ring tap-target flex flex-1 items-center justify-center rounded-xl border border-green px-2 py-1.5 text-xs font-semibold text-green hover:bg-green-soft"
+                className="focus-ring tap-target flex w-full items-center justify-center rounded-xl border border-green px-2 py-1.5 text-xs font-semibold text-green hover:bg-green-soft"
               >
                 목록에서 찾기 ↓
               </button>
