@@ -8,7 +8,7 @@ import { DemoNotice } from '../components/DemoNotice'
 import { MapView, type MapPin } from '../components/MapView'
 import { fetchCareOption } from '../api/careOptions'
 import { careTypeLabels } from '../data/careMatch'
-import { naverMapUrl } from '../data/geo'
+import { naverMapUrl, homepageUrl } from '../data/geo'
 import type { CareOption } from '../data/types'
 
 const noop = () => {}
@@ -118,16 +118,14 @@ export function CareOptionDetail() {
             >
               네이버 지도로 길찾기
             </a>
-            {option.url && (
-              <a
-                href={option.url.startsWith('http') ? option.url : `https://${option.url}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="focus-ring min-h-11 rounded-xl border border-line-2 px-4 py-2.5 text-center text-sm font-semibold text-ink hover:bg-ivory-deep"
-              >
-                홈페이지 방문
-              </a>
-            )}
+            <a
+              href={homepageUrl(option.url, option.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="focus-ring min-h-11 rounded-xl border border-line-2 px-4 py-2.5 text-center text-sm font-semibold text-ink hover:bg-ivory-deep"
+            >
+              홈페이지 방문
+            </a>
           </div>
         </Card>
 

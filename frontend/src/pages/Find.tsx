@@ -13,7 +13,7 @@ import { fetchCareOptions } from '../api/careOptions'
 import { careTypeLabels, matchesCareOption, gradeBuckets, timeBuckets, REGIONS } from '../data/careMatch'
 import { DISTRICTS } from '../data/districts'
 import { computeGaps, overlapWithGap } from '../data/gaps'
-import { naverMapUrl } from '../data/geo'
+import { naverMapUrl, homepageUrl } from '../data/geo'
 import { toISO } from '../data/date'
 import type { CareOption, CareProviderType } from '../data/types'
 import { useFavoritesStore } from '../store/favoritesStore'
@@ -292,16 +292,14 @@ export function Find() {
               >
                 길찾기
               </a>
-              {selectedOption.url && (
-                <a
-                  href={selectedOption.url.startsWith('http') ? selectedOption.url : `https://${selectedOption.url}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
-                >
-                  홈페이지
-                </a>
-              )}
+              <a
+                href={homepageUrl(selectedOption.url, selectedOption.name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="focus-ring tap-link flex flex-1 items-center justify-center rounded-xl border border-line-2 px-2 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
+              >
+                홈페이지
+              </a>
               <button
                 type="button"
                 onClick={scrollToCard}
@@ -394,17 +392,15 @@ export function Find() {
                     >
                       길찾기
                     </a>
-                    {c.url && (
-                      <a
-                        href={c.url.startsWith('http') ? c.url : `https://${c.url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="focus-ring tap-link rounded-xl border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
-                      >
-                        홈페이지
-                      </a>
-                    )}
+                    <a
+                      href={homepageUrl(c.url, c.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="focus-ring tap-link rounded-xl border border-line-2 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ivory-deep"
+                    >
+                      홈페이지
+                    </a>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); navigate(`/find/${c.id}`) }}
