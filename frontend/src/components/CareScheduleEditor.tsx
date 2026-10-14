@@ -53,6 +53,14 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
     else localStorage.removeItem('active-preset-id')
   }, [activePreset])
 
+  // 새로고침 후 active preset의 거주지 복원 (useAutoRegion보다 먼저 실행돼야 override 안 됨)
+  useEffect(() => {
+    if (!activePreset) return
+    if (activePreset.region) match.setRegion(activePreset.region)
+    if (activePreset.district) match.setDistrict(activePreset.district)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const cancelEdit = () => setEditingId(null)
 
   // Clear color overrides whenever edit form closes
