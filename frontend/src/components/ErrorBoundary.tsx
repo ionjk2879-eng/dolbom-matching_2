@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <img
               src={logo}
               alt="After School"
-              width={316}
+              width={320}
               height={120}
               className="h-10 w-auto select-none"
               draggable={false}

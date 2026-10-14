@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useDarkMode } from '../hooks/useDarkMode'
 import logo from '../assets/logo.webp'
+import logoDark from '../assets/logo-dark.webp'
 
 export function Header() {
   const location = useLocation()
@@ -21,9 +22,9 @@ export function Header() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-1 px-4 py-3">
         <Link to="/" className="tap-target flex items-center">
           <img
-            src={logo}
+            src={dark ? logoDark : logo}
             alt="After School"
-            width={316}
+            width={dark ? 324 : 320}
             height={120}
             className="h-9 w-auto select-none"
             draggable={false}
