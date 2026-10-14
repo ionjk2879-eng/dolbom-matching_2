@@ -221,9 +221,11 @@ export function GapMatchPanel({
     <Card className={className}>
       <p className="text-sm text-ink">
         <span className="font-bold">{child.name}</span>의{' '}
-        {patternDays.length > 0
-          ? <span className="font-bold text-green">{patternDays.map((d) => WEEKDAY_LABELS[d]).join('·')}</span>
-          : '이번 주'}{' '}돌봄 공백{' '}
+        {gapDays.length > 0
+          ? <span className="font-bold text-warn">{gapDays.map((d) => WEEKDAY_LABELS[d]).join('·')}</span>
+          : patternDays.length > 0
+            ? <span className="font-bold text-green">{patternDays.map((d) => WEEKDAY_LABELS[d]).join('·')}</span>
+            : '이번 주'}{' '}돌봄 공백{' '}
         <span className="rounded-lg bg-warn-bg px-2 py-1 font-bold text-warn">
           {gap.start}~{gap.end}
         </span>
