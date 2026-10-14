@@ -383,11 +383,6 @@ export function CareScheduleEditor({ careOptions }: { careOptions?: CareOption[]
                         })
                       }}
                       onSave={(id, data) => {
-                        const saveOne = (sid: string, sdata: Omit<RecurringSchedule, 'id'>) => {
-                          if (!schedules.find((x) => x.id === sid)) return
-                          void updateSchedule(sid, sdata)
-                          setActivePreset(null)
-                        }
                         if (!schedules.find((x) => x.id === id)) return
                         void updateSchedule(id, data)
                         const origColor = editOriginalColorsRef.current.get(id)
