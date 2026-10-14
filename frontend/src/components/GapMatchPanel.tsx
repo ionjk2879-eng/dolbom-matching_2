@@ -28,7 +28,7 @@ export function GapMatchPanel({
   const schedules = allSchedules.filter((s) => !s.date)
 
   const gapDays = useMemo(() => {
-    const schedulesForGap = allSchedules.filter((s) => s.type !== 'care')
+    // care 포함해서 계산 — 돌봄이 등록된 요일은 공백이 없으므로 결과에서 빠짐
     const result: number[] = []
     const seen = new Set<number>()
     for (let i = 0; i < 7; i++) {
@@ -37,7 +37,7 @@ export function GapMatchPanel({
       const dow = d.getDay()
       if (seen.has(dow)) continue
       seen.add(dow)
-      if (computeGaps(child, toISO(d), schedulesForGap, exceptions).some((g) => g.start === gap.start && g.end === gap.end))
+      if (computeGaps(child, toISO(d), allSchedules, exceptions).some((g) => g.start === gap.start && g.end === gap.end))
         result.push(dow)
     }
     return result.sort((a, b) => a - b)
@@ -230,11 +230,11 @@ export function GapMatchPanel({
       </div>
 
       <p className="mt-2 text-xs font-semibold">
-        {remaining.length === 0 ? (
+        {gapDays.length === 0 ? (
           <span className="text-green">공백이 모두 커버됐어요</span>
         ) : (
           <span className="text-ink-2">
-            아직 안 채워진 시간: {remaining.map((r) => `${r.start}~${r.end}`).join(', ')}
+            아직 돌봄이 없는 요일: {gapDays.map((d) => WEEKDAY_LABELS[d]).join('·')}
           </span>
         )}
       </p>
